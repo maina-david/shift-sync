@@ -58,7 +58,7 @@ export const DEFAULT_FLOOR_ZONES: FloorZoneConfig[] = [
     label: 'Host Stand',
     position: [0, 0, 3.5],
     size: [2, 1.5],
-    skills: ['Host'],
+    skills: ['Host/Hostess'],
     colorLight: '#4ade80',
     colorDark: '#16a34a',
     colorSelectedLight: '#22c55e',

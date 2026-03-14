@@ -39,7 +39,7 @@ export const ZONES: ZoneConfig[] = [
     label: 'Host Stand',
     position: [0, 0, 3.5],
     size: [2, 1.5],
-    skills: ['Host'],
+    skills: ['Host/Hostess'],
     colorLight: '#4ade80',      // green-400
     colorDark: '#16a34a',       // green-600
     colorSelectedLight: '#22c55e',
