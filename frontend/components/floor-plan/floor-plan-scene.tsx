@@ -100,8 +100,8 @@ export function FloorPlanScene({ locationId, assignments, zones: zoneProp }: Flo
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const [selectedZone, setSelectedZone] = useState<ZoneConfig | null>(null);
-  // Use zones from API when available, fall back to hardcoded defaults
-  const zones = zoneProp ?? ZONES;
+  // Use zones from API when available (guard against empty array too), fall back to hardcoded defaults
+  const zones = zoneProp && zoneProp.length > 0 ? zoneProp : ZONES;
 
   const selectedAssignments = selectedZone
     ? assignments.filter((a) =>
@@ -113,11 +113,11 @@ export function FloorPlanScene({ locationId, assignments, zones: zoneProp }: Flo
 
   return (
     <div className="relative w-full h-full flex">
-      <div className="flex-1 h-full">
+      <div className="flex-1 min-w-0 min-h-0">
         <Canvas
           shadows
           gl={{ antialias: true }}
-          style={{ background: isDark ? '#0f0f1a' : '#f8fafc' }}
+          style={{ width: '100%', height: '100%', background: isDark ? '#0f0f1a' : '#f8fafc' }}
         >
           <Scene
             assignments={assignments}
