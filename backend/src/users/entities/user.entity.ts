@@ -51,6 +51,10 @@ export class User {
   @Column({ type: 'json', nullable: true })
   notificationPreferences: { inApp: boolean; email: boolean } | null;
 
+  /** SHA-256 hash of the current refresh token — cleared on logout, rotated on every refresh */
+  @Column({ type: 'varchar', length: 64, nullable: true, select: false })
+  refreshTokenHash: string | null;
+
   @ManyToMany(() => Skill, { eager: false })
   @JoinTable({ name: 'user_skills' })
   skills: Skill[];

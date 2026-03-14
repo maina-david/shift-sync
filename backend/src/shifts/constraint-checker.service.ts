@@ -182,7 +182,7 @@ export class ConstraintCheckerService {
       });
     }
 
-    const consecutiveDays = await this.countConsecutiveDays(staff.id, shift.date, existingAssignments);
+    const consecutiveDays = await this.countConsecutiveDays(staff.id, shift.date);
     if (consecutiveDays >= 7) {
       if (!overrideReason) {
         push({
@@ -264,12 +264,24 @@ export class ConstraintCheckerService {
     return violations;
   }
 
-  private async countConsecutiveDays(
-    staffId: string,
-    targetDate: string,
-    existingAssignments: ShiftAssignment[],
-  ): Promise<number> {
-    const workedDates = new Set(existingAssignments.map((a) => a.shift.date));
+  private async countConsecutiveDays(staffId: string, targetDate: string): Promise<number> {
+    // Query a ±13-day window to capture any consecutive run that includes targetDate.
+    // This queries the DB directly so it accounts for shifts outside any in-memory dataset.
+    const windowStart = addDays(targetDate, -13);
+    const windowEnd = addDays(targetDate, 13);
+
+    const rows = await this.assignRepo
+      .createQueryBuilder('a')
+      .innerJoin('a.shift', 'shift')
+      .select('shift.date', 'date')
+      .where('a.staffId = :staffId', { staffId })
+      .andWhere('a.status IN (:...statuses)', {
+        statuses: [AssignmentStatus.ASSIGNED, AssignmentStatus.PENDING_SWAP],
+      })
+      .andWhere('shift.date >= :windowStart AND shift.date <= :windowEnd', { windowStart, windowEnd })
+      .getRawMany<{ date: string }>();
+
+    const workedDates = new Set(rows.map((r) => r.date));
     workedDates.add(targetDate);
 
     let count = 0;

@@ -46,18 +46,23 @@ export class AuthController {
   @Throttle({ short: { ttl: 60_000, limit: 10 }, medium: { ttl: 60_000, limit: 10 }, long: { ttl: 60_000, limit: 10 } })
   @Post('refresh')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Exchange refresh token cookie for a new access token' })
-  refresh(@Request() req: { cookies: Record<string, string> }) {
+  @ApiOperation({ summary: 'Exchange refresh token cookie for a new access token — rotates the refresh token on every use' })
+  refresh(
+    @Request() req: { cookies: Record<string, string> },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const token: string | undefined = req.cookies?.['refresh_token'];
     if (!token) throw new UnauthorizedException('No refresh token');
-    return this.authService.refresh(token);
+    return this.authService.refresh(token, res);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('logout')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Clear the refresh token cookie' })
-  logout(@Res({ passthrough: true }) res: Response) {
-    this.authService.logout(res);
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Revoke refresh token and clear the cookie' })
+  logout(@Res({ passthrough: true }) res: Response, @CurrentUser() user: User) {
+    return this.authService.logout(res, user.id);
   }
 
   @UseGuards(JwtAuthGuard)

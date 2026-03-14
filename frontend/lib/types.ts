@@ -23,11 +23,24 @@ export interface User {
   updatedAt: string;
 }
 
+export interface FloorZoneConfig {
+  id: string;
+  label: string;
+  position: [number, number, number];
+  size: [number, number];
+  skills: string[];
+  colorLight: string;
+  colorDark: string;
+  colorSelectedLight: string;
+  colorSelectedDark: string;
+}
+
 export interface Location {
   id: string;
   name: string;
   timezone: string;
   address: string;
+  zones: FloorZoneConfig[] | null;
   createdAt: string;
   updatedAt: string;
 }

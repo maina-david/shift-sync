@@ -81,7 +81,7 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
       </div>
 
       <div className="flex-1 relative rounded-xl border border-border/40 overflow-hidden min-h-0">
-        <FloorPlanCanvas locationId={id} assignments={locationAssignments} />
+        <FloorPlanCanvas locationId={id} assignments={locationAssignments} zones={location?.zones} />
       </div>
 
       <p className="text-xs text-muted-foreground shrink-0 text-center">

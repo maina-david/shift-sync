@@ -138,13 +138,8 @@ All seeded accounts share the same password: **`Coastal2024!`**
 
 ## Known Limitations
 
-1. **Email delivery is not wired up** — SMTP credentials in `.env` are optional. The `MailService` is injected but email sending is disabled by default (no real mailer in dev). Notification events fire in-app only.
-2. **No refresh-token rotation** — the refresh token is reused for its full 7-day lifetime. A production system should rotate it on every use and maintain a revocation list.
-3. **Fairness scoring is location-scoped only** — cross-location fairness (staff who work at multiple locations) is not aggregated into a single score.
-4. **3D floor plan is static** — table/room positions are hardcoded per location. There is no admin UI to rearrange the floor plan.
-5. **Consecutive-day constraint counts only within the seeded window** — the `countConsecutiveDays` helper starts its lookback from the current dataset; it does not account for shifts outside the seeded date range.
-6. **No pagination on large lists** — the shifts, audit log, and staff directory endpoints return up to 200 rows. For large datasets, server-side pagination should be added.
-7. **MySQL only** — TypeORM is configured with the MySQL driver. Switching to PostgreSQL requires changing the driver and a few raw-query expressions.
+1. **MySQL only** — TypeORM is configured with the MySQL driver. Switching to PostgreSQL requires changing the driver and a few raw-query expressions.
+2. **No floor plan editor UI** — zone positions/sizes can be updated via `PUT /locations/:id/zones` (admin API), but there is no drag-and-drop editor in the frontend. JSON edits via API or a REST client (Postman / curl) are required to customise a location's layout.
 
 ---
 

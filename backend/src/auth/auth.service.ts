@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import * as bcrypt from 'bcrypt';
+import { createHash } from 'crypto';
 import { User } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 
@@ -58,12 +59,13 @@ export class AuthService {
   async login(user: Omit<User, 'password'>, res: Response) {
     const accessToken = this.signAccessToken(user);
     const refreshToken = this.signRefreshToken(user.id);
+    await this.userRepo.update(user.id, { refreshTokenHash: hashToken(refreshToken) });
     this.setRefreshCookie(res, refreshToken);
     return { token: accessToken, user };
   }
 
-  /** Verify the refresh token cookie and issue a new access token */
-  async refresh(refreshToken: string): Promise<{ token: string; user: User }> {
+  /** Verify the refresh token cookie, validate against stored hash, rotate token, issue new access token */
+  async refresh(refreshToken: string, res: Response): Promise<{ token: string; user: User }> {
     let payload: { sub: string };
     try {
       payload = this.jwtService.verify<{ sub: string }>(refreshToken, {
@@ -73,17 +75,33 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    const user = await this.userRepo.findOne({
-      where: { id: payload.sub, isActive: true },
-      relations: ['skills', 'certifiedLocations', 'managedLocations'],
-    });
+    const user = await this.userRepo
+      .createQueryBuilder('u')
+      .addSelect('u.refreshTokenHash')
+      .where('u.id = :id AND u.isActive = true', { id: payload.sub })
+      .leftJoinAndSelect('u.skills', 'skills')
+      .leftJoinAndSelect('u.certifiedLocations', 'certifiedLocations')
+      .leftJoinAndSelect('u.managedLocations', 'managedLocations')
+      .getOne();
+
     if (!user) throw new UnauthorizedException('User not found');
+    if (!user.refreshTokenHash || user.refreshTokenHash !== hashToken(refreshToken)) {
+      throw new UnauthorizedException('Refresh token has been revoked');
+    }
+
+    // Rotate: issue new refresh token and update stored hash
+    const newRefreshToken = this.signRefreshToken(user.id);
+    await this.userRepo.update(user.id, { refreshTokenHash: hashToken(newRefreshToken) });
+    this.setRefreshCookie(res, newRefreshToken);
 
     const accessToken = this.signAccessToken(user);
     return { token: accessToken, user };
   }
 
-  logout(res: Response) {
+  async logout(res: Response, userId?: string) {
+    if (userId) {
+      await this.userRepo.update(userId, { refreshTokenHash: null });
+    }
     res.clearCookie(REFRESH_COOKIE, { httpOnly: true, sameSite: 'strict', path: '/auth/refresh' });
   }
 
@@ -123,4 +141,9 @@ export class AuthService {
       maxAge: REFRESH_COOKIE_MAX_AGE_MS,
     });
   }
+}
+
+/** SHA-256 hex digest of a token string — fast, non-reversible, suitable for stored token fingerprinting */
+function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
 }

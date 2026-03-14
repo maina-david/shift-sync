@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Location } from './entities/location.entity';
+import { Location, FloorZoneConfig, DEFAULT_FLOOR_ZONES } from './entities/location.entity';
 import { CreateLocationDto } from './dto/create-location.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 
@@ -32,5 +32,17 @@ export class LocationsService {
   async remove(id: string) {
     const loc = await this.findOne(id);
     return this.locationRepo.remove(loc);
+  }
+
+  async updateZones(id: string, zones: FloorZoneConfig[]) {
+    const loc = await this.findOne(id);
+    loc.zones = zones;
+    return this.locationRepo.save(loc);
+  }
+
+  async resetZones(id: string) {
+    const loc = await this.findOne(id);
+    loc.zones = DEFAULT_FLOOR_ZONES;
+    return this.locationRepo.save(loc);
   }
 }

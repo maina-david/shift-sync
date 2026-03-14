@@ -94,7 +94,7 @@ export const authApi = {
 
 export const usersApi = {
   list: (locationId?: string) =>
-    api.get('/users', { params: { locationId } }).then((r) => r.data),
+    api.get('/users', { params: { locationId, limit: 200 } }).then((r) => r.data.data ?? r.data),
   get: (id: string) => api.get(`/users/${id}`).then((r) => r.data),
   update: (id: string, data: Record<string, unknown>) =>
     api.patch(`/users/${id}`, data).then((r) => r.data),
@@ -136,7 +136,9 @@ export const shiftsApi = {
     startDate?: string;
     endDate?: string;
     status?: string;
-  }) => api.get('/shifts', { params }).then((r) => r.data),
+    page?: number;
+    limit?: number;
+  }) => api.get('/shifts', { params: { limit: 200, ...params } }).then((r) => r.data.data ?? r.data),
 
   get: (id: string) => api.get(`/shifts/${id}`).then((r) => r.data),
 

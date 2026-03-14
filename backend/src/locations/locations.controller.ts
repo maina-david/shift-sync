@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, HttpCode, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { LocationsService } from './locations.service';
 import { CreateLocationDto } from './dto/create-location.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
+import { FloorZoneConfig } from './entities/location.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -44,4 +45,22 @@ export class LocationsController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete a location (admin)' })
   remove(@Param('id') id: string) { return this.svc.remove(id); }
+
+  @Put(':id/zones')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Replace the floor plan zone config for a location (admin)' })
+  updateZones(@Param('id') id: string, @Body() body: { zones: FloorZoneConfig[] }) {
+    return this.svc.updateZones(id, body.zones);
+  }
+
+  @Delete(':id/zones')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Reset floor plan zones to defaults (admin)' })
+  resetZones(@Param('id') id: string) {
+    return this.svc.resetZones(id);
+  }
 }

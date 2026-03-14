@@ -111,21 +111,50 @@ export class AnalyticsService {
     })).sort((a, b) => b.totalHours - a.totalHours);
   }
 
-  async getFairnessReport(startDate: string, endDate: string, locationId?: string, requestingUser?: User) {
-    const qb = this.assignRepo
+  async getFairnessReport(
+    startDate: string,
+    endDate: string,
+    locationId?: string,
+    requestingUser?: User,
+    crossLocation = false,
+  ) {
+    // Base query: location-scoped or cross-location
+    const scopeQb = this.assignRepo
       .createQueryBuilder('a')
       .innerJoinAndSelect('a.shift', 'shift')
       .innerJoinAndSelect('a.staff', 'staff')
       .where('a.status = :status', { status: AssignmentStatus.ASSIGNED })
       .andWhere('shift.date >= :startDate AND shift.date <= :endDate', { startDate, endDate });
 
-    if (locationId) qb.andWhere('shift.locationId = :locationId', { locationId });
-    if (requestingUser?.role === UserRole.MANAGER) {
+    if (!crossLocation) {
+      if (locationId) scopeQb.andWhere('shift.locationId = :locationId', { locationId });
+      if (requestingUser?.role === UserRole.MANAGER) {
+        const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
+        scopeQb.andWhere('shift.locationId IN (:...ids)', { ids });
+      }
+    } else if (requestingUser?.role === UserRole.MANAGER) {
+      // Cross-location for managers: only their managed locations
       const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
-      qb.andWhere('shift.locationId IN (:...ids)', { ids });
+      scopeQb.andWhere('shift.locationId IN (:...ids)', { ids });
     }
 
-    const assignments = await qb.getMany();
+    // When crossLocation AND locationId: find which staff work at target location,
+    // then fetch ALL their shifts across all locations for accurate premium ratios
+    let assignments = await scopeQb.getMany();
+
+    if (crossLocation && locationId) {
+      const staffAtLocation = new Set(assignments.map((a) => a.staffId));
+      if (staffAtLocation.size > 0) {
+        const allQb = this.assignRepo
+          .createQueryBuilder('a')
+          .innerJoinAndSelect('a.shift', 'shift')
+          .innerJoinAndSelect('a.staff', 'staff')
+          .where('a.status = :status', { status: AssignmentStatus.ASSIGNED })
+          .andWhere('shift.date >= :startDate AND shift.date <= :endDate', { startDate, endDate })
+          .andWhere('a.staffId IN (:...staffIds)', { staffIds: Array.from(staffAtLocation) });
+        assignments = await allQb.getMany();
+      }
+    }
 
     const staffMap = new Map<string, {
       name: string;

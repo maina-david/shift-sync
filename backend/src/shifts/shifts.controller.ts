@@ -11,6 +11,8 @@ import {
   HttpCode,
   MessageEvent,
   Sse,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -60,19 +62,23 @@ export class ShiftsController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiOperation({ summary: 'List shifts with optional filters' })
+  @ApiOperation({ summary: 'List shifts with optional filters (paginated)' })
   @ApiQuery({ name: 'locationId', required: false })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   @ApiQuery({ name: 'status', required: false, enum: ShiftStatus })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 100 })
   findAll(
     @CurrentUser() user: User,
     @Query('locationId') locationId?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('status') status?: ShiftStatus,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page = 1,
+    @Query('limit', new DefaultValuePipe(100), ParseIntPipe) limit = 100,
   ) {
-    return this.svc.findAll({ locationId, startDate, endDate, status, requestingUser: user });
+    return this.svc.findAll({ locationId, startDate, endDate, status, requestingUser: user, page, limit });
   }
 
   @Get('available')

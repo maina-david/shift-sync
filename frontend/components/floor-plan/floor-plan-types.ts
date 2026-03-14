@@ -1,18 +1,11 @@
-import type { ShiftAssignment } from '@/lib/types';
+import type { ShiftAssignment, FloorZoneConfig } from '@/lib/types';
 
-export interface ZoneConfig {
-  id: string;
-  label: string;
-  position: [number, number, number]; // [x, y, z] — y is always 0
-  size: [number, number]; // [width, depth]
-  skills: string[];
-  colorLight: string; // hex
-  colorDark: string;  // hex
-  colorSelectedLight: string;
-  colorSelectedDark: string;
-}
+// Re-export as ZoneConfig for local use
+export type ZoneConfig = FloorZoneConfig;
 
 export interface FloorPlanProps {
   locationId: string;
   assignments: ShiftAssignment[];
+  /** Zone layout loaded from the API — falls back to hardcoded defaults when null */
+  zones?: ZoneConfig[] | null;
 }

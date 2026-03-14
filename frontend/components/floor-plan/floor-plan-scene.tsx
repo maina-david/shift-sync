@@ -16,11 +16,13 @@ function Scene({
   selectedZone,
   onSelectZone,
   isDark,
+  zones,
 }: {
   assignments: FloorPlanProps['assignments'];
   selectedZone: ZoneConfig | null;
   onSelectZone: (z: ZoneConfig | null) => void;
   isDark: boolean;
+  zones: ZoneConfig[];
 }) {
   const controlsRef = useRef<OrbitControlsImpl>(null!);
 
@@ -63,7 +65,7 @@ function Scene({
       />
 
       {/* Zones */}
-      {ZONES.map((zone) => {
+      {zones.map((zone) => {
         const zoneAssignments = assignments.filter((a) =>
           zone.skills.some((skill) =>
             a.shift?.requiredSkill?.name?.toLowerCase().includes(skill.toLowerCase())
@@ -94,10 +96,12 @@ function Scene({
   );
 }
 
-export function FloorPlanScene({ locationId, assignments }: FloorPlanProps) {
+export function FloorPlanScene({ locationId, assignments, zones: zoneProp }: FloorPlanProps) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const [selectedZone, setSelectedZone] = useState<ZoneConfig | null>(null);
+  // Use zones from API when available, fall back to hardcoded defaults
+  const zones = zoneProp ?? ZONES;
 
   const selectedAssignments = selectedZone
     ? assignments.filter((a) =>
@@ -120,6 +124,7 @@ export function FloorPlanScene({ locationId, assignments }: FloorPlanProps) {
             selectedZone={selectedZone}
             onSelectZone={setSelectedZone}
             isDark={isDark}
+            zones={zones}
           />
         </Canvas>
       </div>

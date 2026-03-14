@@ -10,6 +10,8 @@ import {
   UseGuards,
   Post,
   HttpCode,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
@@ -30,11 +32,18 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List all users (admin/manager)' })
+  @ApiOperation({ summary: 'List all users (admin/manager, paginated)' })
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiQuery({ name: 'locationId', required: false })
-  findAll(@CurrentUser() user: User, @Query('locationId') locationId?: string) {
-    return this.usersService.findAll(user, locationId);
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 50 })
+  findAll(
+    @CurrentUser() user: User,
+    @Query('locationId') locationId?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page = 1,
+    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit = 50,
+  ) {
+    return this.usersService.findAll(user, locationId, page, limit);
   }
 
   @Get(':id')

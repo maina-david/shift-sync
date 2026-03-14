@@ -26,12 +26,18 @@ export class UsersService {
     private dataSource: DataSource,
   ) { }
 
-  findAll(requestingUser: User, locationId?: string) {
+  async findAll(requestingUser: User, locationId?: string, page = 1, limit = 50) {
+    const take = Math.min(limit, 200);
+    const skip = (Math.max(1, page) - 1) * take;
+
     const qb = this.userRepo
       .createQueryBuilder('u')
       .leftJoinAndSelect('u.skills', 'skills')
       .leftJoinAndSelect('u.certifiedLocations', 'certifiedLocations')
-      .leftJoinAndSelect('u.managedLocations', 'managedLocations');
+      .leftJoinAndSelect('u.managedLocations', 'managedLocations')
+      .orderBy('u.name', 'ASC')
+      .skip(skip)
+      .take(take);
 
     if (requestingUser.role === UserRole.MANAGER) {
       qb.innerJoin('u.certifiedLocations', 'cl').where(
@@ -44,7 +50,8 @@ export class UsersService {
       qb.andWhere('certifiedLocations.id = :locationId', { locationId });
     }
 
-    return qb.getMany();
+    const [data, total] = await qb.getManyAndCount();
+    return { data, total, page: Math.max(1, page), limit: take };
   }
 
   async findOne(id: string, requester?: User) {

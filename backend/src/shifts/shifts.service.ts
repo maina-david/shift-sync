@@ -48,7 +48,12 @@ export class ShiftsService {
     endDate?: string;
     status?: ShiftStatus;
     requestingUser: User;
+    page?: number;
+    limit?: number;
   }) {
+    const page = Math.max(1, options.page ?? 1);
+    const limit = Math.min(options.limit ?? 100, 200);
+
     const qb = this.shiftRepo
       .createQueryBuilder('s')
       .leftJoinAndSelect('s.assignments', 'a')
@@ -56,7 +61,9 @@ export class ShiftsService {
       .leftJoinAndSelect('s.location', 'location')
       .leftJoinAndSelect('s.requiredSkill', 'skill')
       .orderBy('s.date', 'ASC')
-      .addOrderBy('s.startTime', 'ASC');
+      .addOrderBy('s.startTime', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit);
 
     if (options.locationId) {
       qb.andWhere('s.locationId = :locationId', { locationId: options.locationId });
@@ -64,13 +71,13 @@ export class ShiftsService {
 
     if (options.requestingUser.role === UserRole.MANAGER) {
       const managedIds = options.requestingUser.managedLocations?.map((l) => l.id) ?? [];
-      if (managedIds.length === 0) return [];
+      if (managedIds.length === 0) return { data: [], total: 0, page, limit };
       qb.andWhere('s.locationId IN (:...managedIds)', { managedIds });
     }
 
     if (options.requestingUser.role === UserRole.STAFF) {
       const certifiedIds = options.requestingUser.certifiedLocations?.map((l) => l.id) ?? [];
-      if (certifiedIds.length === 0) return [];
+      if (certifiedIds.length === 0) return { data: [], total: 0, page, limit };
       qb.andWhere('s.locationId IN (:...certifiedIds)', { certifiedIds });
       qb.andWhere('s.status = :pub', { pub: ShiftStatus.PUBLISHED });
     }
@@ -79,7 +86,8 @@ export class ShiftsService {
     if (options.endDate) qb.andWhere('s.date <= :endDate', { endDate: options.endDate });
     if (options.status) qb.andWhere('s.status = :status', { status: options.status });
 
-    return qb.getMany();
+    const [data, total] = await qb.getManyAndCount();
+    return { data, total, page, limit };
   }
 
   async findOne(id: string) {

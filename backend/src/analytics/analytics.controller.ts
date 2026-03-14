@@ -35,17 +35,19 @@ export class AnalyticsController {
   @Get('fairness')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Premium shift fairness report (Fri/Sat evening shifts)' })
+  @ApiOperation({ summary: 'Premium shift fairness report — set crossLocation=true to aggregate all locations per staff member' })
   @ApiQuery({ name: 'startDate', example: '2024-08-01' })
   @ApiQuery({ name: 'endDate', example: '2024-08-31' })
   @ApiQuery({ name: 'locationId', required: false })
+  @ApiQuery({ name: 'crossLocation', required: false, description: 'When true, computes each staff member\'s premium ratio across all locations, not just the selected one' })
   fairness(
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
     @Query('locationId') locationId: string,
+    @Query('crossLocation') crossLocation: string,
     @CurrentUser() user: User,
   ) {
-    return this.svc.getFairnessReport(startDate, endDate, locationId, user);
+    return this.svc.getFairnessReport(startDate, endDate, locationId, user, crossLocation === 'true');
   }
 
   @Get('overtime')
