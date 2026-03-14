@@ -65,13 +65,14 @@ export class CertificationsController {
   create(
     @Param('userId') userId: string,
     @Body() dto: CreateCertificationDto,
+    @CurrentUser() user: User,
   ) {
-    return this.svc.create(userId, dto);
+    return this.svc.create(userId, dto, user);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a certification (owner, manager, or admin)' })
   remove(@Param('id') id: string, @CurrentUser() user: User) {
-    return this.svc.remove(id, user.id, user.role);
+    return this.svc.remove(id, user.id, user.role, user.managedLocations?.map((l) => l.id));
   }
 }

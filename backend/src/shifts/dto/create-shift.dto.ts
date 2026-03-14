@@ -1,4 +1,4 @@
-import { IsDateString, IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min, registerDecorator, ValidationOptions, ValidationArguments } from 'class-validator';
+import { IsDateString, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, registerDecorator, ValidationOptions, ValidationArguments } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 function IsNotSameAs(property: string, opts?: ValidationOptions) {
@@ -47,6 +47,7 @@ export class CreateShiftDto {
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Max(100)
   headcount?: number;
 
   @ApiPropertyOptional()

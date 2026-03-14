@@ -180,18 +180,26 @@ export class DropRequestsService {
     }
 
     const saved = await this.dataSource.transaction(async (em) => {
-      await em.update(ShiftAssignment, drop.assignmentId, { status: AssignmentStatus.CANCELLED });
+      const locked = await em.findOne(DropRequest, {
+        where: { id: dropId },
+        lock: { mode: 'pessimistic_write' },
+        relations: ['assignment', 'assignment.shift'],
+      });
+      if (!locked || locked.status !== DropRequestStatus.CLAIMED || !locked.claimedById) {
+        throw new BadRequestException('This drop request is no longer in an approvable state');
+      }
+      await em.update(ShiftAssignment, locked.assignmentId, { status: AssignmentStatus.CANCELLED });
       const newAssignment = em.create(ShiftAssignment, {
-        shiftId: drop.assignment.shiftId,
-        staffId: drop.claimedById!,
+        shiftId: locked.assignment.shiftId,
+        staffId: locked.claimedById,
         assignedById: manager.id,
       });
       await em.save(ShiftAssignment, newAssignment);
-      drop.status = DropRequestStatus.APPROVED;
-      drop.managerId = manager.id;
-      drop.managerNote = dto.managerNote ?? null;
-      drop.reviewedAt = new Date();
-      return em.save(DropRequest, drop);
+      locked.status = DropRequestStatus.APPROVED;
+      locked.managerId = manager.id;
+      locked.managerNote = dto.managerNote ?? null;
+      locked.reviewedAt = new Date();
+      return em.save(DropRequest, locked);
     });
 
     for (const userId of [drop.assignment.staffId, drop.claimedById!]) {

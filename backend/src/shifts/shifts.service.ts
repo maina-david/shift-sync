@@ -226,6 +226,11 @@ export class ShiftsService {
   }
 
   async publishWeek(dto: PublishWeekDto, manager: User) {
+    if (manager.role === UserRole.MANAGER) {
+      const manages = manager.managedLocations?.some((l) => l.id === dto.locationId);
+      if (!manages) throw new ForbiddenException('You do not manage this location');
+    }
+
     const weekEnd = addDays(dto.weekStart, 7);
     const shifts = await this.shiftRepo.find({
       where: {

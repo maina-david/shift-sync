@@ -55,7 +55,20 @@ export class CertificationsService {
       .getMany();
   }
 
-  create(userId: string, dto: CreateCertificationDto): Promise<Certification> {
+  async create(userId: string, dto: CreateCertificationDto, requester: User): Promise<Certification> {
+    if (requester.role === UserRole.MANAGER) {
+      const targetUser = await this.userRepo.findOne({
+        where: { id: userId },
+        relations: ['certifiedLocations'],
+      });
+      const staffLocationIds = targetUser?.certifiedLocations?.map((l) => l.id) ?? [];
+      const managedIds = requester.managedLocations?.map((l) => l.id) ?? [];
+      const hasOverlap = staffLocationIds.some((id) => managedIds.includes(id));
+      if (!hasOverlap) {
+        throw new ForbiddenException('You do not manage any location this staff member is certified for');
+      }
+    }
+
     const cert = this.repo.create({
       userId,
       name: dto.name,
@@ -71,18 +84,28 @@ export class CertificationsService {
     id: string,
     requesterId: string,
     requesterRole: UserRole,
+    managerLocationIds?: string[],
   ): Promise<Certification> {
     const cert = await this.repo.findOne({ where: { id } });
     if (!cert) throw new NotFoundException('Certification not found');
 
     const isOwner = cert.userId === requesterId;
     const isAdmin = requesterRole === UserRole.ADMIN;
-    const isManager = requesterRole === UserRole.MANAGER;
 
-    if (!isOwner && !isAdmin && !isManager) {
-      throw new ForbiddenException(
-        'Only the cert owner, a manager, or an admin can delete this certification',
-      );
+    if (!isOwner && !isAdmin) {
+      if (requesterRole === UserRole.MANAGER) {
+        const certUser = await this.userRepo.findOne({
+          where: { id: cert.userId },
+          relations: ['certifiedLocations'],
+        });
+        const staffLocationIds = certUser?.certifiedLocations?.map((l) => l.id) ?? [];
+        const hasOverlap = staffLocationIds.some((lid) => (managerLocationIds ?? []).includes(lid));
+        if (!hasOverlap) {
+          throw new ForbiddenException('You do not manage any location this staff member is certified for');
+        }
+      } else {
+        throw new ForbiddenException('Only the cert owner, a manager, or an admin can delete this certification');
+      }
     }
 
     const snapshot = { ...cert };

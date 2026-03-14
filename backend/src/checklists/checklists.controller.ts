@@ -59,8 +59,9 @@ export class ChecklistsController {
   findAll(
     @Query('locationId') locationId?: string,
     @Query('date') date?: string,
+    @CurrentUser() user?: User,
   ) {
-    return this.svc.findAll(locationId, date);
+    return this.svc.findAll(locationId, date, user);
   }
 
   @Get(':id')

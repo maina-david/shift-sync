@@ -77,10 +77,11 @@ export default function SchedulePage() {
 
   useEffect(() => {
     const socket = getSocket();
-    socket.on('schedule:updated', () => {
+    const handleScheduleUpdated = () => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
-    });
-    return () => { socket.off('schedule:updated'); };
+    };
+    socket.on('schedule:updated', handleScheduleUpdated);
+    return () => { socket.off('schedule:updated', handleScheduleUpdated); };
   }, [queryClient]);
 
   const publishWeekMutation = useMutation({

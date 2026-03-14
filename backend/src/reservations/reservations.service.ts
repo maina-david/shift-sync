@@ -52,7 +52,8 @@ export class ReservationsService {
     const qb = this.repo.createQueryBuilder('r')
       .leftJoinAndSelect('r.location', 'location')
       .orderBy('r.date', 'ASC')
-      .addOrderBy('r.time', 'ASC');
+      .addOrderBy('r.time', 'ASC')
+      .take(200);
 
     if (filters.date)       qb.andWhere('r.date = :date',             { date: filters.date });
     if (filters.locationId) qb.andWhere('r.locationId = :locationId', { locationId: filters.locationId });

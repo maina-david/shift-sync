@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Checklist } from './entities/checklist.entity';
 import { CreateChecklistDto } from './dto/create-checklist.dto';
+import { User, UserRole } from '../users/entities/user.entity';
 
 @Injectable()
 export class ChecklistsService {
@@ -42,13 +43,25 @@ export class ChecklistsService {
 
   // ─── List ─────────────────────────────────────────────────────────────────
 
-  async findAll(locationId?: string, date?: string): Promise<Checklist[]> {
+  async findAll(locationId?: string, date?: string, user?: User): Promise<Checklist[]> {
     const qb = this.repo
       .createQueryBuilder('cl')
       .leftJoinAndSelect('cl.location', 'location')
       .orderBy('cl.createdAt', 'DESC');
 
-    if (locationId) {
+    if (user?.role === UserRole.MANAGER) {
+      const managedIds = user.managedLocations?.map((l) => l.id) ?? [];
+      if (locationId) {
+        if (!managedIds.includes(locationId)) {
+          throw new ForbiddenException('You do not manage this location');
+        }
+        qb.andWhere('cl.locationId = :locationId', { locationId });
+      } else if (managedIds.length > 0) {
+        qb.andWhere('cl.locationId IN (:...managedIds)', { managedIds });
+      } else {
+        return [];
+      }
+    } else if (locationId) {
       qb.andWhere('cl.locationId = :locationId', { locationId });
     }
 

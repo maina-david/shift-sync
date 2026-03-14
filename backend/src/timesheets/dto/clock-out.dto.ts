@@ -1,5 +1,5 @@
-import { IsOptional, IsInt, Min } from 'class-validator';
+import { IsOptional, IsInt, Min, Max } from 'class-validator';
 
 export class ClockOutDto {
-  @IsOptional() @IsInt() @Min(0) breakMinutes?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(1440) breakMinutes?: number;
 }
