@@ -1,0 +1,268 @@
+// ─── Domain Types ────────────────────────────────────────────────────────────
+
+export type UserRole = 'admin' | 'manager' | 'staff';
+export type ShiftStatus = 'draft' | 'published';
+export type AssignmentStatus = 'assigned' | 'pending_swap' | 'completed' | 'cancelled';
+export type SwapRequestStatus = 'pending' | 'accepted' | 'rejected' | 'approved' | 'denied' | 'cancelled';
+export type DropRequestStatus = 'open' | 'claimed' | 'approved' | 'rejected' | 'expired' | 'cancelled';
+export type TimeOffStatus = 'pending' | 'approved' | 'denied' | 'cancelled';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  isActive: boolean;
+  desiredHoursPerWeek: number;
+  hourlyRate: number | null;
+  notificationPreferences: { inApp: boolean; email: boolean } | null;
+  skills: Skill[];
+  certifiedLocations: Location[];
+  managedLocations: Location[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Location {
+  id: string;
+  name: string;
+  timezone: string;
+  address: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Skill {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Shift {
+  id: string;
+  location: Location;
+  locationId: string;
+  date: string;          // YYYY-MM-DD
+  startTime: string;     // HH:mm
+  endTime: string;       // HH:mm
+  requiredSkill: Skill | null;
+  requiredSkillId: string | null;
+  headcount: number;
+  status: ShiftStatus;
+  notes: string | null;
+  isOvernight: boolean;
+  assignments: ShiftAssignment[];
+  publishedAt: string | null;
+  publishedById: string | null;
+  publishedBy?: User | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShiftAssignment {
+  id: string;
+  shift: Shift;
+  shiftId: string;
+  staff: User;
+  staffId: string;
+  status: AssignmentStatus;
+  assignedById: string | null;
+  assignedBy?: User | null;
+  confirmedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Availability {
+  id: string;
+  userId: string;
+  dayOfWeek: number;     // 0=Sun … 6=Sat
+  startTime: string;
+  endTime: string;
+}
+
+export interface AvailabilityException {
+  id: string;
+  userId: string;
+  date: string;
+  startTime: string | null;
+  endTime: string | null;
+  isUnavailable: boolean;
+  createdAt: string;
+}
+
+export interface SwapRequest {
+  id: string;
+  fromAssignment: ShiftAssignment;
+  fromAssignmentId: string;
+  toUser: User;
+  toUserId: string;
+  status: SwapRequestStatus;
+  reason: string | null;
+  managerId: string | null;
+  managerNote: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DropRequest {
+  id: string;
+  assignment: ShiftAssignment;
+  assignmentId: string;
+  claimedBy: User | null;
+  claimedById: string | null;
+  status: DropRequestStatus;
+  reason: string | null;
+  managerId: string | null;
+  managerNote: string | null;
+  expiresAt: string;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  entityType: string | null;
+  entityId: string | null;
+  createdAt: string;
+}
+
+export interface TimeOffRequest {
+  id: string;
+  staff: User;
+  staffId: string;
+  startDate: string;
+  endDate: string;
+  reason: string | null;
+  status: TimeOffStatus;
+  reviewedById: string | null;
+  managerNote: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuditLog {
+  id: string;
+  entity: string;
+  entityId: string;
+  action: string;
+  locationId: string | null;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+  performedBy: User | null;
+  note: string | null;
+  timestamp: string;
+}
+
+export type ReservationStatus = 'pending' | 'confirmed' | 'cancelled' | 'no_show';
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  category: string;
+  tag: string | null;
+  tagColor: 'cyan' | 'violet' | 'pink' | null;
+  isAvailable: boolean;
+  isTodaysHighlight: boolean;
+  sortOrder: number;
+  locationId: string | null;
+  location: Location | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Bookmark {
+  id: string;
+  label: string;
+  href: string;
+  createdAt: string;
+}
+
+export interface Reservation {
+  id: string;
+  customerName: string;
+  email: string;
+  phone: string | null;
+  date: string;
+  time: string;
+  partySize: number;
+  location: Location | null;
+  locationId: string | null;
+  status: ReservationStatus;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── API Response Shapes ──────────────────────────────────────────────────────
+
+export interface LoginResponse {
+  token: string;
+  user: User;
+}
+
+export interface ConstraintViolation {
+  rule: string;
+  severity: 'error' | 'warning';
+  message: string;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  violations: ConstraintViolation[];
+  warnings: ConstraintViolation[];
+  alternatives: { id: string; name: string }[];
+}
+
+export interface HoursDistributionEntry {
+  staffId: string;
+  name: string;
+  totalHours: number;
+  desiredHoursPerWeek: number;
+}
+
+export interface FairnessEntry {
+  staffId: string;
+  name: string;
+  totalShifts: number;
+  premiumShifts: number;
+  totalHours: number;
+  premiumRatio: number;
+}
+
+export interface FairnessReport {
+  fairnessScore: number;
+  staff: FairnessEntry[];
+}
+
+export interface OvertimeEntry {
+  staffId: string;
+  name: string;
+  hourlyRate: number | null;
+  weeklyHours: number;
+  overtimeHours: number;
+  overtimeCost: number | null;
+  isAtRisk: boolean;
+  isOvertime: boolean;
+  assignments: Array<{
+    shiftId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    minutes: number;
+    isOvertimePusher: boolean;
+    isInOvertime: boolean;
+  }>;
+}
