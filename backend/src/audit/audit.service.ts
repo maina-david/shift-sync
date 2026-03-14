@@ -68,7 +68,7 @@ export class AuditService {
       qb.andWhere('al.locationId = :locationId', { locationId: filters.locationId });
     } else if (filters.managedLocationIds) {
       const ids = filters.managedLocationIds.length > 0 ? filters.managedLocationIds : ['__none__'];
-      qb.andWhere('(al.locationId IN (:...managedIds) OR al.locationId IS NULL)', { managedIds: ids });
+      qb.andWhere('al.locationId IN (:...managedIds)', { managedIds: ids });
     }
 
     const [data, total] = await qb.getManyAndCount();
@@ -91,7 +91,17 @@ export class AuditService {
     startDate?: string;
     endDate?: string;
   }): Promise<string> {
-    const { data: logs } = await this.findAll({ ...filters, page: 1, limit: 200 });
+    const qb = this.auditRepo
+      .createQueryBuilder('al')
+      .leftJoinAndSelect('al.performedBy', 'user')
+      .orderBy('al.timestamp', 'ASC');
+
+    if (filters.entity) qb.andWhere('al.entity = :entity', { entity: filters.entity });
+    if (filters.locationId) qb.andWhere('al.locationId = :locationId', { locationId: filters.locationId });
+    if (filters.startDate) qb.andWhere('al.timestamp >= :start', { start: filters.startDate });
+    if (filters.endDate) qb.andWhere('al.timestamp <= :end', { end: filters.endDate + 'T23:59:59Z' });
+
+    const logs = await qb.getMany();
     const header = ['timestamp', 'entity', 'entityId', 'action', 'performedBy', 'note', 'before', 'after'];
     const rows = logs.map((l) => [
       l.timestamp.toISOString(),

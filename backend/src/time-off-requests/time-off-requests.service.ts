@@ -6,7 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TimeOffRequest, TimeOffStatus } from './entities/time-off-request.entity';
 import { CreateTimeOffRequestDto } from './dto/create-time-off-request.dto';
@@ -22,6 +22,7 @@ export class TimeOffRequestsService {
     @InjectRepository(User)
     private userRepo: Repository<User>,
     private events: EventEmitter2,
+    private dataSource: DataSource,
   ) {}
 
   private safeEmit(event: string, payload: unknown): void {
@@ -68,31 +69,34 @@ export class TimeOffRequestsService {
       throw new BadRequestException(`Time-off request cannot exceed ${MAX_DAYS} days`);
     }
 
-    // Reject if an overlapping PENDING or APPROVED request already exists for this staff member.
-    // Two date ranges [A,B] and [C,D] overlap when A <= D AND B >= C.
-    const conflict = await this.repo
-      .createQueryBuilder('r')
-      .where('r.staffId = :staffId', { staffId: staff.id })
-      .andWhere('r.status IN (:...statuses)', {
-        statuses: [TimeOffStatus.PENDING, TimeOffStatus.APPROVED],
-      })
-      .andWhere('r.startDate <= :endDate', { endDate: dto.endDate })
-      .andWhere('r.endDate >= :startDate', { startDate: dto.startDate })
-      .getOne();
+    const saved = await this.dataSource.transaction(async (em) => {
+      // Lock existing rows for this staff member to prevent concurrent overlapping submissions
+      const conflict = await em
+        .createQueryBuilder(TimeOffRequest, 'r')
+        .where('r.staffId = :staffId', { staffId: staff.id })
+        .andWhere('r.status IN (:...statuses)', {
+          statuses: [TimeOffStatus.PENDING, TimeOffStatus.APPROVED],
+        })
+        .andWhere('r.startDate <= :endDate', { endDate: dto.endDate })
+        .andWhere('r.endDate >= :startDate', { startDate: dto.startDate })
+        .setLock('pessimistic_write')
+        .getOne();
 
-    if (conflict) {
-      throw new BadRequestException(
-        'You already have a pending or approved time-off request that overlaps these dates',
-      );
-    }
+      if (conflict) {
+        throw new BadRequestException(
+          'You already have a pending or approved time-off request that overlaps these dates',
+        );
+      }
 
-    const request = this.repo.create({
-      staffId: staff.id,
-      startDate: dto.startDate,
-      endDate: dto.endDate,
-      reason: dto.reason ?? null,
+      const request = em.create(TimeOffRequest, {
+        staffId: staff.id,
+        startDate: dto.startDate,
+        endDate: dto.endDate,
+        reason: dto.reason ?? null,
+      });
+      return em.save(TimeOffRequest, request);
     });
-    const saved = await this.repo.save(request);
+
     this.safeEmit('time-off.requested', { requestId: saved.id, staffId: staff.id });
     return saved;
   }

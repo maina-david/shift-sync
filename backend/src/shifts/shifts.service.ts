@@ -279,15 +279,23 @@ export class ShiftsService {
     }
 
     const sourceEnd = addDays(sourceWeekStart, 7);
-    const sourceShifts = await this.shiftRepo.find({
-      where: {
-        locationId,
-        date: Between(sourceWeekStart, sourceEnd),
-      },
-    });
+    const targetEnd = addDays(targetWeekStart, 7);
+
+    const [sourceShifts, existingCount] = await Promise.all([
+      this.shiftRepo.find({
+        where: { locationId, date: Between(sourceWeekStart, sourceEnd) },
+      }),
+      this.shiftRepo.count({
+        where: { locationId, date: Between(targetWeekStart, targetEnd) },
+      }),
+    ]);
 
     if (sourceShifts.length === 0) {
       throw new BadRequestException('No shifts found in source week');
+    }
+
+    if (existingCount > 0) {
+      throw new BadRequestException('Target week already has shifts. Delete them first or choose a different target week.');
     }
 
     const dayOffset =
