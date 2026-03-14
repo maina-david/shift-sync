@@ -51,8 +51,11 @@ export class CertificationsController {
   @Get('user/:userId')
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: "Get certifications for a specific user (admin/manager)" })
-  findForUser(@Param('userId') userId: string) {
-    return this.svc.findForUser(userId);
+  findForUser(@Param('userId') userId: string, @CurrentUser() user: User) {
+    const managedLocationIds = user.role === UserRole.MANAGER
+      ? (user.managedLocations?.map((l) => l.id) ?? [])
+      : undefined;
+    return this.svc.findForUser(userId, managedLocationIds);
   }
 
   @Post('user/:userId')

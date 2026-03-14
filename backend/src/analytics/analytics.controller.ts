@@ -75,8 +75,9 @@ export class AnalyticsController {
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
     @Query('locationId') locationId?: string,
+    @CurrentUser() user?: User,
   ) {
-    return this.svc.getLaborCost(startDate, endDate, locationId);
+    return this.svc.getLaborCost(startDate, endDate, locationId, user);
   }
 
   @Get('kpi-rollup')
@@ -88,8 +89,9 @@ export class AnalyticsController {
   kpiRollup(
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
+    @CurrentUser() user?: User,
   ) {
-    return this.svc.getKpiRollup(startDate, endDate);
+    return this.svc.getKpiRollup(startDate, endDate, user);
   }
 
   @Get('absenteeism')
@@ -103,8 +105,9 @@ export class AnalyticsController {
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
     @Query('locationId') locationId?: string,
+    @CurrentUser() user?: User,
   ) {
-    return this.svc.getAbsenteeism(startDate, endDate, locationId);
+    return this.svc.getAbsenteeism(startDate, endDate, locationId, user);
   }
 
   @Get('turnover')

@@ -81,8 +81,15 @@ export class Location {
   @Column()
   address: string;
 
+  /** Geographic coordinates for weather and map integrations */
+  @Column({ type: 'double', nullable: true })
+  lat: number | null;
+
+  @Column({ type: 'double', nullable: true })
+  lng: number | null;
+
   /** Per-location floor plan zone configuration — editable by admins via PATCH /locations/:id/zones */
-  @Column({ type: 'json', nullable: true })
+  @Column({ type: 'json', nullable: true, default: null })
   zones: FloorZoneConfig[] | null;
 
   @CreateDateColumn()

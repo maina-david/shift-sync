@@ -62,10 +62,14 @@ export class ShiftFeedbackController {
   @ApiQuery({ name: 'startDate',  required: false, description: 'Start date (YYYY-MM-DD)' })
   @ApiQuery({ name: 'endDate',    required: false, description: 'End date (YYYY-MM-DD)' })
   getSummary(
+    @CurrentUser() user: User,
     @Query('locationId') locationId?: string,
     @Query('startDate')  startDate?: string,
     @Query('endDate')    endDate?: string,
   ) {
-    return this.svc.getSummary(locationId, startDate, endDate);
+    const managedLocationIds = user.role === UserRole.MANAGER
+      ? (user.managedLocations?.map((l) => l.id) ?? [])
+      : undefined;
+    return this.svc.getSummary(locationId, startDate, endDate, managedLocationIds);
   }
 }

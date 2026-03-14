@@ -85,6 +85,7 @@ export class ShiftFeedbackService {
     locationId?: string,
     startDate?: string,
     endDate?: string,
+    managedLocationIds?: string[],
   ): Promise<FeedbackSummary> {
     const qb = this.repo
       .createQueryBuilder('fb')
@@ -93,6 +94,9 @@ export class ShiftFeedbackService {
 
     if (locationId) {
       qb.andWhere('shift.locationId = :locationId', { locationId });
+    } else if (managedLocationIds) {
+      const ids = managedLocationIds.length > 0 ? managedLocationIds : ['__none__'];
+      qb.andWhere('shift.locationId IN (:...managedIds)', { managedIds: ids });
     }
 
     if (startDate) {

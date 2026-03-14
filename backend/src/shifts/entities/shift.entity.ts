@@ -8,6 +8,7 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { Location } from '../../locations/entities/location.entity';
 import { Skill } from '../../skills/entities/skill.entity';
@@ -83,4 +84,7 @@ export class Shift {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @DeleteDateColumn()
+  deletedAt: Date | null;
 }

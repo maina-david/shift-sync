@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { analyticsApi, analyticsExtApi, locationsApi } from '@/lib/api';
+import { analyticsApi, locationsApi } from '@/lib/api';
 import {
   Location,
   HoursDistributionEntry,
@@ -101,7 +101,7 @@ function LaborCostTab({ locations }: { locations: Location[] }) {
   const { data: report, isLoading } = useQuery<LaborCostReport>({
     queryKey: ['analytics', 'labor-cost', startDate, endDate, locationId],
     queryFn: () =>
-      analyticsExtApi.laborCost(startDate, endDate, locationId === 'all' ? undefined : locationId),
+      analyticsApi.laborCost(startDate, endDate, locationId === 'all' ? undefined : locationId),
   });
 
   const avgCostPerHour =
@@ -250,17 +250,17 @@ function KpiDashboardTab() {
 
   const { data: kpis = [], isLoading: kpiLoading } = useQuery<KpiRollup[]>({
     queryKey: ['analytics', 'kpi-rollup', startDate, endDate],
-    queryFn: () => analyticsExtApi.kpiRollup(startDate, endDate),
+    queryFn: () => analyticsApi.kpiRollup(startDate, endDate),
   });
 
   const { data: absenteeism, isLoading: absenteeismLoading } = useQuery<AbsenteeismReport>({
     queryKey: ['analytics', 'absenteeism', startDate, endDate],
-    queryFn: () => analyticsExtApi.absenteeism(startDate, endDate),
+    queryFn: () => analyticsApi.absenteeism(startDate, endDate),
   });
 
   const { data: turnover, isLoading: turnoverLoading } = useQuery<TurnoverReport>({
     queryKey: ['analytics', 'turnover'],
-    queryFn: analyticsExtApi.turnover,
+    queryFn: analyticsApi.turnover,
   });
 
   const donutData = turnover
@@ -561,13 +561,15 @@ export default function AnalyticsPage() {
     return colors.primary;
   }
 
-  function scoreColor(score: number) {
+  function scoreColor(score: number | null) {
+    if (score === null) return colors.muted;
     if (score >= 0.8) return colors.success;
     if (score >= 0.5) return colors.warning;
     return colors.danger;
   }
 
-  function scoreLabel(score: number) {
+  function scoreLabel(score: number | null) {
+    if (score === null) return 'No data';
     if (score >= 0.8) return 'Excellent';
     if (score >= 0.6) return 'Good';
     if (score >= 0.4) return 'Fair';
@@ -720,9 +722,9 @@ export default function AnalyticsPage() {
                           className="text-3xl font-bold tabular-nums"
                           style={{ color: scoreColor(fairness.fairnessScore) }}
                         >
-                          {(fairness.fairnessScore * 100).toFixed(0)}
+                          {fairness.fairnessScore !== null ? (fairness.fairnessScore * 100).toFixed(0) : '—'}
                         </span>
-                        <span className="text-lg text-muted-foreground">/100</span>
+                        {fairness.fairnessScore !== null && <span className="text-lg text-muted-foreground">/100</span>}
                       </div>
                       <span
                         className="text-sm font-medium"
@@ -736,7 +738,7 @@ export default function AnalyticsPage() {
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
-                        width: `${fairness.fairnessScore * 100}%`,
+                        width: `${(fairness.fairnessScore ?? 0) * 100}%`,
                         background: scoreColor(fairness.fairnessScore),
                       }}
                     />

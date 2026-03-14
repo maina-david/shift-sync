@@ -58,15 +58,24 @@ export class TimesheetsService {
     @InjectRepository(ShiftAssignment)
     private assignmentRepo: Repository<ShiftAssignment>,
     private readonly settingsService: SettingsService,
+    private readonly events: EventEmitter2,
   ) {}
 
-  private safeEmit(_event: string, _payload: unknown): void {
-    // Placeholder: wire up EventEmitter2 if notifications are needed
+  private safeEmit(event: string, payload: unknown): void {
+    try {
+      this.events.emit(event, payload);
+    } catch (err) {
+      this.logger.error(`Event emission failed for "${event}": ${(err as Error).message}`);
+    }
   }
 
   // ─── Clock-In ────────────────────────────────────────────────────────────────
 
   async clockIn(staffId: string, dto: ClockInDto): Promise<Timesheet> {
+    if (!dto.assignmentId && !dto.shiftId) {
+      throw new BadRequestException('Either assignmentId or shiftId must be provided to clock in');
+    }
+
     // Prevent double clock-in — one open timesheet per staff at a time
     const open = await this.repo.findOne({
       where: { staffId, clockOut: IsNull() },
@@ -265,7 +274,7 @@ export class TimesheetsService {
       const shiftDate = ts.shift?.date ?? ts.clockIn.toISOString().slice(0, 10);
 
       const locationName =
-        (ts.shift as any)?.location?.name ??
+        ts.shift?.location?.name ??
         ts.locationId ??
         '';
 

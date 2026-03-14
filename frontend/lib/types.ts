@@ -1,11 +1,19 @@
 // ─── Domain Types ────────────────────────────────────────────────────────────
 
-export type UserRole = 'admin' | 'manager' | 'staff';
+export type UserRole = 'admin' | 'manager' | 'area_manager' | 'staff';
 export type ShiftStatus = 'draft' | 'published';
 export type AssignmentStatus = 'assigned' | 'pending_swap' | 'completed' | 'cancelled';
 export type SwapRequestStatus = 'pending' | 'accepted' | 'rejected' | 'approved' | 'denied' | 'cancelled';
 export type DropRequestStatus = 'open' | 'claimed' | 'approved' | 'rejected' | 'expired' | 'cancelled';
 export type TimeOffStatus = 'pending' | 'approved' | 'denied' | 'cancelled';
+
+// Runtime-safe value sets (use for guards, validation, and switch exhaustiveness)
+export const USER_ROLES: UserRole[] = ['admin', 'manager', 'area_manager', 'staff'];
+export const SHIFT_STATUSES: ShiftStatus[] = ['draft', 'published'];
+export const ASSIGNMENT_STATUSES: AssignmentStatus[] = ['assigned', 'pending_swap', 'completed', 'cancelled'];
+export const SWAP_REQUEST_STATUSES: SwapRequestStatus[] = ['pending', 'accepted', 'rejected', 'approved', 'denied', 'cancelled'];
+export const DROP_REQUEST_STATUSES: DropRequestStatus[] = ['open', 'claimed', 'approved', 'rejected', 'expired', 'cancelled'];
+export const TIME_OFF_STATUSES: TimeOffStatus[] = ['pending', 'approved', 'denied', 'cancelled'];
 
 export interface User {
   id: string;
@@ -40,6 +48,8 @@ export interface Location {
   name: string;
   timezone: string;
   address: string;
+  lat: number | null;
+  lng: number | null;
   zones: FloorZoneConfig[] | null;
   createdAt: string;
   updatedAt: string;
@@ -256,7 +266,7 @@ export interface FairnessEntry {
 }
 
 export interface FairnessReport {
-  fairnessScore: number;
+  fairnessScore: number | null;
   staff: FairnessEntry[];
 }
 

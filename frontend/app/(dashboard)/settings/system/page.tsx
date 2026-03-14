@@ -180,9 +180,12 @@ export default function SystemSettingsPage() {
   const queryClient = useQueryClient();
   const [resetOpen, setResetOpen] = useState(false);
 
+  const isAdmin = user?.role === 'admin';
+
   const { data: settings = [], isLoading } = useQuery<SystemSetting[]>({
     queryKey: ['settings'],
     queryFn: settingsApi.list,
+    enabled: isAdmin,
   });
 
   const resetMutation = useMutation({
@@ -195,8 +198,9 @@ export default function SystemSettingsPage() {
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 
-  // ── Access guard ────────────────────────────────────────────────────────────
-  if (user?.role !== 'admin') {
+  // ── Access guard — wait for auth to settle before showing restricted message ─
+  if (user === null) return null;
+  if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
         <ShieldAlert className="h-10 w-10 opacity-40" />

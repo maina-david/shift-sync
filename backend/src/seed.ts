@@ -130,10 +130,10 @@ async function main() {
 
   console.log('📍 Creating locations...');
   const [loc1, loc2, loc3, loc4] = await locationRepo.save([
-    locationRepo.create({ name: 'North Beach',     timezone: 'America/New_York',    address: '123 North Beach Ave, New York, NY 10001',          zones: DEFAULT_FLOOR_ZONES }),
-    locationRepo.create({ name: 'Midtown East',    timezone: 'America/New_York',    address: '456 Park Ave, New York, NY 10022',                  zones: DEFAULT_FLOOR_ZONES }),
-    locationRepo.create({ name: 'Marina District', timezone: 'America/Los_Angeles', address: '789 Marina Blvd, San Francisco, CA 94123',          zones: DEFAULT_FLOOR_ZONES }),
-    locationRepo.create({ name: 'Santa Monica',    timezone: 'America/Los_Angeles', address: '321 Ocean Ave, Santa Monica, CA 90401',             zones: DEFAULT_FLOOR_ZONES }),
+    locationRepo.create({ name: 'North Beach',     timezone: 'America/New_York',    address: '123 North Beach Ave, New York, NY 10001',          lat: 40.7282,  lng: -73.9942,   zones: DEFAULT_FLOOR_ZONES }),
+    locationRepo.create({ name: 'Midtown East',    timezone: 'America/New_York',    address: '456 Park Ave, New York, NY 10022',                  lat: 40.7549,  lng: -73.9748,   zones: DEFAULT_FLOOR_ZONES }),
+    locationRepo.create({ name: 'Marina District', timezone: 'America/Los_Angeles', address: '789 Marina Blvd, San Francisco, CA 94123',          lat: 37.8030,  lng: -122.4370,  zones: DEFAULT_FLOOR_ZONES }),
+    locationRepo.create({ name: 'Santa Monica',    timezone: 'America/Los_Angeles', address: '321 Ocean Ave, Santa Monica, CA 90401',             lat: 34.0195,  lng: -118.4912,  zones: DEFAULT_FLOOR_ZONES }),
   ]);
   console.log('  ✓ 4 locations (2 ET, 2 PT)\n');
 

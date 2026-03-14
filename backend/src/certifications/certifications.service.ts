@@ -4,19 +4,34 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Certification } from './entities/certification.entity';
 import { CreateCertificationDto } from './dto/create-certification.dto';
-import { UserRole } from '../users/entities/user.entity';
+import { User, UserRole } from '../users/entities/user.entity';
 
 @Injectable()
 export class CertificationsService {
   constructor(
     @InjectRepository(Certification)
     private repo: Repository<Certification>,
+    @InjectRepository(User)
+    private userRepo: Repository<User>,
   ) {}
 
-  findForUser(userId: string): Promise<Certification[]> {
+  async findForUser(userId: string, managedLocationIds?: string[]): Promise<Certification[]> {
+    if (managedLocationIds !== undefined) {
+      // Manager: verify the target user is certified at one of the manager's locations
+      const targetUser = await this.userRepo.findOne({
+        where: { id: userId },
+        relations: ['certifiedLocations'],
+      });
+      const staffLocationIds = targetUser?.certifiedLocations?.map((l) => l.id) ?? [];
+      const hasOverlap = staffLocationIds.some((id) => managedLocationIds.includes(id));
+      if (!hasOverlap) {
+        throw new ForbiddenException('You do not manage any location this staff member is certified for');
+      }
+    }
+
     return this.repo.find({
       where: { userId },
       order: { expiryDate: 'ASC' },

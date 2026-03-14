@@ -42,9 +42,9 @@ export default function AvailabilityPage() {
     isUnavailable: false,
   });
 
-  const { data: availability } = useQuery({
+  const { data: availability, isLoading: availabilityLoading } = useQuery({
     queryKey: ['availability', user?.id],
-    queryFn: () => usersApi.getAvailability(user!.id),
+    queryFn: () => usersApi.getAvailability(user?.id ?? ''),
     enabled: !!user?.id,
   });
 
@@ -61,7 +61,7 @@ export default function AvailabilityPage() {
   }, [availability]);
 
   const saveMutation = useMutation({
-    mutationFn: () => usersApi.setAvailability(user!.id, slots),
+    mutationFn: () => usersApi.setAvailability(user?.id ?? '', slots),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['availability', user?.id] });
       toast.success('Availability saved');
@@ -245,7 +245,9 @@ export default function AvailabilityPage() {
           </Sheet>
         </CardHeader>
         <CardContent className="space-y-2">
-          {!availability?.exceptions?.length ? (
+          {availabilityLoading ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : !availability?.exceptions?.length ? (
             <p className="text-sm text-muted-foreground">No exceptions set.</p>
           ) : (
             <>

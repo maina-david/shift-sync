@@ -65,24 +65,37 @@ export class ConstraintCheckerService {
       }
     }
 
-    const availViolations = await this.checkDayAvailability(
-      staff,
-      shift.date,
-      timeToMinutes(shift.startTime),
-      timeToMinutes(shift.startTime) + shiftMinutes,
-    );
-    for (const v of availViolations) push(v);
+    const startMinutes = timeToMinutes(shift.startTime);
+    const endMinutes = timeToMinutes(shift.endTime);
+    const isOvernight = endMinutes < startMinutes;
 
-    const isOvernight = timeToMinutes(shift.endTime) < timeToMinutes(shift.startTime);
     if (isOvernight) {
+      // Split availability check at midnight: check current day from start → midnight,
+      // then next day from midnight → shift end.
+      const startDayViolations = await this.checkDayAvailability(
+        staff,
+        shift.date,
+        startMinutes,
+        24 * 60,
+      );
+      for (const v of startDayViolations) push(v);
+
       const nextDate = addDays(shift.date, 1);
       const nextViolations = await this.checkDayAvailability(
         staff,
         nextDate,
         0,
-        timeToMinutes(shift.endTime),
+        endMinutes,
       );
       for (const v of nextViolations) push(v);
+    } else {
+      const availViolations = await this.checkDayAvailability(
+        staff,
+        shift.date,
+        startMinutes,
+        startMinutes + shiftMinutes,
+      );
+      for (const v of availViolations) push(v);
     }
 
     const windowStart = new Date(startUTC.getTime() - 14 * 24 * 3600 * 1000);

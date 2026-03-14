@@ -25,10 +25,10 @@ export class Timesheet {
   @Column() staffId: string;
 
   @ManyToOne(() => Shift, { eager: true, nullable: true }) @JoinColumn({ name: 'shiftId' }) shift: Shift | null;
-  @Column({ type: 'varchar', nullable: true }) shiftId: string | null;
+  @Column({ type: 'varchar', nullable: true, default: null }) shiftId: string | null;
 
   @ManyToOne(() => ShiftAssignment, { nullable: true }) @JoinColumn({ name: 'assignmentId' }) assignment: ShiftAssignment | null;
-  @Column({ type: 'varchar', nullable: true }) assignmentId: string | null;
+  @Column({ type: 'varchar', nullable: true, default: null }) assignmentId: string | null;
 
   /** Actual clock-in time (ISO UTC) */
   @Column({ type: 'datetime' }) clockIn: Date;

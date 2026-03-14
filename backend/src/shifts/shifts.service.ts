@@ -198,7 +198,7 @@ export class ShiftsService {
     const shift = await this.findOne(id);
     this.assertCanManage(shift, manager);
     const locationId = shift.locationId;
-    await this.shiftRepo.remove(shift);
+    await this.shiftRepo.softRemove(shift);
     this.safeEmit('schedule.updated', { locationId });
   }
 
@@ -446,12 +446,13 @@ export class ShiftsService {
       entityId: shiftId,
     });
 
-    if (constraintResult.warnings.some((w) => w.rule === 'weekly_hours')) {
+    const overtimeWarning = constraintResult.warnings.find((w) => w.rule === 'weekly_hours');
+    if (overtimeWarning) {
       this.safeEmit('notification.send', {
         userId: manager.id,
         type: 'OVERTIME_WARNING',
         title: 'Overtime Warning',
-        message: constraintResult.warnings.find((w) => w.rule === 'weekly_hours')!.message,
+        message: overtimeWarning.message,
         entityType: 'shift_assignment',
         entityId: saved.id,
       });

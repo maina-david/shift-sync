@@ -22,18 +22,20 @@ export default function DashboardPage() {
   const queryClient = useQueryClient();
   const isStaff = user?.role === 'staff';
 
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+  const nextWeekStart = format(addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 1), 'yyyy-MM-dd');
+  const twoWeeksEnd = format(addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 2), 'yyyy-MM-dd');
+
   useEffect(() => {
-    if (isStaff) return;
+    if (user?.role === 'staff') return;
     const socket = getSocket();
     const handler = () => {
-      queryClient.invalidateQueries({ queryKey: ['on-duty-now'] });
+      queryClient.invalidateQueries({ queryKey: ['on-duty-now', today] });
     };
     socket.on('schedule:updated', handler);
     return () => { socket.off('schedule:updated', handler); };
-  }, [isStaff, queryClient]);
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
-  const twoWeeksEnd = format(addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 2), 'yyyy-MM-dd');
+  }, [user?.role, queryClient, today]);
 
   const { data: todayShifts = [], isLoading: shiftsLoading } = useQuery<Shift[]>({
     queryKey: ['shifts', 'today'],
@@ -43,20 +45,20 @@ export default function DashboardPage() {
   const { data: upcomingShifts = [], isLoading: upcomingLoading } = useQuery<Shift[]>({
     queryKey: ['shifts', 'upcoming', weekStart, twoWeeksEnd],
     queryFn: () => shiftsApi.list({ startDate: today, endDate: twoWeeksEnd }),
-    enabled: isStaff,
+    enabled: !!user && isStaff,
   });
 
   const { data: onDuty = [], isLoading: onDutyLoading } = useQuery({
-    queryKey: ['on-duty-now'],
+    queryKey: ['on-duty-now', today],
     queryFn: () => shiftsApi.onDutyNow(),
     refetchInterval: 60_000,
-    enabled: !isStaff,
+    enabled: !!user && !isStaff,
   });
 
   const { data: availableShifts = [] } = useQuery<Shift[]>({
     queryKey: ['shifts-available'],
     queryFn: () => shiftsApi.availableForPickup(),
-    enabled: isStaff,
+    enabled: !!user && isStaff,
   });
 
   const { data: swaps = [] } = useQuery<SwapRequest[]>({
@@ -72,20 +74,20 @@ export default function DashboardPage() {
   const { data: timeOffRequests = [] } = useQuery<TimeOffRequest[]>({
     queryKey: ['time-off-requests'],
     queryFn: timeOffApi.list,
-    enabled: !isStaff,
+    enabled: !!user && !isStaff,
   });
 
   const { data: overtime = [] } = useQuery({
     queryKey: ['analytics', 'overtime', weekStart],
     queryFn: () => analyticsApi.overtime(weekStart),
-    enabled: !isStaff,
+    enabled: !!user && !isStaff,
   });
 
   const myUpcoming = (upcomingShifts as Shift[]).filter((s) =>
     s.assignments.some((a) => a.staffId === user?.id && (a.status === 'assigned' || a.status === 'pending_swap')),
   ).sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
 
-  const myWeekShifts = myUpcoming.filter((s) => s.date >= weekStart && s.date < twoWeeksEnd.slice(0, 7) + '7');
+  const myWeekShifts = myUpcoming.filter((s) => s.date >= weekStart && s.date < nextWeekStart);
   const myWeekHours = myWeekShifts.reduce((acc, s) => {
     const [sh, sm] = s.startTime.split(':').map(Number);
     const [eh, em] = s.endTime.split(':').map(Number);

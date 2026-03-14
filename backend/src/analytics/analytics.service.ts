@@ -95,14 +95,12 @@ export class AnalyticsService {
     for (const a of assignments) {
       const mins = minutesBetween(a.shift.startTime, a.shift.endTime);
       const key = a.staffId;
-      if (!staffMap.has(key)) {
-        staffMap.set(key, {
-          name: a.staff.name,
-          totalMinutes: 0,
-          desiredHours: a.staff.desiredHoursPerWeek,
-        });
+      let entry = staffMap.get(key);
+      if (!entry) {
+        entry = { name: a.staff.name, totalMinutes: 0, desiredHours: a.staff.desiredHoursPerWeek };
+        staffMap.set(key, entry);
       }
-      staffMap.get(key)!.totalMinutes += mins;
+      entry.totalMinutes += mins;
     }
 
     return Array.from(staffMap.entries()).map(([staffId, data]) => ({
@@ -171,10 +169,11 @@ export class AnalyticsService {
       const isPremium = PREMIUM_DAYS.includes(day) && a.shift.startTime >= '17:00';
       const mins = minutesBetween(a.shift.startTime, a.shift.endTime);
 
-      if (!staffMap.has(a.staffId)) {
-        staffMap.set(a.staffId, { name: a.staff.name, totalShifts: 0, premiumShifts: 0, totalHours: 0 });
+      let entry = staffMap.get(a.staffId);
+      if (!entry) {
+        entry = { name: a.staff.name, totalShifts: 0, premiumShifts: 0, totalHours: 0 };
+        staffMap.set(a.staffId, entry);
       }
-      const entry = staffMap.get(a.staffId)!;
       entry.totalShifts++;
       if (isPremium) entry.premiumShifts++;
       entry.totalHours += mins / 60;
@@ -189,9 +188,13 @@ export class AnalyticsService {
       premiumRatio: d.totalShifts > 0 ? +(d.premiumShifts / d.totalShifts).toFixed(3) : 0,
     }));
 
+    if (results.length === 0) {
+      return { fairnessScore: null, staff: [] };
+    }
+
     const ratios = results.map((r) => r.premiumRatio);
-    const mean = ratios.reduce((s, v) => s + v, 0) / (ratios.length || 1);
-    const variance = ratios.reduce((s, v) => s + (v - mean) ** 2, 0) / (ratios.length || 1);
+    const mean = ratios.reduce((s, v) => s + v, 0) / ratios.length;
+    const variance = ratios.reduce((s, v) => s + (v - mean) ** 2, 0) / ratios.length;
     const stdDev = Math.sqrt(variance);
 
     return {
@@ -230,10 +233,11 @@ export class AnalyticsService {
 
     for (const a of assignments) {
       const mins = minutesBetween(a.shift.startTime, a.shift.endTime);
-      if (!staffMap.has(a.staffId)) {
-        staffMap.set(a.staffId, { name: a.staff.name, hourlyRate: a.staff.hourlyRate, weeklyMinutes: 0, assignments: [] });
+      let entry = staffMap.get(a.staffId);
+      if (!entry) {
+        entry = { name: a.staff.name, hourlyRate: a.staff.hourlyRate, weeklyMinutes: 0, assignments: [] };
+        staffMap.set(a.staffId, entry);
       }
-      const entry = staffMap.get(a.staffId)!;
       entry.weeklyMinutes += mins;
       entry.assignments.push({
         shiftId: a.shiftId,
@@ -277,7 +281,7 @@ export class AnalyticsService {
 
   // ─── PART 1: NEW ANALYTICS METHODS ─────────────────────────────────────────
 
-  async getLaborCost(startDate: string, endDate: string, locationId?: string) {
+  async getLaborCost(startDate: string, endDate: string, locationId?: string, requestingUser?: User) {
     const qb = this.shiftRepo
       .createQueryBuilder('s')
       .leftJoinAndSelect('s.assignments', 'a')
@@ -287,6 +291,10 @@ export class AnalyticsService {
       .andWhere('s.date >= :startDate AND s.date <= :endDate', { startDate, endDate });
 
     if (locationId) qb.andWhere('s.locationId = :locationId', { locationId });
+    if (requestingUser?.role === UserRole.MANAGER) {
+      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
+      qb.andWhere('s.locationId IN (:...ids)', { ids });
+    }
 
     const shifts = await qb.getMany();
 
@@ -317,19 +325,20 @@ export class AnalyticsService {
       // By location
       const locId = shift.locationId;
       const locName = shift.location?.name ?? locId;
-      if (!byLocationMap.has(locId)) {
-        byLocationMap.set(locId, { name: locName, scheduledHours: 0, laborCost: 0, shiftCount: 0 });
+      let locEntry = byLocationMap.get(locId);
+      if (!locEntry) {
+        locEntry = { name: locName, scheduledHours: 0, laborCost: 0, shiftCount: 0 };
+        byLocationMap.set(locId, locEntry);
       }
-      const locEntry = byLocationMap.get(locId)!;
       locEntry.scheduledHours += scheduledHours;
       locEntry.laborCost += shiftLaborCost;
       locEntry.shiftCount += 1;
 
-      // By date
-      if (!byDateMap.has(shift.date)) {
-        byDateMap.set(shift.date, { laborCost: 0, scheduledHours: 0 });
+      let dateEntry = byDateMap.get(shift.date);
+      if (!dateEntry) {
+        dateEntry = { laborCost: 0, scheduledHours: 0 };
+        byDateMap.set(shift.date, dateEntry);
       }
-      const dateEntry = byDateMap.get(shift.date)!;
       dateEntry.laborCost += shiftLaborCost;
       dateEntry.scheduledHours += scheduledHours;
     }
@@ -354,15 +363,20 @@ export class AnalyticsService {
     };
   }
 
-  async getKpiRollup(startDate: string, endDate: string) {
-    // Fetch all shifts in range with their assignments and location
-    const shifts = await this.shiftRepo
+  async getKpiRollup(startDate: string, endDate: string, requestingUser?: User) {
+    const qb = this.shiftRepo
       .createQueryBuilder('s')
       .leftJoinAndSelect('s.assignments', 'a')
       .leftJoinAndSelect('a.staff', 'staff')
       .leftJoinAndSelect('s.location', 'loc')
-      .where('s.date >= :startDate AND s.date <= :endDate', { startDate, endDate })
-      .getMany();
+      .where('s.date >= :startDate AND s.date <= :endDate', { startDate, endDate });
+
+    if (requestingUser?.role === UserRole.MANAGER) {
+      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
+      qb.andWhere('s.locationId IN (:...ids)', { ids });
+    }
+
+    const shifts = await qb.getMany();
 
     const locMap = new Map<string, {
       name: string;
@@ -379,8 +393,9 @@ export class AnalyticsService {
 
     for (const shift of shifts) {
       const locId = shift.locationId;
-      if (!locMap.has(locId)) {
-        locMap.set(locId, {
+      let entry = locMap.get(locId);
+      if (!entry) {
+        entry = {
           name: shift.location?.name ?? locId,
           timezone: shift.location?.timezone ?? 'UTC',
           totalShifts: 0,
@@ -391,9 +406,9 @@ export class AnalyticsService {
           publishedAssignments: 0,
           totalScheduledHours: 0,
           estimatedLaborCost: 0,
-        });
+        };
+        locMap.set(locId, entry);
       }
-      const entry = locMap.get(locId)!;
       entry.totalShifts += 1;
 
       if (shift.status === ShiftStatus.PUBLISHED) {
@@ -436,10 +451,9 @@ export class AnalyticsService {
     })).sort((a, b) => b.totalShifts - a.totalShifts);
   }
 
-  async getAbsenteeism(startDate: string, endDate: string, locationId?: string) {
+  async getAbsenteeism(startDate: string, endDate: string, locationId?: string, requestingUser?: User) {
     const today = new Date().toISOString().split('T')[0];
 
-    // A no-show: PUBLISHED shift, date < today, assignment status ASSIGNED (not completed/cancelled)
     const qb = this.assignRepo
       .createQueryBuilder('a')
       .innerJoinAndSelect('a.shift', 's')
@@ -450,11 +464,15 @@ export class AnalyticsService {
       .andWhere('a.status = :assignedStatus', { assignedStatus: AssignmentStatus.ASSIGNED });
 
     if (locationId) qb.andWhere('s.locationId = :locationId', { locationId });
+    if (requestingUser?.role === UserRole.MANAGER) {
+      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
+      qb.andWhere('s.locationId IN (:...ids)', { ids });
+    }
 
     const noShows = await qb.getMany();
 
     const noShowCount = noShows.length;
-    const totalAssignmentsInRange = await this.assignRepo
+    const totalQb = this.assignRepo
       .createQueryBuilder('a')
       .innerJoin('a.shift', 's')
       .where('s.status = :status', { status: ShiftStatus.PUBLISHED })
@@ -462,8 +480,15 @@ export class AnalyticsService {
       .andWhere('s.date < :today', { today })
       .andWhere('a.status IN (:...statuses)', {
         statuses: [AssignmentStatus.ASSIGNED, AssignmentStatus.COMPLETED],
-      })
-      .getCount();
+      });
+
+    if (locationId) totalQb.andWhere('s.locationId = :locationId', { locationId });
+    if (requestingUser?.role === UserRole.MANAGER) {
+      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
+      totalQb.andWhere('s.locationId IN (:...ids)', { ids });
+    }
+
+    const totalAssignmentsInRange = await totalQb.getCount();
 
     const noShowRate = totalAssignmentsInRange > 0
       ? +(noShowCount / totalAssignmentsInRange).toFixed(3)
@@ -475,10 +500,12 @@ export class AnalyticsService {
 
     for (const a of noShows) {
       const key = a.staffId;
-      if (!byStaffMap.has(key)) {
-        byStaffMap.set(key, { name: a.staff.name, noShowCount: 0 });
+      let staffEntry = byStaffMap.get(key);
+      if (!staffEntry) {
+        staffEntry = { name: a.staff.name, noShowCount: 0 };
+        byStaffMap.set(key, staffEntry);
       }
-      byStaffMap.get(key)!.noShowCount += 1;
+      staffEntry.noShowCount += 1;
 
       const date = a.shift.date;
       byDateMap.set(date, (byDateMap.get(date) ?? 0) + 1);

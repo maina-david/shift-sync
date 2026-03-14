@@ -62,7 +62,7 @@ export class DropRequestsService {
       qb.where('shift.locationId IN (:...managedIds)', { managedIds });
     }
 
-    return qb.getMany();
+    return qb.take(200).getMany();
   }
 
   async create(dto: CreateDropRequestDto, requester: User) {
@@ -164,6 +164,9 @@ export class DropRequestsService {
     const drop = await this.findOneOr404(dropId);
     if (drop.status !== DropRequestStatus.CLAIMED) {
       throw new BadRequestException('No one has claimed this drop request yet.');
+    }
+    if (!drop.claimedById) {
+      throw new BadRequestException('No user has claimed this drop request.');
     }
 
     if (manager.role === UserRole.MANAGER) {

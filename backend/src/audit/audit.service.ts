@@ -43,6 +43,7 @@ export class AuditService {
     performedById?: string;
     page?: number;
     limit?: number;
+    managedLocationIds?: string[];
   }) {
     if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
       throw new BadRequestException('endDate must be on or after startDate');
@@ -65,6 +66,9 @@ export class AuditService {
     if (filters.endDate) qb.andWhere('al.timestamp <= :end', { end: filters.endDate + 'T23:59:59Z' });
     if (filters.locationId) {
       qb.andWhere('al.locationId = :locationId', { locationId: filters.locationId });
+    } else if (filters.managedLocationIds) {
+      const ids = filters.managedLocationIds.length > 0 ? filters.managedLocationIds : ['__none__'];
+      qb.andWhere('(al.locationId IN (:...managedIds) OR al.locationId IS NULL)', { managedIds: ids });
     }
 
     const [data, total] = await qb.getManyAndCount();

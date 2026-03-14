@@ -32,15 +32,13 @@ export class ShiftFeedback {
   @Column({ type: 'tinyint' })
   rating: number;
 
-  @Column({ nullable: true, type: 'text' })
+  @Column({ nullable: true, type: 'text', default: null })
   comment: string | null;
 
-  /** Was the shift adequately staffed? */
-  @Column({ type: 'tinyint', nullable: true })
+  @Column({ type: 'tinyint', nullable: true, default: null })
   adequatelyStaffed: boolean | null;
 
-  /** Would staff like more shifts like this? */
-  @Column({ type: 'tinyint', nullable: true })
+  @Column({ type: 'tinyint', nullable: true, default: null })
   wouldRepeat: boolean | null;
 
   @CreateDateColumn()

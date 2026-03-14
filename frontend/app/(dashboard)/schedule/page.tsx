@@ -143,7 +143,12 @@ export default function SchedulePage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <WeatherWidget lat={37.7749} lng={-122.4194} locationName={locations.find((l) => l.id === firstLocationId)?.name} />
+          {(() => {
+            const loc = locations.find((l) => l.id === firstLocationId);
+            return loc?.lat != null && loc?.lng != null ? (
+              <WeatherWidget lat={loc.lat} lng={loc.lng} locationName={loc.name} />
+            ) : null;
+          })()}
 
           {isManager && locations.length > 0 && (
             <Select value={firstLocationId} onValueChange={setSelectedLocationId}>

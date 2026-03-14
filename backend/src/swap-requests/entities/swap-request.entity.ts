@@ -25,7 +25,7 @@ export class SwapRequest {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => ShiftAssignment, { eager: true })
+  @ManyToOne(() => ShiftAssignment, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'fromAssignmentId' })
   fromAssignment: ShiftAssignment;
 
@@ -44,20 +44,20 @@ export class SwapRequest {
   @Column({ type: 'enum', enum: SwapRequestStatus, default: SwapRequestStatus.PENDING })
   status: SwapRequestStatus;
 
-  @Column({ nullable: true, type: 'text' })
+  @Column({ nullable: true, type: 'text', default: null })
   reason: string | null;
 
-  @Column({ nullable: true, type: 'text' })
+  @Column({ nullable: true, type: 'text', default: null })
   managerNote: string | null;
 
   @ManyToOne(() => User, { nullable: true, eager: false })
   @JoinColumn({ name: 'managerId' })
   manager: User | null;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'varchar', nullable: true, default: null })
   managerId: string | null;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'datetime', nullable: true, default: null })
   reviewedAt: Date | null;
 
   @CreateDateColumn()

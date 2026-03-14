@@ -36,14 +36,14 @@ function changeTypeBadge(type: ScheduleChangeType) {
 }
 
 function exportCsv(violations: ScheduleChangeLog[]) {
-  const header = 'Shift Date,Location,Change Type,Changed At,Hours Before Shift,Predictability Pay Triggered,Predictability Pay Amount';
+  const header = 'Shift Date,Location,Change Type,Changed At,Hours Before Shift,Predictability Pay Triggered,Extra Hours Owed';
   const rows = violations.map((v) => {
     const shiftDate = v.shift?.date ?? '';
     const location = v.shift?.location?.name ?? '';
     const changedAt = format(new Date(v.changedAt), 'yyyy-MM-dd HH:mm');
     const hoursBeforeShift = v.hoursBeforeShift.toFixed(1);
     const triggered = v.triggersPredictabilityPay ? 'Yes' : 'No';
-    const amount = v.predictabilityPayAmount != null ? `$${v.predictabilityPayAmount.toFixed(2)}` : '';
+    const amount = v.predictabilityPayAmount != null ? `${v.predictabilityPayAmount.toFixed(2)} hrs` : '';
     return [shiftDate, location, v.changeType, changedAt, hoursBeforeShift, triggered, amount]
       .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
       .join(',');
@@ -132,14 +132,14 @@ export default function FairWorkweekPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Predictability Pay Owed</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Extra Hours Owed (factor)</CardTitle>
           </CardHeader>
           <CardContent>
             {summaryLoading ? (
               <Skeleton className="h-8 w-28" />
             ) : (
               <p className="text-3xl font-bold tabular-nums text-amber-600">
-                ${totalPayOwed.toFixed(2)}
+                {totalPayOwed.toFixed(2)} hrs
               </p>
             )}
           </CardContent>
@@ -205,7 +205,7 @@ export default function FairWorkweekPage() {
                     <TableHead>Change Type</TableHead>
                     <TableHead>Changed At</TableHead>
                     <TableHead className="text-right">Hours Before Shift</TableHead>
-                    <TableHead className="text-right">Predictability Pay</TableHead>
+                    <TableHead className="text-right">Extra Hours Owed</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -228,7 +228,7 @@ export default function FairWorkweekPage() {
                             variant="outline"
                             className="border-destructive/40 text-destructive bg-destructive/10 tabular-nums"
                           >
-                            ${(v.predictabilityPayAmount ?? 0).toFixed(2)}
+                            {(v.predictabilityPayAmount ?? 0).toFixed(2)} hrs
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground text-xs">—</span>

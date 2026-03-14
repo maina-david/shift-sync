@@ -57,7 +57,7 @@ export class Checklist {
   @Column({ type: 'varchar', nullable: true })
   assignedToId: string | null;
 
-  @Column({ type: 'json' })
+  @Column({ type: 'json', default: () => "'[]'" })
   items: ChecklistItem[];
 
   @Column({ default: false })

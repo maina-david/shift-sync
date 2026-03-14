@@ -64,7 +64,7 @@ export default function SwapRequestsPage() {
   });
 
   const swapMutation = useMutation({
-    mutationFn: ({ id, action, note }: { id: string; action: string; note?: string }) =>
+    mutationFn: ({ id, action, note }: { id: string; action: 'approve' | 'deny' | 'accept' | 'reject'; note?: string }) =>
       action === 'approve'
         ? swapRequestsApi.approve(id, note)
         : action === 'deny'
@@ -82,7 +82,7 @@ export default function SwapRequestsPage() {
   });
 
   const dropMutation = useMutation({
-    mutationFn: ({ id, action, note }: { id: string; action: string; note?: string }) =>
+    mutationFn: ({ id, action, note }: { id: string; action: 'claim' | 'approve' | 'cancel' | 'reject'; note?: string }) =>
       action === 'claim'
         ? dropRequestsApi.claim(id)
         : action === 'approve'

@@ -117,7 +117,7 @@ export class AuthService {
       { sub: user.id, email: user.email, role: user.role },
       {
         secret: this.config.get<string>('jwt.secret'),
-        expiresIn: this.config.get('jwt.expiresIn') as any,
+        expiresIn: this.config.get<string>('jwt.expiresIn'),
       },
     );
   }
@@ -127,7 +127,7 @@ export class AuthService {
       { sub: userId },
       {
         secret: this.config.get<string>('jwt.refreshSecret'),
-        expiresIn: this.config.get('jwt.refreshExpiresIn') as any,
+        expiresIn: this.config.get<string>('jwt.refreshExpiresIn'),
       },
     );
   }

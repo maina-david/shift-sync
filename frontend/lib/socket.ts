@@ -15,8 +15,8 @@ export function getSocket(): Socket {
       autoConnect: true,
     });
 
-    socket.on('connect_error', (err) => {
-      console.warn('Socket.IO connection error:', err.message);
+    socket.on('connect_error', () => {
+      // connection errors are retried automatically by socket.io
     });
   }
   return socket;
