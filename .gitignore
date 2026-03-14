@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+
+# Environment files — copy .env.example and fill in values
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# IDE / tool directories
+.vscode/
+.claude/
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
