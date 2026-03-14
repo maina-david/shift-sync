@@ -38,7 +38,6 @@ export class AuthService {
     return safe;
   }
 
-  /** Called by LocalStrategy — validates credentials, returns user without password or null */
   async validateUser(email: string, password: string): Promise<Omit<User, 'password'> | null> {
     const user = await this.userRepo
       .createQueryBuilder('u')
@@ -55,7 +54,6 @@ export class AuthService {
     return safe;
   }
 
-  /** Called by controller after Passport has validated credentials via LocalStrategy */
   async login(user: Omit<User, 'password'>, res: Response) {
     const accessToken = this.signAccessToken(user);
     const refreshToken = this.signRefreshToken(user.id);
@@ -64,7 +62,6 @@ export class AuthService {
     return { token: accessToken, user };
   }
 
-  /** Verify the refresh token cookie, validate against stored hash, rotate token, issue new access token */
   async refresh(refreshToken: string, res: Response): Promise<{ token: string; user: User }> {
     let payload: { sub: string };
     try {
@@ -89,7 +86,6 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token has been revoked');
     }
 
-    // Rotate: issue new refresh token and update stored hash
     const newRefreshToken = this.signRefreshToken(user.id);
     await this.userRepo.update(user.id, { refreshTokenHash: hashToken(newRefreshToken) });
     this.setRefreshCookie(res, newRefreshToken);

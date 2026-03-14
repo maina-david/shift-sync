@@ -70,8 +70,6 @@ export class TimesheetsService {
     }
   }
 
-  // ─── Clock-In ────────────────────────────────────────────────────────────────
-
   async clockIn(staffId: string, dto: ClockInDto): Promise<Timesheet> {
     if (!dto.assignmentId && !dto.shiftId) {
       throw new BadRequestException('Either assignmentId or shiftId must be provided to clock in');
@@ -125,8 +123,6 @@ export class TimesheetsService {
     });
   }
 
-  // ─── Clock-Out ───────────────────────────────────────────────────────────────
-
   async clockOut(staffId: string, dto: ClockOutDto): Promise<Timesheet> {
     const timesheet = await this.repo.findOne({
       where: { staffId, clockOut: IsNull() },
@@ -138,7 +134,7 @@ export class TimesheetsService {
     const now = new Date();
     const breakMinutes = dto.breakMinutes ?? 0;
 
-    // actualHours = elapsed milliseconds / 3_600_000 - break in fractional hours
+    // actualHours = elapsed time minus break, floored to zero
     const elapsedHours = (now.getTime() - timesheet.clockIn.getTime()) / 3_600_000;
     const breakHours = breakMinutes / 60;
     const actualHours = Math.max(0, parseFloat((elapsedHours - breakHours).toFixed(2)));
@@ -150,8 +146,6 @@ export class TimesheetsService {
 
     return this.repo.save(timesheet);
   }
-
-  // ─── Queries ─────────────────────────────────────────────────────────────────
 
   async findAll(query: TimesheetQuery): Promise<Timesheet[]> {
     const qb = this.repo
@@ -195,8 +189,6 @@ export class TimesheetsService {
     });
   }
 
-  // ─── Review ──────────────────────────────────────────────────────────────────
-
   async review(id: string, dto: ReviewTimesheetDto, reviewerId: string): Promise<Timesheet> {
     const timesheet = await this.repo.findOne({ where: { id } });
     if (!timesheet) {
@@ -228,14 +220,12 @@ export class TimesheetsService {
     return saved;
   }
 
-  // ─── Payroll Export ───────────────────────────────────────────────────────────
-
   async export(query: PayrollExportQuery): Promise<string> {
     const status = query.status ?? TimesheetStatus.APPROVED;
     const payrollSettings = this.settingsService.getPayroll();
     const overtimeMultiplier = payrollSettings.overtimeMultiplier;
 
-    // Per-shift overtime threshold: hours beyond 8 in a single shift are flagged as OT
+    // Hours beyond 8 in a single shift are billed at the overtime rate
     const perShiftOtThreshold = 8;
 
     const qb = this.repo
@@ -247,7 +237,6 @@ export class TimesheetsService {
       .andWhere('ts.clockIn >= :startDate', { startDate: new Date(query.startDate) })
       .orderBy('ts.clockIn', 'ASC');
 
-    // End-of-day boundary
     const endDate = new Date(query.endDate);
     endDate.setUTCHours(23, 59, 59, 999);
     qb.andWhere('ts.clockIn <= :endDate', { endDate });
@@ -271,13 +260,8 @@ export class TimesheetsService {
       );
       const totalPay = parseFloat((regularPay + overtimePay).toFixed(2));
 
-      // Determine shift date from the linked shift, or fall back to clock-in date
       const shiftDate = ts.shift?.date ?? ts.clockIn.toISOString().slice(0, 10);
-
-      const locationName =
-        ts.shift?.location?.name ??
-        ts.locationId ??
-        '';
+      const locationName = ts.shift?.location?.name ?? ts.locationId ?? '';
 
       return {
         employeeName: ts.staff?.name ?? '',
@@ -296,7 +280,6 @@ export class TimesheetsService {
       };
     });
 
-    // Build CSV
     const header = [
       'Employee Name',
       'Email',

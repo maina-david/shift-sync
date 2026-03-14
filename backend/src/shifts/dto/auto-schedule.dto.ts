@@ -1,4 +1,4 @@
-import { IsUUID, IsString, IsOptional, IsInt, Min } from 'class-validator';
+import { IsUUID, IsString, IsOptional, IsInt, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AutoScheduleDto {
@@ -14,11 +14,13 @@ export class AutoScheduleDto {
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Max(24)
   shiftsPerDay?: number;
 
   @ApiPropertyOptional({ default: 1, description: 'Minimum staff to assign per slot; slots below this threshold are recorded as unfilled' })
   @IsOptional()
   @IsInt()
   @Min(0)
+  @Max(100)
   minStaffPerShift?: number;
 }

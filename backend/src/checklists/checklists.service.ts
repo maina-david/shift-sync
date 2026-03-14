@@ -16,8 +16,6 @@ export class ChecklistsService {
     private readonly repo: Repository<Checklist>,
   ) {}
 
-  // ─── Create ──────────────────────────────────────────────────────────────────
-
   async create(dto: CreateChecklistDto, _creatorId: string): Promise<Checklist> {
     const items = dto.items.map((item) => ({
       id: crypto.randomUUID(),
@@ -40,8 +38,6 @@ export class ChecklistsService {
 
     return this.repo.save(checklist);
   }
-
-  // ─── List ─────────────────────────────────────────────────────────────────
 
   async findAll(locationId?: string, date?: string, user?: User): Promise<Checklist[]> {
     const qb = this.repo
@@ -66,14 +62,11 @@ export class ChecklistsService {
     }
 
     if (date) {
-      // Filter to checklists whose linked shift falls on the given date
       qb.innerJoin('shifts', 'shift', 'shift.id = cl.shiftId AND shift.date = :date', { date });
     }
 
     return qb.getMany();
   }
-
-  // ─── Find One ─────────────────────────────────────────────────────────────
 
   async findOne(id: string): Promise<Checklist> {
     const checklist = await this.repo.findOne({ where: { id } });
@@ -82,8 +75,6 @@ export class ChecklistsService {
     }
     return checklist;
   }
-
-  // ─── Complete Item ────────────────────────────────────────────────────────
 
   async completeItem(checklistId: string, itemId: string, userId: string): Promise<Checklist> {
     const checklist = await this.findOne(checklistId);
@@ -100,7 +91,7 @@ export class ChecklistsService {
       completedById: userId,
     };
 
-    // If every required item is now completed, mark the whole checklist as done
+    // Mark the checklist complete once all required items are done
     const allRequiredDone = checklist.items
       .filter((i) => i.required)
       .every((i) => i.completedAt !== null);
@@ -112,8 +103,6 @@ export class ChecklistsService {
 
     return this.repo.save(checklist);
   }
-
-  // ─── Remove ───────────────────────────────────────────────────────────────
 
   async remove(id: string): Promise<void> {
     const checklist = await this.findOne(id);

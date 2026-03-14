@@ -22,9 +22,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   @WebSocketServer()
   server: Server;
 
-  /** Map of userId → Set of socket IDs */
   private userSockets = new Map<string, Set<string>>();
-  /** Map of socketId → userId */
   private socketUser = new Map<string, string>();
 
   constructor(
@@ -100,17 +98,14 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     }
   }
 
-  /** Emit notification to a specific user */
   emitToUser(userId: string, event: string, data: unknown) {
     this.server.to(`user:${userId}`).emit(event, data);
   }
 
-  /** Emit to all managers of a location */
   emitToLocation(locationId: string, event: string, data: unknown) {
     this.server.to(`location:${locationId}`).emit(event, data);
   }
 
-  /** Emit schedule update to location room (for real-time calendar refresh) */
   @OnEvent('schedule.updated')
   handleScheduleUpdated(payload: { locationId?: string; shiftId?: string; weekStart?: string }) {
     if (payload.locationId) {
@@ -119,7 +114,6 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     }
   }
 
-  /** Real-time conflict detection: emit when simultaneous assignment attempted */
   emitConflict(locationId: string, data: { shiftId: string; staffId: string; message: string }) {
     this.server.to(`location:${locationId}`).emit('assignment:conflict', data);
   }
