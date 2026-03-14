@@ -1,14 +1,16 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { ArrowLeft, MapPin } from 'lucide-react';
+import { ArrowLeft, MapPin, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { locationsApi, shiftsApi } from '@/lib/api';
+import { useAuth } from '@/contexts/auth-context';
 import type { Location, ShiftAssignment } from '@/lib/types';
+import { FloorPlanEditor } from '@/components/floor-plan/floor-plan-editor';
 import LocationLoading from './loading';
 
 const FloorPlanCanvas = dynamic(
@@ -16,16 +18,10 @@ const FloorPlanCanvas = dynamic(
   { ssr: false, loading: () => <LocationLoading /> }
 );
 
-function FloorPlanSkeleton() {
-  return (
-    <div className="flex h-full items-center justify-center bg-muted/20 rounded-lg border border-border/40">
-      <p className="text-sm text-muted-foreground animate-pulse">Loading floor plan…</p>
-    </div>
-  );
-}
-
 export default function LocationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { user } = useAuth();
+  const [editingLayout, setEditingLayout] = useState(false);
 
   const { data: location, isLoading: locLoading } = useQuery<Location>({
     queryKey: ['location', id],
@@ -44,6 +40,28 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
 
   if (locLoading) return <LocationLoading />;
 
+  // ─── Editor overlay ───────────────────────────────────────────────────────
+  if (editingLayout) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-6rem)]">
+        <div className="shrink-0 px-0 pb-3 flex items-center gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">
+            Edit floor plan — {location?.name}
+          </h2>
+          <Badge variant="outline" className="font-mono text-xs">{location?.timezone}</Badge>
+        </div>
+        <div className="flex-1 rounded-xl border border-border/40 overflow-hidden min-h-0 bg-background">
+          <FloorPlanEditor
+            locationId={id}
+            initialZones={location?.zones ?? null}
+            onClose={() => setEditingLayout(false)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Normal view ──────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] space-y-4">
       <div className="flex items-start justify-between shrink-0">
@@ -69,14 +87,26 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
 
-        <div className="flex items-center gap-2 rounded-md border border-chart-success/20 bg-chart-success/8 px-2.5 py-1.5">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-success opacity-75" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-chart-success" />
-          </span>
-          <span className="text-xs font-medium text-chart-success">
-            {locationAssignments.length} on duty now
-          </span>
+        <div className="flex items-center gap-2">
+          {user?.role === 'admin' && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setEditingLayout(true)}
+            >
+              <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
+              Edit layout
+            </Button>
+          )}
+          <div className="flex items-center gap-2 rounded-md border border-chart-success/20 bg-chart-success/8 px-2.5 py-1.5">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-success opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-chart-success" />
+            </span>
+            <span className="text-xs font-medium text-chart-success">
+              {locationAssignments.length} on duty now
+            </span>
+          </div>
         </div>
       </div>
 
@@ -86,6 +116,7 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
 
       <p className="text-xs text-muted-foreground shrink-0 text-center">
         Click a zone to see who&apos;s on duty · Scroll to zoom · Drag to pan
+        {user?.role === 'admin' && ' · Edit layout to customise zones'}
       </p>
     </div>
   );

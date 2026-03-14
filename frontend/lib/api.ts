@@ -121,6 +121,10 @@ export const locationsApi = {
   update: (id: string, data: Partial<{ name: string; timezone: string; address: string }>) =>
     api.patch(`/locations/${id}`, data).then((r) => r.data),
   remove: (id: string) => api.delete(`/locations/${id}`).then((r) => r.data),
+  updateZones: (id: string, zones: import('./types').FloorZoneConfig[]) =>
+    api.put(`/locations/${id}/zones`, { zones }).then((r) => r.data),
+  resetZones: (id: string) =>
+    api.delete(`/locations/${id}/zones`).then((r) => r.data),
 };
 
 export const skillsApi = {

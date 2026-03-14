@@ -139,7 +139,6 @@ All seeded accounts share the same password: **`Coastal2024!`**
 ## Known Limitations
 
 1. **MySQL only** — TypeORM is configured with the MySQL driver. Switching to PostgreSQL requires changing the driver and a few raw-query expressions.
-2. **No floor plan editor UI** — zone positions/sizes can be updated via `PUT /locations/:id/zones` (admin API), but there is no drag-and-drop editor in the frontend. JSON edits via API or a REST client (Postman / curl) are required to customise a location's layout.
 
 ---
 
