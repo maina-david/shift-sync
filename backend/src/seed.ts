@@ -5,7 +5,7 @@ import * as dotenv from 'dotenv';
 import { resolve } from 'path';
 
 import { User, UserRole } from './users/entities/user.entity';
-import { Location } from './locations/entities/location.entity';
+import { Location, DEFAULT_FLOOR_ZONES } from './locations/entities/location.entity';
 import { Skill } from './skills/entities/skill.entity';
 import { Shift, ShiftStatus } from './shifts/entities/shift.entity';
 import { ShiftAssignment, AssignmentStatus } from './shifts/entities/shift-assignment.entity';
@@ -112,10 +112,10 @@ async function main() {
 
   console.log('📍 Creating locations...');
   const [loc1, loc2, loc3, loc4] = await locationRepo.save([
-    locationRepo.create({ name: 'North Beach',     timezone: 'America/New_York',    address: '123 North Beach Ave, New York, NY 10001' }),
-    locationRepo.create({ name: 'Midtown East',    timezone: 'America/New_York',    address: '456 Park Ave, New York, NY 10022' }),
-    locationRepo.create({ name: 'Marina District', timezone: 'America/Los_Angeles', address: '789 Marina Blvd, San Francisco, CA 94123' }),
-    locationRepo.create({ name: 'Santa Monica',    timezone: 'America/Los_Angeles', address: '321 Ocean Ave, Santa Monica, CA 90401' }),
+    locationRepo.create({ name: 'North Beach',     timezone: 'America/New_York',    address: '123 North Beach Ave, New York, NY 10001',          zones: DEFAULT_FLOOR_ZONES }),
+    locationRepo.create({ name: 'Midtown East',    timezone: 'America/New_York',    address: '456 Park Ave, New York, NY 10022',                  zones: DEFAULT_FLOOR_ZONES }),
+    locationRepo.create({ name: 'Marina District', timezone: 'America/Los_Angeles', address: '789 Marina Blvd, San Francisco, CA 94123',          zones: DEFAULT_FLOOR_ZONES }),
+    locationRepo.create({ name: 'Santa Monica',    timezone: 'America/Los_Angeles', address: '321 Ocean Ave, Santa Monica, CA 90401',             zones: DEFAULT_FLOOR_ZONES }),
   ]);
   console.log('  ✓ 4 locations (2 ET, 2 PT)\n');
 
