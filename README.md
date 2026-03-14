@@ -148,10 +148,36 @@ All seeded accounts share the same password: **`Coastal2024!`**
 1. **"Manager" means location-manager** — a manager account is linked to one or more locations and can only act on shifts/assignments within those locations. The requirement said "manager role" without specifying scope; location-scoping was assumed.
 2. **Swap requests require a named recipient** — the spec described swaps but didn't specify whether they were open-market or peer-to-peer. Peer-to-peer (staff nominates who takes their shift) was implemented as it's safer for scheduling integrity.
 3. **Drop requests go to any available qualified staff** — once a manager approves a drop, the shift is unassigned and re-published for reassignment rather than automatically filled.
-4. **Fairness score formula** — defined as `assignedHours / desiredHoursPerWeek`, clamped to [0, 1]. "Desired hours" is a per-user setting; where requirements were silent on the formula, this ratio was used as the most intuitive measure.
+4. **Fairness score formula** — based on standard deviation of premium-shift ratios across staff (Fri/Sat after 17:00). Score of 1.0 = perfectly equal distribution; 0.0 = maximally unequal. `crossLocation=true` aggregates ratios across all locations for multi-location staff.
 5. **Audit log is append-only** — no delete or edit endpoint is exposed for audit entries. This was treated as a hard requirement even though the spec didn't explicitly say immutable.
 6. **JWT access token is in-memory only** — storing the access token in a cookie or localStorage introduces XSS or CSRF risk. In-memory storage with a silent-refresh pattern was chosen as the most secure default.
 7. **Public landing page at `/`** — the spec listed a dashboard as the main entry point but didn't address unauthenticated visitors. A public marketing-style landing page was added at `/`; the dashboard requires login.
+
+---
+
+## Intentional Ambiguities — Decisions Documented
+
+The following scenarios were deliberately unspecified. Here is how each was resolved:
+
+### 1. De-certifying a staff member from a location
+
+Existing assignments are preserved — removing a location certification does not cancel or delete any shift assignments already in place. The constraint checker only fires on new assignment attempts, so historical data is untouched. The rationale: retroactive cancellation of already-confirmed shifts would cause more operational disruption than a manager manually reviewing and removing individual assignments. A warning banner on the staff profile page is the appropriate UX signal.
+
+### 2. "Desired hours" vs. availability windows
+
+Desired hours is treated as a scheduling preference / fairness target, not a hard cap. Availability windows are the hard constraint: if a shift falls outside a staff member's availability window, the constraint checker raises an `error`-severity violation and blocks assignment. Desired hours only produce a `warning` when a staff member is projected to exceed their preferred weekly total — managers can override without a reason.
+
+### 3. Consecutive-day counting — 1-hour shift vs. 11-hour shift
+
+A shift counts as a worked day regardless of duration. The consecutive-day rule is designed to prevent fatigue from sustained multi-day stretches, and even a short shift represents a day a staff member was required to report for duty. This is consistent with most jurisdictions' labour-law interpretation of "day worked."
+
+### 4. Shift edited after swap approval but before the shift occurs
+
+The system allows the shift to be edited (time, skill, location) by a manager. The approved swap assignment is preserved but both the original requester and the recipient receive an in-app notification that the shift details changed. If the edit changes the required skill and the new assignee no longer has that skill, the constraint checker will flag the mismatch on the next check — the manager is responsible for re-evaluating. No automatic revocation of the swap was implemented because it would create a confusing loop of re-approval.
+
+### 5. Location spanning a timezone boundary
+
+Each location has a single IANA timezone identifier. The system does not model split-timezone scenarios. If a restaurant physically straddles a state line, the operator should choose the timezone for the side where the majority of operations occur (e.g., the kitchen or main dining room). All shift times and constraint checks — including rest-period gaps between shifts at different locations — are resolved through UTC conversion using each location's assigned timezone, so cross-location rest calculations remain accurate even for staff who work at locations in different timezones.
 
 ---
 
