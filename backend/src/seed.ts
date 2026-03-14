@@ -20,6 +20,13 @@ import { LogEntry } from './log-book/entities/log-entry.entity';
 import { MenuItem } from './menu/entities/menu-item.entity';
 import { Reservation, ReservationStatus } from './reservations/entities/reservation.entity';
 import { Bookmark } from './bookmarks/entities/bookmark.entity';
+import { ScheduleTemplate } from './schedule-templates/entities/schedule-template.entity';
+import { Timesheet, TimesheetStatus } from './timesheets/entities/timesheet.entity';
+import { Certification } from './certifications/entities/certification.entity';
+import { Message, MessageType } from './messages/entities/message.entity';
+import { Checklist, ChecklistType } from './checklists/entities/checklist.entity';
+import { ShiftFeedback } from './shift-feedback/entities/shift-feedback.entity';
+import { ScheduleChangeLog, ChangeType } from './fair-workweek/entities/schedule-change-log.entity';
 
 dotenv.config({ path: resolve(__dirname, '..', '.env') });
 
@@ -58,6 +65,8 @@ async function main() {
       SwapRequest, DropRequest, Notification, AuditLog,
       TimeOffRequest, LogEntry,
       MenuItem, Reservation, Bookmark,
+      ScheduleTemplate, Timesheet, Certification,
+      Message, Checklist, ShiftFeedback, ScheduleChangeLog,
     ],
     synchronize: true,
   });
@@ -75,6 +84,8 @@ async function main() {
     'users', 'skills', 'locations',
     'time_off_requests', 'log_entries',
     'menu_items', 'reservations', 'bookmarks',
+    'schedule_templates', 'timesheets', 'certifications',
+    'messages', 'checklists', 'shift_feedback', 'schedule_change_logs',
   ];
   for (const table of tables) {
     await AppDataSource.query(`TRUNCATE TABLE \`${table}\``);
@@ -82,22 +93,29 @@ async function main() {
   await AppDataSource.query('SET FOREIGN_KEY_CHECKS = 1');
   console.log('✅ Tables cleared\n');
 
-  const userRepo     = AppDataSource.getRepository(User);
-  const locationRepo = AppDataSource.getRepository(Location);
-  const skillRepo    = AppDataSource.getRepository(Skill);
-  const shiftRepo    = AppDataSource.getRepository(Shift);
-  const assignRepo   = AppDataSource.getRepository(ShiftAssignment);
-  const availRepo    = AppDataSource.getRepository(Availability);
-  const exceptRepo   = AppDataSource.getRepository(AvailabilityException);
-  const swapRepo     = AppDataSource.getRepository(SwapRequest);
-  const dropRepo     = AppDataSource.getRepository(DropRequest);
-  const notifRepo    = AppDataSource.getRepository(Notification);
-  const auditRepo    = AppDataSource.getRepository(AuditLog);
-  const timeOffRepo  = AppDataSource.getRepository(TimeOffRequest);
-  const logRepo      = AppDataSource.getRepository(LogEntry);
-  const menuRepo     = AppDataSource.getRepository(MenuItem);
-  const reservRepo   = AppDataSource.getRepository(Reservation);
-  const bookmarkRepo = AppDataSource.getRepository(Bookmark);
+  const userRepo      = AppDataSource.getRepository(User);
+  const locationRepo  = AppDataSource.getRepository(Location);
+  const skillRepo     = AppDataSource.getRepository(Skill);
+  const shiftRepo     = AppDataSource.getRepository(Shift);
+  const assignRepo    = AppDataSource.getRepository(ShiftAssignment);
+  const availRepo     = AppDataSource.getRepository(Availability);
+  const exceptRepo    = AppDataSource.getRepository(AvailabilityException);
+  const swapRepo      = AppDataSource.getRepository(SwapRequest);
+  const dropRepo      = AppDataSource.getRepository(DropRequest);
+  const notifRepo     = AppDataSource.getRepository(Notification);
+  const auditRepo     = AppDataSource.getRepository(AuditLog);
+  const timeOffRepo   = AppDataSource.getRepository(TimeOffRequest);
+  const logRepo       = AppDataSource.getRepository(LogEntry);
+  const menuRepo      = AppDataSource.getRepository(MenuItem);
+  const reservRepo    = AppDataSource.getRepository(Reservation);
+  const bookmarkRepo  = AppDataSource.getRepository(Bookmark);
+  const templateRepo  = AppDataSource.getRepository(ScheduleTemplate);
+  const timesheetRepo = AppDataSource.getRepository(Timesheet);
+  const certRepo      = AppDataSource.getRepository(Certification);
+  const messageRepo   = AppDataSource.getRepository(Message);
+  const checklistRepo = AppDataSource.getRepository(Checklist);
+  const feedbackRepo  = AppDataSource.getRepository(ShiftFeedback);
+  const changeLogRepo = AppDataSource.getRepository(ScheduleChangeLog);
 
   const thisMonday = getThisMonday();
   const lastMonday = addDays(thisMonday, -7);
@@ -362,7 +380,7 @@ async function main() {
       confirmedAt: isConfirmed ? confirmedAt : null,
     });
 
-  await assignRepo.save([
+  const lwAssignments = await assignRepo.save([
     assign(lwShifts[0], uAlice), assign(lwShifts[0], uHenry),
     assign(lwShifts[1], uBob),
     assign(lwShifts[2], uAlice), assign(lwShifts[3], uBob),
@@ -726,6 +744,286 @@ async function main() {
   ]);
   console.log('  ✓ 17 bookmarks seeded across admin, managers, and staff\n');
 
+  // ── NEW MODULES ────────────────────────────────────────────────────────────
+
+  console.log('📐 Creating schedule templates...');
+  const openingItems = [
+    { id: '1', label: 'Unlock front door',             required: true,  completedAt: null, completedById: null },
+    { id: '2', label: 'Check refrigerator temperatures', required: true, completedAt: null, completedById: null },
+    { id: '3', label: 'Count cash drawer',              required: true,  completedAt: null, completedById: null },
+    { id: '4', label: 'Review reservation list',        required: false, completedAt: null, completedById: null },
+    { id: '5', label: 'Brief staff on specials',        required: false, completedAt: null, completedById: null },
+  ];
+  const closingItems = [
+    { id: '1', label: 'Close out all POS terminals',       required: true,  completedAt: null, completedById: null },
+    { id: '2', label: 'Clean and sanitize all surfaces',   required: true,  completedAt: null, completedById: null },
+    { id: '3', label: 'Lock all doors and windows',        required: true,  completedAt: null, completedById: null },
+    { id: '4', label: 'Complete end-of-night cash count',  required: true,  completedAt: null, completedById: null },
+    { id: '5', label: 'Set alarm system',                  required: false, completedAt: null, completedById: null },
+  ];
+
+  const makeTemplates = (loc: Location) => [
+    templateRepo.create({
+      name: 'Standard Week',
+      location: loc,
+      locationId: loc.id,
+      createdById: uMarcus.id,
+      shifts: [
+        { dayOfWeek: 0, startTime: '08:00', endTime: '16:00', requiredSkillId: sServer.id,    headcount: 2, notes: null },
+        { dayOfWeek: 1, startTime: '08:00', endTime: '16:00', requiredSkillId: sServer.id,    headcount: 2, notes: null },
+        { dayOfWeek: 2, startTime: '08:00', endTime: '16:00', requiredSkillId: sServer.id,    headcount: 2, notes: null },
+        { dayOfWeek: 3, startTime: '08:00', endTime: '16:00', requiredSkillId: sServer.id,    headcount: 2, notes: null },
+        { dayOfWeek: 4, startTime: '08:00', endTime: '16:00', requiredSkillId: sServer.id,    headcount: 2, notes: null },
+        { dayOfWeek: 0, startTime: '17:00', endTime: '23:00', requiredSkillId: sServer.id,    headcount: 2, notes: null },
+        { dayOfWeek: 1, startTime: '17:00', endTime: '23:00', requiredSkillId: sServer.id,    headcount: 2, notes: null },
+        { dayOfWeek: 2, startTime: '17:00', endTime: '23:00', requiredSkillId: sServer.id,    headcount: 2, notes: null },
+        { dayOfWeek: 3, startTime: '17:00', endTime: '23:00', requiredSkillId: sServer.id,    headcount: 2, notes: null },
+        { dayOfWeek: 4, startTime: '17:00', endTime: '23:00', requiredSkillId: sServer.id,    headcount: 2, notes: null },
+        { dayOfWeek: 4, startTime: '20:00', endTime: '02:00', requiredSkillId: sBartender.id, headcount: 1, notes: 'Overnight closing' },
+        { dayOfWeek: 5, startTime: '20:00', endTime: '02:00', requiredSkillId: sBartender.id, headcount: 1, notes: 'Overnight closing' },
+      ],
+    }),
+    templateRepo.create({
+      name: 'Weekend Rush',
+      location: loc,
+      locationId: loc.id,
+      createdById: uMarcus.id,
+      shifts: [
+        { dayOfWeek: 4, startTime: '17:00', endTime: '23:00', requiredSkillId: sServer.id,    headcount: 3, notes: null },
+        { dayOfWeek: 5, startTime: '11:00', endTime: '19:00', requiredSkillId: sServer.id,    headcount: 3, notes: null },
+        { dayOfWeek: 5, startTime: '17:00', endTime: '23:00', requiredSkillId: sBartender.id, headcount: 2, notes: null },
+        { dayOfWeek: 6, startTime: '11:00', endTime: '18:00', requiredSkillId: sServer.id,    headcount: 2, notes: null },
+      ],
+    }),
+  ];
+
+  await templateRepo.save([
+    ...makeTemplates(loc1),
+    ...makeTemplates(loc2),
+    ...makeTemplates(loc3),
+    ...makeTemplates(loc4),
+  ]);
+  console.log('  ✓ 8 schedule templates (2 per location)\n');
+
+  console.log('🏅 Creating certifications...');
+  const allStaffAndManagers = [uMarcus, uPriya, uAlice, uBob, uCarol, uDave, uEmma, uFrank, uGrace, uHenry];
+  const halfStaff           = [uAlice, uCarol, uDave, uEmma, uGrace];
+  const bartenders          = [uBob, uGrace];
+
+  const certRows: Partial<Certification>[] = [];
+
+  // Food Handler Card — all staff & managers
+  for (const u of allStaffAndManagers) {
+    certRows.push(certRepo.create({
+      userId: u.id,
+      name: 'Food Handler Card',
+      issuedDate: '2024-01-15',
+      expiryDate: '2026-01-15',
+      issuer: 'National Registry of Food Safety Professionals',
+      documentUrl: null,
+    }));
+  }
+
+  // ServSafe Manager — half of staff (EXPIRED — useful for expiry alert tests)
+  for (const u of halfStaff) {
+    certRows.push(certRepo.create({
+      userId: u.id,
+      name: 'ServSafe Manager',
+      issuedDate: '2023-06-01',
+      expiryDate: '2025-06-01',
+      issuer: 'National Restaurant Association',
+      documentUrl: null,
+    }));
+  }
+
+  // TIPS Alcohol Service — bartenders (Bob & Grace)
+  for (const u of bartenders) {
+    certRows.push(certRepo.create({
+      userId: u.id,
+      name: 'TIPS Alcohol Service',
+      issuedDate: '2024-03-01',
+      expiryDate: '2027-03-01',
+      issuer: 'Health Communications Inc.',
+      documentUrl: null,
+    }));
+  }
+
+  await certRepo.save(certRows);
+  console.log(`  ✓ ${certRows.length} certifications (Food Handler ×${allStaffAndManagers.length}, ServSafe ×${halfStaff.length} expired, TIPS ×${bartenders.length})\n`);
+
+  console.log('⏱️  Creating timesheets...');
+  // Last week APPROVED timesheets — pick 7 representative assignments from lwAssignments
+  // lwAssignments indices: [0]=Alice lw(0) 09-17, [1]=Henry lw(0) 09-17,
+  // [2]=Bob lw(0) 17-23, [3]=Alice lw(1) 09-17, [4]=Bob lw(1) 17-23,
+  // [5]=Alice lw(2) 09-17, [6]=Bob lw(2) 17-23, [7]=Alice lw(3) 09-17
+  const lwTimesheets = [
+    { a: lwAssignments[0], staff: uAlice, shift: lwShifts[0], date: lw(0), ci: '09:05', co: '17:10', brk: 30, hours: 7.58 },
+    { a: lwAssignments[1], staff: uHenry, shift: lwShifts[0], date: lw(0), ci: '08:55', co: '17:00', brk: 30, hours: 7.58 },
+    { a: lwAssignments[2], staff: uBob,   shift: lwShifts[1], date: lw(0), ci: '17:02', co: '23:05', brk: 30, hours: 5.55 },
+    { a: lwAssignments[3], staff: uAlice, shift: lwShifts[2], date: lw(1), ci: '09:00', co: '17:00', brk: 30, hours: 7.50 },
+    { a: lwAssignments[4], staff: uBob,   shift: lwShifts[3], date: lw(1), ci: '17:00', co: '23:00', brk: 30, hours: 5.50 },
+    { a: lwAssignments[5], staff: uAlice, shift: lwShifts[4], date: lw(2), ci: '08:58', co: '17:03', brk: 30, hours: 7.58 },
+    { a: lwAssignments[6], staff: uBob,   shift: lwShifts[5], date: lw(2), ci: '17:00', co: '23:00', brk: 30, hours: 5.50 },
+  ];
+
+  const reviewedByMarcus = new Date();
+  reviewedByMarcus.setDate(reviewedByMarcus.getDate() - 3);
+
+  for (const t of lwTimesheets) {
+    await timesheetRepo.save(timesheetRepo.create({
+      staffId:      t.staff.id,
+      shiftId:      t.shift.id,
+      assignmentId: t.a.id,
+      locationId:   t.shift.locationId,
+      clockIn:      new Date(`${t.date}T${t.ci}:00`),
+      clockOut:     new Date(`${t.date}T${t.co}:00`),
+      breakMinutes: t.brk,
+      actualHours:  t.hours,
+      status:       TimesheetStatus.APPROVED,
+      reviewedById: uMarcus.id,
+      managerNote:  'Approved.',
+      reviewedAt:   reviewedByMarcus,
+    }));
+  }
+
+  // This-week PENDING timesheets for a couple of completed-looking shifts
+  const twTimesheets = [
+    { a: aNbMon1Alice, staff: uAlice, shift: nbMon1, date: tw(0), ci: '09:02', co: '17:00', brk: 30, hours: 7.47 },
+    { a: aNbMon2Bob,   staff: uBob,   shift: nbMon2, date: tw(0), ci: '17:00', co: '23:05', brk: 30, hours: 5.58 },
+  ];
+
+  for (const t of twTimesheets) {
+    await timesheetRepo.save(timesheetRepo.create({
+      staffId:      t.staff.id,
+      shiftId:      t.shift.id,
+      assignmentId: t.a.id,
+      locationId:   t.shift.locationId,
+      clockIn:      new Date(`${t.date}T${t.ci}:00`),
+      clockOut:     new Date(`${t.date}T${t.co}:00`),
+      breakMinutes: t.brk,
+      actualHours:  t.hours,
+      status:       TimesheetStatus.PENDING,
+      reviewedById: null,
+      managerNote:  null,
+      reviewedAt:   null,
+    }));
+  }
+  console.log(`  ✓ ${lwTimesheets.length + twTimesheets.length} timesheets (${lwTimesheets.length} approved last week, ${twTimesheets.length} pending this week)\n`);
+
+  console.log('💬 Creating messages...');
+  // 1. Announcement from admin (Sarah Chen) to loc1
+  const msg1 = await messageRepo.save(messageRepo.create({
+    type:        MessageType.ANNOUNCEMENT,
+    senderId:    uAdmin.id,
+    recipientId: null,
+    locationId:  loc1.id,
+    body:        'Welcome to ShiftSync! Check your schedule for this week. Reach out to your manager if you have any questions.',
+    isRead:      false,
+  }));
+
+  // 2. Direct message from manager (Marcus) to staff (Alice)
+  const msg2 = await messageRepo.save(messageRepo.create({
+    type:        MessageType.DIRECT,
+    senderId:    uMarcus.id,
+    recipientId: uAlice.id,
+    locationId:  null,
+    body:        'Hey Alice — can you cover Saturday evening (18:00–23:00) at North Beach? We\'re short a server. Let me know ASAP!',
+    isRead:      false,
+  }));
+
+  // 3. Direct reply from Alice back to Marcus
+  await messageRepo.save(messageRepo.create({
+    type:        MessageType.DIRECT,
+    senderId:    uAlice.id,
+    recipientId: uMarcus.id,
+    locationId:  null,
+    body:        'Hi Marcus — I can do it! I\'ll be there at 17:45 to set up. Thanks for thinking of me.',
+    isRead:      false,
+  }));
+  console.log('  ✓ 3 messages (1 announcement + 1 DM from manager + 1 DM reply)\n');
+
+  console.log('✅ Creating checklists...');
+  const checklistRows: ReturnType<typeof checklistRepo.create>[] = [];
+  for (const loc of [loc1, loc2, loc3, loc4]) {
+    checklistRows.push(
+      checklistRepo.create({
+        type:         ChecklistType.OPENING,
+        title:        `Opening Checklist — ${loc.name}`,
+        locationId:   loc.id,
+        shiftId:      null,
+        assignedToId: null,
+        items:        openingItems,
+        isCompleted:  false,
+        completedAt:  null,
+      }),
+      checklistRepo.create({
+        type:         ChecklistType.CLOSING,
+        title:        `Closing Checklist — ${loc.name}`,
+        locationId:   loc.id,
+        shiftId:      null,
+        assignedToId: null,
+        items:        closingItems,
+        isCompleted:  false,
+        completedAt:  null,
+      }),
+    );
+  }
+  await checklistRepo.save(checklistRows);
+  console.log('  ✓ 8 checklists (1 opening + 1 closing per location)\n');
+
+  console.log('⭐ Creating shift feedback...');
+  // Use 4 last-week assignments with sensible feedback
+  const feedbackData = [
+    { a: lwAssignments[0], staff: uAlice, rating: 5, comment: 'Great shift, well organised.', adequatelyStaffed: true,  wouldRepeat: true },
+    { a: lwAssignments[2], staff: uBob,   rating: 4, comment: 'Busy but manageable.',         adequatelyStaffed: true,  wouldRepeat: true },
+    { a: lwAssignments[5], staff: uAlice, rating: 4, comment: 'Great shift, well organised.', adequatelyStaffed: true,  wouldRepeat: true },
+    { a: lwAssignments[6], staff: uBob,   rating: 5, comment: 'Busy but manageable.',         adequatelyStaffed: false, wouldRepeat: true },
+  ];
+
+  for (const f of feedbackData) {
+    await feedbackRepo.save(feedbackRepo.create({
+      staffId:          f.staff.id,
+      assignmentId:     f.a.id,
+      rating:           f.rating,
+      comment:          f.comment,
+      adequatelyStaffed: f.adequatelyStaffed,
+      wouldRepeat:      f.wouldRepeat,
+    }));
+  }
+  console.log(`  ✓ ${feedbackData.length} shift feedback entries\n`);
+
+  console.log('⚖️  Creating Fair Workweek change logs...');
+  // 1. Violation: shift modified inside advance-notice window (< 14 days) → predictability pay triggered
+  const violationChangedAt = new Date(`${lw(4)}T10:00:00`); // changed Friday last week
+  const violationShiftStart = new Date(`${lw(4)}T17:00:00`); // shift starts same day at 17:00
+  const hoursViolation = (violationShiftStart.getTime() - violationChangedAt.getTime()) / (1000 * 60 * 60); // 7h
+
+  await changeLogRepo.save(changeLogRepo.create({
+    shiftId:                 lwShifts[9].id,   // loc1 Fri lw(4) 17:00–23:00 bartender
+    changeType:              ChangeType.MODIFIED,
+    changedAt:               violationChangedAt,
+    hoursBeforeShift:        parseFloat(hoursViolation.toFixed(2)),
+    triggersPredictabilityPay: true,
+    predictabilityPayAmount: 18.00,            // approx: 6h * $15/hr * 0.2 premium
+    changedById:             uMarcus.id,
+  }));
+
+  // 2. Compliant publish: schedule published > 14 days before shift
+  const compliantChangedAt = new Date(`${lw(0)}T09:00:00`);  // published Monday last week
+  const compliantShiftStart = new Date(`${tw(1)}T09:00:00`); // shift is next-week Tuesday
+  const hoursCompliant = (compliantShiftStart.getTime() - compliantChangedAt.getTime()) / (1000 * 60 * 60);
+
+  await changeLogRepo.save(changeLogRepo.create({
+    shiftId:                 nbTue1.id,         // this-week Tue 09:00–17:00 server
+    changeType:              ChangeType.PUBLISHED,
+    changedAt:               compliantChangedAt,
+    hoursBeforeShift:        parseFloat(hoursCompliant.toFixed(2)),
+    triggersPredictabilityPay: false,
+    predictabilityPayAmount: null,
+    changedById:             uMarcus.id,
+  }));
+  console.log('  ✓ 2 Fair Workweek change logs (1 violation + 1 compliant publish)\n');
+
   await AppDataSource.destroy();
 
   console.log('╔══════════════════════════════════════════════════════════════╗');
@@ -766,6 +1064,15 @@ async function main() {
   console.log('║  • Confirmed       — Mon+Tue assignments have confirmedAt  ║');
   console.log('║  • Floor plan demo — all-day shifts today, all 4 locations ║');
   console.log('║  • Bookmarks       — 17 bookmarks across admin/mgr/staff   ║');
+  console.log('╠══════════════════════════════════════════════════════════════╣');
+  console.log('║  New module data:                                           ║');
+  console.log('║  • Templates   — 8 (2 per location: Standard + Weekend)    ║');
+  console.log('║  • Certs       — 17 (Food Handler ×10, ServSafe ×5, TIPS ×2)║');
+  console.log('║  • Timesheets  — 9 (7 approved last wk, 2 pending this wk) ║');
+  console.log('║  • Messages    — 3 (1 announcement + 2 DMs)                ║');
+  console.log('║  • Checklists  — 8 (opening + closing per location)        ║');
+  console.log('║  • Feedback    — 4 (last-week shifts, rating 4–5)          ║');
+  console.log('║  • FWW logs    — 2 (1 violation, 1 compliant publish)      ║');
   console.log('╚══════════════════════════════════════════════════════════════╝');
 }
 

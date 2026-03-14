@@ -22,6 +22,14 @@ import { ReservationsModule } from './reservations/reservations.module';
 import { BookmarksModule } from './bookmarks/bookmarks.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { EmailModule } from './email/email.module';
+import { ScheduleTemplatesModule } from './schedule-templates/schedule-templates.module';
+import { TimesheetsModule } from './timesheets/timesheets.module';
+import { CertificationsModule } from './certifications/certifications.module';
+import { MessagesModule } from './messages/messages.module';
+import { SettingsModule } from './settings/settings.module';
+import { ChecklistsModule } from './checklists/checklists.module';
+import { ShiftFeedbackModule } from './shift-feedback/shift-feedback.module';
+import { FairWorkweekModule } from './fair-workweek/fair-workweek.module';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
@@ -56,6 +64,7 @@ import { validationSchema } from './config/validation.schema';
     ]),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
+    SettingsModule,
     EmailModule,
     AuthModule,
     UsersModule,
@@ -73,6 +82,13 @@ import { validationSchema } from './config/validation.schema';
     ReservationsModule,
     BookmarksModule,
     SchedulerModule,
+    ScheduleTemplatesModule,
+    TimesheetsModule,
+    CertificationsModule,
+    MessagesModule,
+    ChecklistsModule,
+    ShiftFeedbackModule,
+    FairWorkweekModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

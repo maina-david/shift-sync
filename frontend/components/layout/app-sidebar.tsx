@@ -29,6 +29,14 @@ import {
   CircleUser,
   Bookmark,
   BookmarkCheck,
+  MessageSquare,
+  CheckSquare,
+  BadgeCheck,
+  Clock,
+  LayoutTemplate,
+  Sliders,
+  Scale,
+  Star,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -64,6 +72,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'staff'] },
       { href: '/schedule', label: 'Schedule', icon: CalendarDays, roles: ['admin', 'manager', 'staff'] },
       { href: '/my-schedule', label: 'My Schedule', icon: CalendarRange, roles: ['staff'] },
+      { href: '/timesheets', label: 'Timesheets', icon: Clock, roles: ['admin', 'manager', 'staff'] },
+      { href: '/messages', label: 'Messages', icon: MessageSquare, roles: ['admin', 'manager', 'staff'] },
+      { href: '/checklists', label: 'Checklists', icon: CheckSquare, roles: ['admin', 'manager', 'staff'] },
+      { href: '/certifications', label: 'Certifications', icon: BadgeCheck, roles: ['admin', 'manager', 'staff'] },
     ],
   },
   {
@@ -88,6 +100,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/staff', label: 'Staff', icon: Users, roles: ['admin', 'manager'] },
       { href: '/locations', label: 'Locations', icon: MapPin, roles: ['admin'] },
       { href: '/skills', label: 'Skills', icon: Wrench, roles: ['admin'] },
+      { href: '/schedule-templates', label: 'Templates', icon: LayoutTemplate, roles: ['admin', 'manager'] },
       { href: '/log-book', label: 'Log Book', icon: BookText, roles: ['admin', 'manager'] },
     ],
   },
@@ -100,6 +113,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/menu', label: 'Menu', icon: UtensilsCrossed, roles: ['admin', 'manager'] },
       { href: '/reservations', label: 'Reservations', icon: CalendarClock, roles: ['admin', 'manager'] },
+      { href: '/shift-feedback', label: 'Shift Feedback', icon: Star, roles: ['admin', 'manager', 'staff'] },
     ],
   },
   {
@@ -111,6 +125,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin', 'manager'] },
       { href: '/audit', label: 'Audit Log', icon: ClipboardList, roles: ['admin', 'manager'] },
+      { href: '/fair-workweek', label: 'Fair Workweek', icon: Scale, roles: ['admin', 'manager'] },
     ],
   },
   {
@@ -122,6 +137,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin', 'manager', 'staff'] },
       { href: '/settings/availability', label: 'Availability', icon: CalendarCheck, roles: ['staff'] },
+      { href: '/settings/system', label: 'System Settings', icon: Sliders, roles: ['admin'] },
     ],
   },
 ];

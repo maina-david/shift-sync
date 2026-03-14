@@ -279,3 +279,171 @@ export interface OvertimeEntry {
     isInOvertime: boolean;
   }>;
 }
+
+// ─── Schedule Templates ───────────────────────────────────────────────────────
+export interface TemplateShift {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  requiredSkillId: string | null;
+  headcount: number;
+  notes: string | null;
+}
+export interface ScheduleTemplate {
+  id: string;
+  name: string;
+  locationId: string;
+  location: Location;
+  shifts: TemplateShift[];
+  createdById: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Timesheets ───────────────────────────────────────────────────────────────
+export type TimesheetStatus = 'pending' | 'approved' | 'rejected';
+export interface Timesheet {
+  id: string;
+  staffId: string;
+  staff: User;
+  shiftId: string | null;
+  shift: Shift | null;
+  assignmentId: string | null;
+  clockIn: string;
+  clockOut: string | null;
+  breakMinutes: number;
+  actualHours: number | null;
+  status: TimesheetStatus;
+  reviewedById: string | null;
+  managerNote: string | null;
+  reviewedAt: string | null;
+  locationId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Certifications ───────────────────────────────────────────────────────────
+export interface Certification {
+  id: string;
+  userId: string;
+  name: string;
+  issuedDate: string;
+  expiryDate: string;
+  documentUrl: string | null;
+  issuer: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
+export type MessageType = 'direct' | 'announcement';
+export interface Message {
+  id: string;
+  type: MessageType;
+  senderId: string;
+  sender: User;
+  recipientId: string | null;
+  recipient: User | null;
+  locationId: string | null;
+  body: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+// ─── Checklists ───────────────────────────────────────────────────────────────
+export type ChecklistType = 'opening' | 'closing' | 'custom';
+export interface ChecklistItem {
+  id: string;
+  label: string;
+  required: boolean;
+  completedAt: string | null;
+  completedById: string | null;
+}
+export interface Checklist {
+  id: string;
+  type: ChecklistType;
+  title: string;
+  locationId: string;
+  location: Location;
+  shiftId: string | null;
+  assignedToId: string | null;
+  items: ChecklistItem[];
+  isCompleted: boolean;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Shift Feedback ───────────────────────────────────────────────────────────
+export interface ShiftFeedback {
+  id: string;
+  staffId: string;
+  assignmentId: string;
+  assignment: ShiftAssignment;
+  rating: number;
+  comment: string | null;
+  adequatelyStaffed: boolean | null;
+  wouldRepeat: boolean | null;
+  createdAt: string;
+}
+export interface FeedbackSummary {
+  avgRating: number;
+  totalResponses: number;
+  adequatelyStaffedPct: number;
+  wouldRepeatPct: number;
+}
+
+// ─── Fair Workweek ────────────────────────────────────────────────────────────
+export type ScheduleChangeType = 'published' | 'modified' | 'cancelled';
+export interface ScheduleChangeLog {
+  id: string;
+  shiftId: string;
+  shift: Shift;
+  changeType: ScheduleChangeType;
+  changedAt: string;
+  hoursBeforeShift: number;
+  triggersPredictabilityPay: boolean;
+  predictabilityPayAmount: number | null;
+  changedById: string | null;
+  createdAt: string;
+}
+
+// ─── System Settings ─────────────────────────────────────────────────────────
+export interface SystemSetting {
+  key: string;
+  value: unknown;
+  description: string | null;
+  updatedAt: string;
+}
+
+// ─── Analytics Extensions ────────────────────────────────────────────────────
+export interface LaborCostReport {
+  totalScheduledHours: number;
+  totalLaborCost: number;
+  byLocation: { locationId: string; name: string; scheduledHours: number; laborCost: number; shiftCount: number }[];
+  byDate: { date: string; laborCost: number; scheduledHours: number }[];
+}
+export interface KpiRollup {
+  locationId: string;
+  name: string;
+  timezone: string;
+  totalShifts: number;
+  publishedShifts: number;
+  draftShifts: number;
+  totalAssignments: number;
+  totalScheduledHours: number;
+  estimatedLaborCost: number;
+  fillRate: number;
+}
+export interface AbsenteeismReport {
+  noShowCount: number;
+  noShowRate: number;
+  byStaff: { staffId: string; name: string; noShowCount: number }[];
+  byDate: { date: string; noShowCount: number }[];
+}
+export interface TurnoverReport {
+  totalActive: number;
+  totalInactive: number;
+  hiresByMonth: { month: string; count: number }[];
+  activeByLocation: { locationId: string; name: string; staffCount: number }[];
+}

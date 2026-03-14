@@ -12,6 +12,7 @@ import { SwapRequest } from '../swap-requests/entities/swap-request.entity';
 import { UsersModule } from '../users/users.module';
 import { AuthModule } from '../auth/auth.module';
 import { SseJwtGuard } from '../common/guards/sse-jwt.guard';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { SseJwtGuard } from '../common/guards/sse-jwt.guard';
     ]),
     UsersModule,
     AuthModule,
+    SettingsModule,
   ],
   providers: [ShiftsService, ConstraintCheckerService, SseJwtGuard],
   controllers: [ShiftsController],

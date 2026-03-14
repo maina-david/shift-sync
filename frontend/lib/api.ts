@@ -298,6 +298,119 @@ export const reservationsApi = {
   remove: (id: string) => api.delete(`/reservations/${id}`).then((r) => r.data),
 };
 
+export const scheduleTemplatesApi = {
+  list: (locationId?: string): Promise<import('./types').ScheduleTemplate[]> =>
+    api.get('/schedule-templates', { params: locationId ? { locationId } : undefined }).then((r) => r.data),
+  get: (id: string): Promise<import('./types').ScheduleTemplate> =>
+    api.get(`/schedule-templates/${id}`).then((r) => r.data),
+  create: (data: { name: string; locationId: string; shifts: import('./types').TemplateShift[] }): Promise<import('./types').ScheduleTemplate> =>
+    api.post('/schedule-templates', data).then((r) => r.data),
+  remove: (id: string) => api.delete(`/schedule-templates/${id}`).then((r) => r.data),
+  apply: (id: string, weekStart: string) =>
+    api.post(`/schedule-templates/${id}/apply`, { weekStart }).then((r) => r.data),
+};
+
+export const timesheetsApi = {
+  clockIn: (data: { assignmentId?: string; shiftId?: string; coordinates?: string }) =>
+    api.post('/timesheets/clock-in', data).then((r) => r.data),
+  clockOut: (data: { breakMinutes?: number }) =>
+    api.post('/timesheets/clock-out', data).then((r) => r.data),
+  getOpen: (): Promise<import('./types').Timesheet | null> =>
+    api.get('/timesheets/open').then((r) => r.data).catch(() => null),
+  getMine: (): Promise<import('./types').Timesheet[]> =>
+    api.get('/timesheets/me').then((r) => r.data),
+  list: (params?: { staffId?: string; locationId?: string; status?: string; startDate?: string; endDate?: string }): Promise<import('./types').Timesheet[]> =>
+    api.get('/timesheets', { params }).then((r) => r.data),
+  review: (id: string, data: { status: 'approved' | 'rejected'; managerNote?: string }) =>
+    api.patch(`/timesheets/${id}/review`, data).then((r) => r.data),
+  exportUrl: (params: { locationId?: string; startDate: string; endDate: string }) => {
+    const q = new URLSearchParams({ ...params } as Record<string, string>);
+    return `${api.defaults.baseURL}/timesheets/export?${q.toString()}`;
+  },
+};
+
+export const certificationsApi = {
+  getMine: (): Promise<import('./types').Certification[]> =>
+    api.get('/certifications/mine').then((r) => r.data),
+  getForUser: (userId: string): Promise<import('./types').Certification[]> =>
+    api.get(`/certifications/user/${userId}`).then((r) => r.data),
+  getExpiring: (days?: number): Promise<(import('./types').Certification & { user: import('./types').User })[]> =>
+    api.get('/certifications/expiring', { params: days ? { days } : undefined }).then((r) => r.data),
+  create: (userId: string, data: { name: string; issuedDate: string; expiryDate: string; documentUrl?: string; issuer?: string }) =>
+    api.post(`/certifications/user/${userId}`, data).then((r) => r.data),
+  remove: (id: string) => api.delete(`/certifications/${id}`).then((r) => r.data),
+};
+
+export const messagesApi = {
+  send: (data: { type: 'direct' | 'announcement'; recipientId?: string; locationId?: string; body: string }) =>
+    api.post('/messages', data).then((r) => r.data),
+  getInbox: (): Promise<import('./types').Message[]> =>
+    api.get('/messages/inbox').then((r) => r.data),
+  getThread: (userId: string): Promise<import('./types').Message[]> =>
+    api.get(`/messages/thread/${userId}`).then((r) => r.data),
+  getAnnouncements: (locationId?: string): Promise<import('./types').Message[]> =>
+    api.get('/messages/announcements', { params: locationId ? { locationId } : undefined }).then((r) => r.data),
+  markRead: (id: string) => api.patch(`/messages/${id}/read`).then((r) => r.data),
+  markAllRead: () => api.patch('/messages/read-all').then((r) => r.data),
+};
+
+export const checklistsApi = {
+  list: (params?: { locationId?: string; date?: string }): Promise<import('./types').Checklist[]> =>
+    api.get('/checklists', { params }).then((r) => r.data),
+  get: (id: string): Promise<import('./types').Checklist> =>
+    api.get(`/checklists/${id}`).then((r) => r.data),
+  create: (data: { type: string; title: string; locationId: string; shiftId?: string; assignedToId?: string; items: { label: string; required: boolean }[] }) =>
+    api.post('/checklists', data).then((r) => r.data),
+  completeItem: (checklistId: string, itemId: string) =>
+    api.patch(`/checklists/${checklistId}/items/${itemId}/complete`).then((r) => r.data),
+  remove: (id: string) => api.delete(`/checklists/${id}`).then((r) => r.data),
+};
+
+export const shiftFeedbackApi = {
+  submit: (data: { assignmentId: string; rating: number; comment?: string; adequatelyStaffed?: boolean; wouldRepeat?: boolean }) =>
+    api.post('/shift-feedback', data).then((r) => r.data),
+  getMine: (): Promise<import('./types').ShiftFeedback[]> =>
+    api.get('/shift-feedback/mine').then((r) => r.data),
+  getForShift: (shiftId: string): Promise<import('./types').ShiftFeedback[]> =>
+    api.get(`/shift-feedback/shift/${shiftId}`).then((r) => r.data),
+  getSummary: (params?: { locationId?: string; startDate?: string; endDate?: string }): Promise<import('./types').FeedbackSummary> =>
+    api.get('/shift-feedback/summary', { params }).then((r) => r.data),
+};
+
+export const settingsApi = {
+  list: (): Promise<import('./types').SystemSetting[]> =>
+    api.get('/settings').then((r) => r.data),
+  update: (key: string, value: unknown, description?: string) =>
+    api.patch(`/settings/${encodeURIComponent(key)}`, { value, description }).then((r) => r.data),
+  reset: () => api.post('/settings/reset').then((r) => r.data),
+};
+
+export const fairWorkweekApi = {
+  getViolations: (params?: { locationId?: string; startDate?: string; endDate?: string }): Promise<import('./types').ScheduleChangeLog[]> =>
+    api.get('/fair-workweek/violations', { params }).then((r) => r.data),
+  getSummary: (locationId?: string) =>
+    api.get('/fair-workweek/summary', { params: locationId ? { locationId } : undefined }).then((r) => r.data),
+};
+
+// ─── Analytics extensions ─────────────────────────────────────────────────────
+// (add these methods to the existing analyticsApi object — but since we can't
+//  easily patch it, export a new analyticsExtApi)
+export const analyticsExtApi = {
+  laborCost: (startDate: string, endDate: string, locationId?: string): Promise<import('./types').LaborCostReport> =>
+    api.get('/analytics/labor-cost', { params: { startDate, endDate, ...(locationId ? { locationId } : {}) } }).then((r) => r.data),
+  kpiRollup: (startDate: string, endDate: string): Promise<import('./types').KpiRollup[]> =>
+    api.get('/analytics/kpi-rollup', { params: { startDate, endDate } }).then((r) => r.data),
+  absenteeism: (startDate: string, endDate: string, locationId?: string): Promise<import('./types').AbsenteeismReport> =>
+    api.get('/analytics/absenteeism', { params: { startDate, endDate, ...(locationId ? { locationId } : {}) } }).then((r) => r.data),
+  turnover: (): Promise<import('./types').TurnoverReport> =>
+    api.get('/analytics/turnover').then((r) => r.data),
+};
+
+export const autoScheduleApi = {
+  generate: (data: { locationId: string; weekStart: string; shiftsPerDay?: number; minStaffPerShift?: number }) =>
+    api.post('/shifts/auto-schedule', data).then((r) => r.data),
+};
+
 export function getErrorMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {
     const data = err.response?.data;

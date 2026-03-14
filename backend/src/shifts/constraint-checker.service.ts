@@ -7,6 +7,7 @@ import { Shift } from './entities/shift.entity';
 import { Availability } from '../users/entities/availability.entity';
 import { AvailabilityException } from '../users/entities/availability-exception.entity';
 import { shiftToUTCRange, minutesBetween, addDays, weekStart } from '../common/timezone.util';
+import { SettingsService } from '../settings/settings.service';
 
 export interface ConstraintViolation {
   rule: string;
@@ -20,17 +21,13 @@ export interface ConstraintResult {
   warnings: ConstraintViolation[];
 }
 
-const MIN_REST_HOURS = 10;
-const DAILY_WARN_HOURS = 8;
-const DAILY_BLOCK_HOURS = 12;
-const WEEKLY_WARN_HOURS = 35;
-
 @Injectable()
 export class ConstraintCheckerService {
   constructor(
     @InjectRepository(ShiftAssignment) private assignRepo: Repository<ShiftAssignment>,
     @InjectRepository(Availability) private availRepo: Repository<Availability>,
     @InjectRepository(AvailabilityException) private exceptRepo: Repository<AvailabilityException>,
+    private readonly settingsService: SettingsService,
   ) {}
 
   async check(
@@ -38,6 +35,7 @@ export class ConstraintCheckerService {
     staff: User,
     overrideReason?: string,
   ): Promise<ConstraintResult> {
+    const s = this.settingsService.getScheduling();
     const violations: ConstraintViolation[] = [];
     const warnings: ConstraintViolation[] = [];
     const push = (v: ConstraintViolation) =>
@@ -122,18 +120,18 @@ export class ConstraintCheckerService {
       const gapAfterExisting = (startUTC.getTime() - exEnd.getTime()) / 3600000;
       const gapBeforeExisting = (exStart.getTime() - endUTC.getTime()) / 3600000;
 
-      if (gapAfterExisting >= 0 && gapAfterExisting < MIN_REST_HOURS) {
+      if (gapAfterExisting >= 0 && gapAfterExisting < s.minRestHours) {
         push({
           rule: 'min_rest',
           severity: 'error',
-          message: `Only ${gapAfterExisting.toFixed(1)}h rest between previous shift (${exShift.location.name} ${exShift.startTime}–${exShift.endTime}) and this shift — minimum ${MIN_REST_HOURS}h required.`,
+          message: `Only ${gapAfterExisting.toFixed(1)}h rest between previous shift (${exShift.location.name} ${exShift.startTime}–${exShift.endTime}) and this shift — minimum ${s.minRestHours}h required.`,
         });
       }
-      if (gapBeforeExisting >= 0 && gapBeforeExisting < MIN_REST_HOURS) {
+      if (gapBeforeExisting >= 0 && gapBeforeExisting < s.minRestHours) {
         push({
           rule: 'min_rest',
           severity: 'error',
-          message: `Only ${gapBeforeExisting.toFixed(1)}h rest between this shift and next shift (${exShift.location.name} ${exShift.startTime}–${exShift.endTime}) — minimum ${MIN_REST_HOURS}h required.`,
+          message: `Only ${gapBeforeExisting.toFixed(1)}h rest between this shift and next shift (${exShift.location.name} ${exShift.startTime}–${exShift.endTime}) — minimum ${s.minRestHours}h required.`,
         });
       }
     }
@@ -144,17 +142,17 @@ export class ConstraintCheckerService {
       shiftMinutes,
     );
     const dailyHours = dailyMinutes / 60;
-    if (dailyHours > DAILY_BLOCK_HOURS) {
+    if (dailyHours > s.dailyBlockHours) {
       push({
         rule: 'daily_hours',
         severity: 'error',
-        message: `This would put ${staff.name} at ${dailyHours.toFixed(1)}h on ${shift.date}, exceeding the 12-hour daily limit.`,
+        message: `This would put ${staff.name} at ${dailyHours.toFixed(1)}h on ${shift.date}, exceeding the ${s.dailyBlockHours}-hour daily limit.`,
       });
-    } else if (dailyHours > DAILY_WARN_HOURS) {
+    } else if (dailyHours > s.dailyWarnHours) {
       push({
         rule: 'daily_hours',
         severity: 'warning',
-        message: `${staff.name} would work ${dailyHours.toFixed(1)}h on ${shift.date} (8h daily threshold).`,
+        message: `${staff.name} would work ${dailyHours.toFixed(1)}h on ${shift.date} (${s.dailyWarnHours}h daily threshold).`,
       });
     }
 
@@ -168,40 +166,40 @@ export class ConstraintCheckerService {
       shiftMinutes,
     );
     const weeklyHours = weeklyMinutes / 60;
-    if (weeklyHours >= 40) {
+    if (weeklyHours >= s.weeklyOvertimeHours) {
       push({
         rule: 'weekly_hours',
         severity: 'warning',
-        message: `${staff.name} would reach ${weeklyHours.toFixed(1)}h this week (week of ${wk}), entering overtime territory (40h+).`,
+        message: `${staff.name} would reach ${weeklyHours.toFixed(1)}h this week (week of ${wk}), entering overtime territory (${s.weeklyOvertimeHours}h+).`,
       });
-    } else if (weeklyHours >= WEEKLY_WARN_HOURS) {
+    } else if (weeklyHours >= s.weeklyWarnHours) {
       push({
         rule: 'weekly_hours',
         severity: 'warning',
-        message: `${staff.name} is approaching 40h: projected ${weeklyHours.toFixed(1)}h this week.`,
+        message: `${staff.name} is approaching ${s.weeklyOvertimeHours}h: projected ${weeklyHours.toFixed(1)}h this week.`,
       });
     }
 
     const consecutiveDays = await this.countConsecutiveDays(staff.id, shift.date);
-    if (consecutiveDays >= 7) {
+    if (consecutiveDays >= s.maxConsecutiveDaysHard) {
       if (!overrideReason) {
         push({
           rule: 'consecutive_days',
           severity: 'error',
-          message: `${staff.name} would work their 7th consecutive day. A manager override with documented reason is required.`,
+          message: `${staff.name} would work their ${s.maxConsecutiveDaysHard}th consecutive day. A manager override with documented reason is required.`,
         });
       } else {
         push({
           rule: 'consecutive_days',
           severity: 'warning',
-          message: `Override applied: ${staff.name} working 7th consecutive day. Reason: ${overrideReason}`,
+          message: `Override applied: ${staff.name} working ${s.maxConsecutiveDaysHard}th consecutive day. Reason: ${overrideReason}`,
         });
       }
-    } else if (consecutiveDays === 6) {
+    } else if (consecutiveDays === s.maxConsecutiveDays) {
       push({
         rule: 'consecutive_days',
         severity: 'warning',
-        message: `${staff.name} would be working their 6th consecutive day.`,
+        message: `${staff.name} would be working their ${s.maxConsecutiveDays}th consecutive day.`,
       });
     }
 

@@ -17,6 +17,7 @@ import { AvailabilityException } from './availability-exception.entity';
 export enum UserRole {
   ADMIN = 'admin',
   MANAGER = 'manager',
+  AREA_MANAGER = 'area_manager',
   STAFF = 'staff',
 }
 

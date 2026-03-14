@@ -11,14 +11,17 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Shift, ShiftStatus } from './entities/shift.entity';
 import { ShiftAssignment, AssignmentStatus } from './entities/shift-assignment.entity';
 import { User, UserRole } from '../users/entities/user.entity';
+import { Availability } from '../users/entities/availability.entity';
 import { SwapRequest, SwapRequestStatus } from '../swap-requests/entities/swap-request.entity';
 import { ConstraintCheckerService } from './constraint-checker.service';
 import { CreateShiftDto } from './dto/create-shift.dto';
 import { UpdateShiftDto } from './dto/update-shift.dto';
 import { AssignStaffDto } from './dto/assign-staff.dto';
 import { PublishWeekDto } from './dto/publish-week.dto';
-import { addDays, weekStart, shiftToUTCRange } from '../common/timezone.util';
+import { addDays, weekStart, shiftToUTCRange, minutesBetween } from '../common/timezone.util';
 import { UsersService } from '../users/users.service';
+import { SettingsService } from '../settings/settings.service';
+import { AutoScheduleDto } from './dto/auto-schedule.dto';
 
 @Injectable()
 export class ShiftsService {
@@ -28,10 +31,12 @@ export class ShiftsService {
     @InjectRepository(Shift) private shiftRepo: Repository<Shift>,
     @InjectRepository(ShiftAssignment) private assignRepo: Repository<ShiftAssignment>,
     @InjectRepository(User) private userRepo: Repository<User>,
+    @InjectRepository(Availability) private availRepo: Repository<Availability>,
     private constraints: ConstraintCheckerService,
     private usersService: UsersService,
     private events: EventEmitter2,
     private dataSource: DataSource,
+    private settingsService: SettingsService,
   ) {}
 
   private safeEmit(event: string, payload: unknown): void {
@@ -576,6 +581,225 @@ export class ShiftsService {
       );
       return now.getTime() >= startUTC.getTime() && now.getTime() < endUTC.getTime();
     });
+  }
+
+  /**
+   * Cross-location staffing: find staff certified at the given location
+   * who are available on the given date (dayOfWeek match) and are NOT
+   * already assigned to any shift that day at any location.
+   */
+  async getCrossLocationAvailable(locationId: string, date: string): Promise<User[]> {
+    // 1. Find all users certified at the target location
+    const certifiedStaff = await this.userRepo
+      .createQueryBuilder('u')
+      .innerJoin('u.certifiedLocations', 'loc', 'loc.id = :locationId', { locationId })
+      .leftJoinAndSelect('u.availabilities', 'avail')
+      .where('u.isActive = :active', { active: true })
+      .andWhere('u.role = :role', { role: UserRole.STAFF })
+      .getMany();
+
+    if (certifiedStaff.length === 0) return [];
+
+    // 2. Determine the day of week for the target date (0=Sun … 6=Sat)
+    const targetDow = new Date(date + 'T00:00:00Z').getUTCDay();
+
+    // 3. Find all staff already assigned to a shift on this date (any location)
+    const assignedOnDate = await this.assignRepo
+      .createQueryBuilder('a')
+      .innerJoin('a.shift', 's')
+      .select('a.staffId', 'staffId')
+      .where('s.date = :date', { date })
+      .andWhere('a.status IN (:...statuses)', {
+        statuses: [AssignmentStatus.ASSIGNED, AssignmentStatus.PENDING_SWAP],
+      })
+      .getRawMany<{ staffId: string }>();
+
+    const assignedIds = new Set(assignedOnDate.map((r) => r.staffId));
+
+    // 4. Filter: not already assigned that day AND has availability for that dayOfWeek
+    return certifiedStaff.filter((u) => {
+      if (assignedIds.has(u.id)) return false;
+      // If the user has no availability records at all, treat them as available
+      if (!u.availabilities || u.availabilities.length === 0) return true;
+      return u.availabilities.some((av) => av.dayOfWeek === targetDow);
+    });
+  }
+
+  async autoSchedule(dto: AutoScheduleDto, requesterId: string) {
+    const { locationId, weekStart: wkStart } = dto;
+    const slotsPerDay = dto.shiftsPerDay ?? 3;
+    const minStaff = dto.minStaffPerShift ?? 1;
+
+    // Scheduling settings — used to enforce weeklyOvertimeHours cap
+    const s = this.settingsService.getScheduling();
+
+    // Default time slots for each day
+    const DEFAULT_SLOTS: { startTime: string; endTime: string }[] = [
+      { startTime: '08:00', endTime: '16:00' },
+      { startTime: '12:00', endTime: '20:00' },
+      { startTime: '17:00', endTime: '23:00' },
+    ];
+    const slots = DEFAULT_SLOTS.slice(0, slotsPerDay);
+
+    // 1. Fetch all active STAFF certified at locationId with their availabilities
+    const certifiedStaff = await this.userRepo
+      .createQueryBuilder('u')
+      .innerJoin('u.certifiedLocations', 'loc', 'loc.id = :locationId', { locationId })
+      .leftJoinAndSelect('u.availabilities', 'avail')
+      .where('u.isActive = :active', { active: true })
+      .andWhere('u.role = :role', { role: 'staff' })
+      .getMany();
+
+    // Pre-fetch all existing assignments in the target week for these staff members
+    // to avoid N+1 queries inside the day/slot loops.
+    const weekEnd = addDays(wkStart, 7);
+    const staffIds = certifiedStaff.map((u) => u.id);
+
+    type RawAssignment = { staffId: string; date: string; startTime: string; endTime: string };
+    let weekAssignments: RawAssignment[] = [];
+    if (staffIds.length > 0) {
+      weekAssignments = await this.assignRepo
+        .createQueryBuilder('a')
+        .innerJoin('a.shift', 's')
+        .select([
+          'a.staffId   AS "staffId"',
+          's.date      AS "date"',
+          's.startTime AS "startTime"',
+          's.endTime   AS "endTime"',
+        ])
+        .where('a.staffId IN (:...staffIds)', { staffIds })
+        .andWhere('s.date >= :wkStart', { wkStart })
+        .andWhere('s.date < :weekEnd', { weekEnd })
+        .andWhere('a.status IN (:...statuses)', {
+          statuses: [AssignmentStatus.ASSIGNED, AssignmentStatus.PENDING_SWAP],
+        })
+        .getRawMany<RawAssignment>();
+    }
+
+    // Build per-staff weekly-hours map (minutes → hours when needed)
+    const weeklyMinutesMap = new Map<string, number>();
+    for (const u of certifiedStaff) weeklyMinutesMap.set(u.id, 0);
+    for (const row of weekAssignments) {
+      const mins = minutesBetween(row.startTime, row.endTime);
+      weeklyMinutesMap.set(row.staffId, (weeklyMinutesMap.get(row.staffId) ?? 0) + mins);
+    }
+
+    // Build per-staff per-date assignment set (to detect same-day conflicts)
+    const assignedDates = new Map<string, Set<string>>(); // staffId → Set<date>
+    for (const row of weekAssignments) {
+      if (!assignedDates.has(row.staffId)) assignedDates.set(row.staffId, new Set());
+      assignedDates.get(row.staffId)!.add(row.date);
+    }
+
+    const createdShifts: Shift[] = [];
+    const createdAssignments: ShiftAssignment[] = [];
+    const unfilledSlots: { date: string; startTime: string; endTime: string; reason: string }[] = [];
+
+    // 2. Iterate over each of the 7 days Mon–Sun
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const date = addDays(wkStart, dayOffset);
+      // dayOfWeek: 0=Sun … 6=Sat — use UTC to be consistent with Availability entity
+      const dow = new Date(date + 'T00:00:00Z').getUTCDay();
+
+      for (const slot of slots) {
+        const slotMinutes = minutesBetween(slot.startTime, slot.endTime);
+
+        // 2b. Find eligible candidates for this slot
+        const candidates = certifiedStaff.filter((u) => {
+          // Must have availability covering this dayOfWeek
+          if (u.availabilities && u.availabilities.length > 0) {
+            const avail = u.availabilities.find((av) => av.dayOfWeek === dow);
+            if (!avail) return false;
+            // Availability window must cover the slot
+            const [avSH, avSM] = avail.startTime.split(':').map(Number);
+            const [avEH, avEM] = avail.endTime.split(':').map(Number);
+            const [slotSH, slotSM] = slot.startTime.split(':').map(Number);
+            const [slotEH, slotEM] = slot.endTime.split(':').map(Number);
+            const availStart = avSH * 60 + avSM;
+            const availEnd = avEH * 60 + avEM;
+            const slotStart = slotSH * 60 + slotSM;
+            const slotEnd = slotEH * 60 + slotEM;
+            if (slotStart < availStart || slotEnd > availEnd) return false;
+          }
+          // Must not already be assigned to another shift that day
+          if (assignedDates.get(u.id)?.has(date)) return false;
+          // Must not exceed weeklyOvertimeHours
+          const currentHours = (weeklyMinutesMap.get(u.id) ?? 0) / 60;
+          if (currentHours + slotMinutes / 60 > s.weeklyOvertimeHours) return false;
+          return true;
+        });
+
+        if (candidates.length === 0) {
+          unfilledSlots.push({
+            date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            reason: 'No eligible staff available for this slot',
+          });
+          continue;
+        }
+
+        // 2c. Sort: fewest scheduled hours first, then alphabetically by name
+        candidates.sort((a, b) => {
+          const hoursA = (weeklyMinutesMap.get(a.id) ?? 0) / 60;
+          const hoursB = (weeklyMinutesMap.get(b.id) ?? 0) / 60;
+          if (hoursA !== hoursB) return hoursA - hoursB;
+          return a.name.localeCompare(b.name);
+        });
+
+        // 2d. Pick min(minStaff, candidates.length) staff for this slot
+        const picks = candidates.slice(0, Math.min(minStaff, candidates.length));
+
+        if (picks.length < minStaff) {
+          // Record that we could not fully fill this slot
+          unfilledSlots.push({
+            date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            reason: `Only ${picks.length} of ${minStaff} required staff available`,
+          });
+        }
+
+        // 2e. Create the DRAFT shift and assignments
+        const isOvernight = slot.endTime < slot.startTime;
+        const shift = this.shiftRepo.create({
+          locationId,
+          date,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          headcount: picks.length,
+          isOvernight,
+          status: ShiftStatus.DRAFT,
+          notes: 'Auto-generated draft',
+        });
+        const savedShift = await this.shiftRepo.save(shift);
+        createdShifts.push(savedShift);
+
+        for (const staff of picks) {
+          const assignment = this.assignRepo.create({
+            shiftId: savedShift.id,
+            staffId: staff.id,
+            assignedById: requesterId,
+          });
+          const savedAssignment = await this.assignRepo.save(assignment);
+          createdAssignments.push(savedAssignment);
+
+          // Update in-memory tracking so subsequent slots in this week reflect the new load
+          weeklyMinutesMap.set(staff.id, (weeklyMinutesMap.get(staff.id) ?? 0) + slotMinutes);
+          if (!assignedDates.has(staff.id)) assignedDates.set(staff.id, new Set());
+          assignedDates.get(staff.id)!.add(date);
+        }
+      }
+    }
+
+    this.safeEmit('schedule.updated', { locationId, weekStart: wkStart });
+
+    return {
+      shiftsCreated: createdShifts.length,
+      assignmentsCreated: createdAssignments.length,
+      shifts: createdShifts,
+      unfilledSlots,
+    };
   }
 
   private assertCanManage(shift: Shift, user: User) {

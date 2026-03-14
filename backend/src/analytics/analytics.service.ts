@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Shift, ShiftStatus } from '../shifts/entities/shift.entity';
 import { ShiftAssignment, AssignmentStatus } from '../shifts/entities/shift-assignment.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { TimeOffRequest, TimeOffStatus } from '../time-off-requests/entities/time-off-request.entity';
@@ -24,6 +25,7 @@ export interface LiveStatsSnapshot {
 @Injectable()
 export class AnalyticsService {
   constructor(
+    @InjectRepository(Shift) private shiftRepo: Repository<Shift>,
     @InjectRepository(ShiftAssignment) private assignRepo: Repository<ShiftAssignment>,
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(TimeOffRequest) private timeOffRepo: Repository<TimeOffRequest>,
@@ -271,5 +273,283 @@ export class AnalyticsService {
         assignments: annotatedAssignments,
       };
     }).sort((a, b) => b.weeklyHours - a.weeklyHours);
+  }
+
+  // ─── PART 1: NEW ANALYTICS METHODS ─────────────────────────────────────────
+
+  async getLaborCost(startDate: string, endDate: string, locationId?: string) {
+    const qb = this.shiftRepo
+      .createQueryBuilder('s')
+      .leftJoinAndSelect('s.assignments', 'a')
+      .leftJoinAndSelect('a.staff', 'staff')
+      .leftJoinAndSelect('s.location', 'loc')
+      .where('s.status = :status', { status: ShiftStatus.PUBLISHED })
+      .andWhere('s.date >= :startDate AND s.date <= :endDate', { startDate, endDate });
+
+    if (locationId) qb.andWhere('s.locationId = :locationId', { locationId });
+
+    const shifts = await qb.getMany();
+
+    let totalScheduledHours = 0;
+    let totalLaborCost = 0;
+
+    const byLocationMap = new Map<string, {
+      name: string;
+      scheduledHours: number;
+      laborCost: number;
+      shiftCount: number;
+    }>();
+
+    const byDateMap = new Map<string, { laborCost: number; scheduledHours: number }>();
+
+    for (const shift of shifts) {
+      const scheduledHours = minutesBetween(shift.startTime, shift.endTime) / 60;
+      const activeAssignments = (shift.assignments ?? []).filter(
+        (a) => a.status === AssignmentStatus.ASSIGNED || a.status === AssignmentStatus.COMPLETED,
+      );
+      const shiftLaborCost = scheduledHours * activeAssignments.reduce((sum, a) => {
+        return sum + (a.staff?.hourlyRate ? Number(a.staff.hourlyRate) : 0);
+      }, 0);
+
+      totalScheduledHours += scheduledHours;
+      totalLaborCost += shiftLaborCost;
+
+      // By location
+      const locId = shift.locationId;
+      const locName = shift.location?.name ?? locId;
+      if (!byLocationMap.has(locId)) {
+        byLocationMap.set(locId, { name: locName, scheduledHours: 0, laborCost: 0, shiftCount: 0 });
+      }
+      const locEntry = byLocationMap.get(locId)!;
+      locEntry.scheduledHours += scheduledHours;
+      locEntry.laborCost += shiftLaborCost;
+      locEntry.shiftCount += 1;
+
+      // By date
+      if (!byDateMap.has(shift.date)) {
+        byDateMap.set(shift.date, { laborCost: 0, scheduledHours: 0 });
+      }
+      const dateEntry = byDateMap.get(shift.date)!;
+      dateEntry.laborCost += shiftLaborCost;
+      dateEntry.scheduledHours += scheduledHours;
+    }
+
+    return {
+      totalScheduledHours: +totalScheduledHours.toFixed(2),
+      totalLaborCost: +totalLaborCost.toFixed(2),
+      byLocation: Array.from(byLocationMap.entries()).map(([locId, d]) => ({
+        locationId: locId,
+        name: d.name,
+        scheduledHours: +d.scheduledHours.toFixed(2),
+        laborCost: +d.laborCost.toFixed(2),
+        shiftCount: d.shiftCount,
+      })),
+      byDate: Array.from(byDateMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, d]) => ({
+          date,
+          laborCost: +d.laborCost.toFixed(2),
+          scheduledHours: +d.scheduledHours.toFixed(2),
+        })),
+    };
+  }
+
+  async getKpiRollup(startDate: string, endDate: string) {
+    // Fetch all shifts in range with their assignments and location
+    const shifts = await this.shiftRepo
+      .createQueryBuilder('s')
+      .leftJoinAndSelect('s.assignments', 'a')
+      .leftJoinAndSelect('a.staff', 'staff')
+      .leftJoinAndSelect('s.location', 'loc')
+      .where('s.date >= :startDate AND s.date <= :endDate', { startDate, endDate })
+      .getMany();
+
+    const locMap = new Map<string, {
+      name: string;
+      timezone: string;
+      totalShifts: number;
+      publishedShifts: number;
+      draftShifts: number;
+      totalAssignments: number;
+      totalHeadcount: number;
+      publishedAssignments: number;
+      totalScheduledHours: number;
+      estimatedLaborCost: number;
+    }>();
+
+    for (const shift of shifts) {
+      const locId = shift.locationId;
+      if (!locMap.has(locId)) {
+        locMap.set(locId, {
+          name: shift.location?.name ?? locId,
+          timezone: shift.location?.timezone ?? 'UTC',
+          totalShifts: 0,
+          publishedShifts: 0,
+          draftShifts: 0,
+          totalAssignments: 0,
+          totalHeadcount: 0,
+          publishedAssignments: 0,
+          totalScheduledHours: 0,
+          estimatedLaborCost: 0,
+        });
+      }
+      const entry = locMap.get(locId)!;
+      entry.totalShifts += 1;
+
+      if (shift.status === ShiftStatus.PUBLISHED) {
+        entry.publishedShifts += 1;
+        const scheduledHours = minutesBetween(shift.startTime, shift.endTime) / 60;
+        entry.totalScheduledHours += scheduledHours;
+        entry.totalHeadcount += shift.headcount;
+
+        const activeAssignments = (shift.assignments ?? []).filter(
+          (a) => a.status === AssignmentStatus.ASSIGNED || a.status === AssignmentStatus.COMPLETED,
+        );
+        entry.publishedAssignments += activeAssignments.length;
+        entry.totalAssignments += activeAssignments.length;
+
+        entry.estimatedLaborCost += scheduledHours * activeAssignments.reduce((sum, a) => {
+          return sum + (a.staff?.hourlyRate ? Number(a.staff.hourlyRate) : 0);
+        }, 0);
+      } else {
+        entry.draftShifts += 1;
+        const activeAssignments = (shift.assignments ?? []).filter(
+          (a) => a.status === AssignmentStatus.ASSIGNED || a.status === AssignmentStatus.COMPLETED,
+        );
+        entry.totalAssignments += activeAssignments.length;
+      }
+    }
+
+    return Array.from(locMap.entries()).map(([locId, d]) => ({
+      locationId: locId,
+      name: d.name,
+      timezone: d.timezone,
+      totalShifts: d.totalShifts,
+      publishedShifts: d.publishedShifts,
+      draftShifts: d.draftShifts,
+      totalAssignments: d.totalAssignments,
+      totalScheduledHours: +d.totalScheduledHours.toFixed(2),
+      estimatedLaborCost: +d.estimatedLaborCost.toFixed(2),
+      fillRate: d.totalHeadcount > 0
+        ? +(d.publishedAssignments / d.totalHeadcount).toFixed(3)
+        : 0,
+    })).sort((a, b) => b.totalShifts - a.totalShifts);
+  }
+
+  async getAbsenteeism(startDate: string, endDate: string, locationId?: string) {
+    const today = new Date().toISOString().split('T')[0];
+
+    // A no-show: PUBLISHED shift, date < today, assignment status ASSIGNED (not completed/cancelled)
+    const qb = this.assignRepo
+      .createQueryBuilder('a')
+      .innerJoinAndSelect('a.shift', 's')
+      .innerJoinAndSelect('a.staff', 'staff')
+      .where('s.status = :status', { status: ShiftStatus.PUBLISHED })
+      .andWhere('s.date >= :startDate AND s.date <= :endDate', { startDate, endDate })
+      .andWhere('s.date < :today', { today })
+      .andWhere('a.status = :assignedStatus', { assignedStatus: AssignmentStatus.ASSIGNED });
+
+    if (locationId) qb.andWhere('s.locationId = :locationId', { locationId });
+
+    const noShows = await qb.getMany();
+
+    const noShowCount = noShows.length;
+    const totalAssignmentsInRange = await this.assignRepo
+      .createQueryBuilder('a')
+      .innerJoin('a.shift', 's')
+      .where('s.status = :status', { status: ShiftStatus.PUBLISHED })
+      .andWhere('s.date >= :startDate AND s.date <= :endDate', { startDate, endDate })
+      .andWhere('s.date < :today', { today })
+      .andWhere('a.status IN (:...statuses)', {
+        statuses: [AssignmentStatus.ASSIGNED, AssignmentStatus.COMPLETED],
+      })
+      .getCount();
+
+    const noShowRate = totalAssignmentsInRange > 0
+      ? +(noShowCount / totalAssignmentsInRange).toFixed(3)
+      : 0;
+
+    // Aggregate by staff
+    const byStaffMap = new Map<string, { name: string; noShowCount: number }>();
+    const byDateMap = new Map<string, number>();
+
+    for (const a of noShows) {
+      const key = a.staffId;
+      if (!byStaffMap.has(key)) {
+        byStaffMap.set(key, { name: a.staff.name, noShowCount: 0 });
+      }
+      byStaffMap.get(key)!.noShowCount += 1;
+
+      const date = a.shift.date;
+      byDateMap.set(date, (byDateMap.get(date) ?? 0) + 1);
+    }
+
+    return {
+      noShowCount,
+      noShowRate,
+      byStaff: Array.from(byStaffMap.entries())
+        .map(([staffId, d]) => ({ staffId, name: d.name, noShowCount: d.noShowCount }))
+        .sort((a, b) => b.noShowCount - a.noShowCount),
+      byDate: Array.from(byDateMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, noShowCount]) => ({ date, noShowCount })),
+    };
+  }
+
+  async getTurnover() {
+    const now = new Date();
+    const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+
+    // All users
+    const allUsers = await this.userRepo.find({
+      select: ['id', 'isActive', 'createdAt'],
+    });
+
+    const totalActive = allUsers.filter((u) => u.isActive).length;
+    const totalInactive = allUsers.filter((u) => !u.isActive).length;
+
+    // Hires per month (users created in the last 12 months)
+    const hiresByMonthMap = new Map<string, number>();
+    for (const user of allUsers) {
+      const created = new Date(user.createdAt);
+      if (created >= twelveMonthsAgo) {
+        const monthKey = `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, '0')}`;
+        hiresByMonthMap.set(monthKey, (hiresByMonthMap.get(monthKey) ?? 0) + 1);
+      }
+    }
+
+    // Build ordered month list for last 12 months
+    const hiresByMonth: Array<{ month: string; count: number }> = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      hiresByMonth.push({ month: monthKey, count: hiresByMonthMap.get(monthKey) ?? 0 });
+    }
+
+    // Active staff count by location
+    const activeByLocationRaw = await this.userRepo
+      .createQueryBuilder('u')
+      .innerJoin('u.certifiedLocations', 'loc')
+      .select('loc.id', 'locationId')
+      .addSelect('loc.name', 'name')
+      .addSelect('COUNT(DISTINCT u.id)', 'staffCount')
+      .where('u.isActive = :active', { active: true })
+      .andWhere('u.role = :role', { role: UserRole.STAFF })
+      .groupBy('loc.id')
+      .addGroupBy('loc.name')
+      .getRawMany<{ locationId: string; name: string; staffCount: string }>();
+
+    const activeByLocation = activeByLocationRaw.map((r) => ({
+      locationId: r.locationId,
+      name: r.name,
+      staffCount: Number(r.staffCount),
+    }));
+
+    return {
+      totalActive,
+      totalInactive,
+      hiresByMonth,
+      activeByLocation,
+    };
   }
 }

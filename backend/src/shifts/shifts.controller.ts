@@ -30,6 +30,7 @@ import { CreateShiftDto } from './dto/create-shift.dto';
 import { UpdateShiftDto } from './dto/update-shift.dto';
 import { AssignStaffDto } from './dto/assign-staff.dto';
 import { PublishWeekDto } from './dto/publish-week.dto';
+import { AutoScheduleDto } from './dto/auto-schedule.dto';
 
 @ApiTags('shifts')
 @ApiBearerAuth()
@@ -97,6 +98,21 @@ export class ShiftsController {
     return this.svc.onDutyNow(user);
   }
 
+  @Get('cross-location-available')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @ApiOperation({
+    summary: 'Staff certified at a location, available on a date, and not already assigned anywhere that day',
+  })
+  @ApiQuery({ name: 'locationId', required: true, description: 'Target location UUID' })
+  @ApiQuery({ name: 'date', required: true, description: 'Date to check availability (YYYY-MM-DD)' })
+  crossLocationAvailable(
+    @Query('locationId') locationId: string,
+    @Query('date') date: string,
+  ) {
+    return this.svc.getCrossLocationAvailable(locationId, date);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get shift by ID' })
@@ -109,6 +125,17 @@ export class ShiftsController {
   @ApiOperation({ summary: 'Create a shift' })
   create(@Body() dto: CreateShiftDto, @CurrentUser() user: User) {
     return this.svc.create(dto, user);
+  }
+
+  @Post('auto-schedule')
+  @HttpCode(201)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @ApiOperation({
+    summary: 'Auto-generate a draft schedule for a full week at a location (heuristic)',
+  })
+  autoSchedule(@Body() dto: AutoScheduleDto, @CurrentUser() user: User) {
+    return this.svc.autoSchedule(dto, user.id);
   }
 
   @Post('publish-week')

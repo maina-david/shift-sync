@@ -64,6 +64,57 @@ export class AnalyticsController {
     return this.svc.getOvertimeProjection(weekStart, locationId, user);
   }
 
+  @Get('labor-cost')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @ApiOperation({ summary: 'Labor cost breakdown by location and date for published shifts' })
+  @ApiQuery({ name: 'startDate', example: '2024-08-01' })
+  @ApiQuery({ name: 'endDate', example: '2024-08-31' })
+  @ApiQuery({ name: 'locationId', required: false })
+  laborCost(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('locationId') locationId?: string,
+  ) {
+    return this.svc.getLaborCost(startDate, endDate, locationId);
+  }
+
+  @Get('kpi-rollup')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @ApiOperation({ summary: 'KPI rollup per location: shift counts, hours, labor cost, fill rate' })
+  @ApiQuery({ name: 'startDate', example: '2024-08-01' })
+  @ApiQuery({ name: 'endDate', example: '2024-08-31' })
+  kpiRollup(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    return this.svc.getKpiRollup(startDate, endDate);
+  }
+
+  @Get('absenteeism')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @ApiOperation({ summary: 'Absenteeism report — no-shows on past published shifts' })
+  @ApiQuery({ name: 'startDate', example: '2024-08-01' })
+  @ApiQuery({ name: 'endDate', example: '2024-08-31' })
+  @ApiQuery({ name: 'locationId', required: false })
+  absenteeism(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('locationId') locationId?: string,
+  ) {
+    return this.svc.getAbsenteeism(startDate, endDate, locationId);
+  }
+
+  @Get('turnover')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @ApiOperation({ summary: 'Staff turnover summary — hires by month and active/inactive counts' })
+  turnover() {
+    return this.svc.getTurnover();
+  }
+
   @Sse('live')
   @UseGuards(SseJwtGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.MANAGER)

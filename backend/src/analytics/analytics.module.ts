@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AnalyticsService } from './analytics.service';
 import { AnalyticsController } from './analytics.controller';
+import { Shift } from '../shifts/entities/shift.entity';
 import { ShiftAssignment } from '../shifts/entities/shift-assignment.entity';
 import { User } from '../users/entities/user.entity';
 import { TimeOffRequest } from '../time-off-requests/entities/time-off-request.entity';
@@ -14,6 +15,7 @@ import { AuthModule } from '../auth/auth.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
+      Shift,
       ShiftAssignment,
       User,
       TimeOffRequest,

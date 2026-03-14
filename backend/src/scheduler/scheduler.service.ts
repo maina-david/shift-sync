@@ -33,7 +33,7 @@ import {
   SwapRequestStatus,
 } from '../swap-requests/entities/swap-request.entity';
 import { User, UserRole } from '../users/entities/user.entity';
-import { Notification } from '../notifications/entities/notification.entity';
+import { Notification, NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class SchedulerService implements OnModuleInit, OnModuleDestroy {
@@ -306,6 +306,99 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     this.logger.log(
       `[reservation-no-show] Marked ${eligible.length} reservation(s) as NO_SHOW`,
     );
+  }
+
+  // ─── CRON: every 30 minutes — upcoming shift reminders ────────────────────
+
+  /**
+   * Sends an in-app SHIFT_REMINDER notification for every ASSIGNED staff
+   * member whose shift starts within the next 2 hours, provided a reminder
+   * has not already been sent for that assignment today.
+   *
+   * Runs every 30 minutes so staff are notified close to shift start without
+   * spamming them — the duplicate check ensures at most one reminder per
+   * assignment per calendar day.
+   */
+  @Cron('0 */30 * * * *', { name: 'shift-reminders' })
+  async sendShiftReminders(): Promise<void> {
+    const now = new Date();
+    const windowEnd = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+
+    // Fetch published shifts whose date is today or tomorrow (covers overnight boundary)
+    const todayDate = now.toISOString().split('T')[0];
+    const tomorrowDate = new Date(now.getTime() + 86400000).toISOString().split('T')[0];
+
+    const candidates = await this.shiftRepo
+      .createQueryBuilder('s')
+      .innerJoinAndSelect('s.assignments', 'a')
+      .innerJoinAndSelect('a.staff', 'staff')
+      .innerJoinAndSelect('s.location', 'loc')
+      .where('s.status = :status', { status: ShiftStatus.PUBLISHED })
+      .andWhere('s.date IN (:...dates)', { dates: [todayDate, tomorrowDate] })
+      .andWhere('a.status = :assignedStatus', { assignedStatus: AssignmentStatus.ASSIGNED })
+      .getMany();
+
+    // Determine which shifts start within [now, now+2h]
+    const upcomingAssignments: Array<{ assignmentId: string; staffId: string; shift: Shift }> = [];
+
+    for (const shift of candidates) {
+      // Build a UTC Date from date + startTime (treated as UTC for comparison)
+      const shiftStart = new Date(`${shift.date}T${shift.startTime}:00Z`);
+      if (shiftStart >= now && shiftStart <= windowEnd) {
+        for (const assignment of shift.assignments) {
+          upcomingAssignments.push({
+            assignmentId: assignment.id,
+            staffId: assignment.staffId,
+            shift,
+          });
+        }
+      }
+    }
+
+    if (upcomingAssignments.length === 0) return;
+
+    // Check which assignments already have a SHIFT_REMINDER notification created today
+    const remindersSentToday = await this.notifRepo
+      .createQueryBuilder('n')
+      .where('n.type = :type', { type: NotificationType.SHIFT_REMINDER })
+      .andWhere('n.entityType = :entityType', { entityType: 'shift_assignment' })
+      .andWhere('n.entityId IN (:...ids)', {
+        ids: upcomingAssignments.map((a) => a.assignmentId),
+      })
+      .andWhere('DATE(n.createdAt) = :today', { today: todayDate })
+      .select('n.entityId', 'entityId')
+      .getRawMany<{ entityId: string }>();
+
+    const alreadyReminded = new Set(remindersSentToday.map((r) => r.entityId));
+
+    let sentCount = 0;
+    for (const { assignmentId, staffId, shift } of upcomingAssignments) {
+      if (alreadyReminded.has(assignmentId)) continue;
+
+      const minutesUntil = Math.round(
+        (new Date(`${shift.date}T${shift.startTime}:00Z`).getTime() - now.getTime()) / 60000,
+      );
+      const timeLabel = minutesUntil <= 60
+        ? `in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`
+        : `in about ${Math.round(minutesUntil / 60)} hour${Math.round(minutesUntil / 60) !== 1 ? 's' : ''}`;
+
+      this.safeEmit('notification.send', {
+        userId: staffId,
+        type: NotificationType.SHIFT_REMINDER,
+        title: 'Upcoming Shift Reminder',
+        message: `Your shift at ${shift.location.name} starts ${timeLabel} (${shift.startTime}–${shift.endTime}).`,
+        entityType: 'shift_assignment',
+        entityId: assignmentId,
+      });
+
+      sentCount++;
+    }
+
+    if (sentCount > 0) {
+      this.logger.log(
+        `[shift-reminders] Sent ${sentCount} upcoming shift reminder(s) (window: now → +2 h)`,
+      );
+    }
   }
 
   // ─── INTERVAL: every 12 hours ──────────────────────────────────────────────

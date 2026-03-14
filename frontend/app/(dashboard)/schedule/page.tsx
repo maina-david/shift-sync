@@ -28,6 +28,7 @@ import { Shift, Location, Skill } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 import { getSocket } from '@/lib/socket';
 import { cn } from '@/lib/utils';
+import { WeatherWidget } from '@/components/weather-widget';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -142,6 +143,8 @@ export default function SchedulePage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <WeatherWidget lat={37.7749} lng={-122.4194} locationName={locations.find((l) => l.id === firstLocationId)?.name} />
+
           {isManager && locations.length > 0 && (
             <Select value={firstLocationId} onValueChange={setSelectedLocationId}>
               <SelectTrigger className="w-48">

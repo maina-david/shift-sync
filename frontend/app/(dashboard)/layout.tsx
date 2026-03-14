@@ -40,6 +40,9 @@ const PAGE_TITLES: Record<string, string> = {
   '/audit': 'Audit Log',
   '/menu': 'Menu',
   '/reservations': 'Reservations',
+  '/timesheets': 'Timesheets',
+  '/schedule-templates': 'Schedule Templates',
+  '/settings/system': 'System Settings',
   '/settings/availability': 'Availability',
   '/settings': 'Settings',
 };

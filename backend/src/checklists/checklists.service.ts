@@ -1,0 +1,109 @@
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Checklist } from './entities/checklist.entity';
+import { CreateChecklistDto } from './dto/create-checklist.dto';
+
+@Injectable()
+export class ChecklistsService {
+  constructor(
+    @InjectRepository(Checklist)
+    private readonly repo: Repository<Checklist>,
+  ) {}
+
+  // ─── Create ──────────────────────────────────────────────────────────────────
+
+  async create(dto: CreateChecklistDto, _creatorId: string): Promise<Checklist> {
+    const items = dto.items.map((item) => ({
+      id: crypto.randomUUID(),
+      label: item.label,
+      required: item.required,
+      completedAt: null,
+      completedById: null,
+    }));
+
+    const checklist = this.repo.create({
+      type: dto.type,
+      title: dto.title,
+      locationId: dto.locationId,
+      shiftId: dto.shiftId ?? null,
+      assignedToId: dto.assignedToId ?? null,
+      items,
+      isCompleted: false,
+      completedAt: null,
+    });
+
+    return this.repo.save(checklist);
+  }
+
+  // ─── List ─────────────────────────────────────────────────────────────────
+
+  async findAll(locationId?: string, date?: string): Promise<Checklist[]> {
+    const qb = this.repo
+      .createQueryBuilder('cl')
+      .leftJoinAndSelect('cl.location', 'location')
+      .orderBy('cl.createdAt', 'DESC');
+
+    if (locationId) {
+      qb.andWhere('cl.locationId = :locationId', { locationId });
+    }
+
+    if (date) {
+      // Filter to checklists whose linked shift falls on the given date
+      qb.innerJoin('shifts', 'shift', 'shift.id = cl.shiftId AND shift.date = :date', { date });
+    }
+
+    return qb.getMany();
+  }
+
+  // ─── Find One ─────────────────────────────────────────────────────────────
+
+  async findOne(id: string): Promise<Checklist> {
+    const checklist = await this.repo.findOne({ where: { id } });
+    if (!checklist) {
+      throw new NotFoundException(`Checklist ${id} not found`);
+    }
+    return checklist;
+  }
+
+  // ─── Complete Item ────────────────────────────────────────────────────────
+
+  async completeItem(checklistId: string, itemId: string, userId: string): Promise<Checklist> {
+    const checklist = await this.findOne(checklistId);
+
+    const itemIndex = checklist.items.findIndex((i) => i.id === itemId);
+    if (itemIndex === -1) {
+      throw new NotFoundException(`Item ${itemId} not found in checklist ${checklistId}`);
+    }
+
+    const now = new Date().toISOString();
+    checklist.items[itemIndex] = {
+      ...checklist.items[itemIndex],
+      completedAt: now,
+      completedById: userId,
+    };
+
+    // If every required item is now completed, mark the whole checklist as done
+    const allRequiredDone = checklist.items
+      .filter((i) => i.required)
+      .every((i) => i.completedAt !== null);
+
+    if (allRequiredDone && !checklist.isCompleted) {
+      checklist.isCompleted = true;
+      checklist.completedAt = new Date();
+    }
+
+    return this.repo.save(checklist);
+  }
+
+  // ─── Remove ───────────────────────────────────────────────────────────────
+
+  async remove(id: string): Promise<void> {
+    const checklist = await this.findOne(id);
+    await this.repo.remove(checklist);
+  }
+}
