@@ -182,30 +182,358 @@ Each location has a single IANA timezone identifier. The system does not model s
 
 ## Project Structure
 
-```
+```text
 shift-sync/
-├── backend/          # NestJS API (port 3001)
+├── .gitignore
+├── README.md
+│
+├── backend/                                        # NestJS API — http://localhost:3001
+│   ├── .env.example
+│   ├── .gitignore
+│   ├── .prettierrc
+│   ├── eslint.config.mjs
+│   ├── nest-cli.json
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── tsconfig.build.json
 │   ├── src/
-│   │   ├── auth/
-│   │   ├── users/
-│   │   ├── locations/
-│   │   ├── shifts/
-│   │   ├── swap-requests/
-│   │   ├── drop-requests/
-│   │   ├── time-off/
-│   │   ├── notifications/
+│   │   ├── main.ts
+│   │   ├── app.module.ts
+│   │   ├── app.controller.ts
+│   │   ├── app.controller.spec.ts
+│   │   ├── app.service.ts
+│   │   ├── seed.ts                                 # Database seeder (run once after install)
 │   │   ├── analytics/
+│   │   │   ├── analytics.controller.ts
+│   │   │   ├── analytics.module.ts
+│   │   │   └── analytics.service.ts
 │   │   ├── audit/
-│   │   ├── operations/
-│   │   └── seed.ts
-│   └── .env.example
-└── frontend/         # Next.js 16 App Router (port 3000)
+│   │   │   ├── audit.controller.ts
+│   │   │   ├── audit.module.ts
+│   │   │   ├── audit.service.ts
+│   │   │   └── entities/
+│   │   │       └── audit-log.entity.ts
+│   │   ├── auth/
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── auth.module.ts
+│   │   │   ├── auth.service.ts
+│   │   │   ├── jwt-auth.guard.ts
+│   │   │   ├── jwt.strategy.ts
+│   │   │   ├── local-auth.guard.ts
+│   │   │   ├── local.strategy.ts
+│   │   │   ├── roles.guard.ts
+│   │   │   └── dto/
+│   │   │       ├── login.dto.ts
+│   │   │       └── register.dto.ts
+│   │   ├── bookmarks/
+│   │   │   ├── bookmarks.controller.ts
+│   │   │   ├── bookmarks.module.ts
+│   │   │   ├── bookmarks.service.ts
+│   │   │   ├── dto/
+│   │   │   │   └── create-bookmark.dto.ts
+│   │   │   └── entities/
+│   │   │       └── bookmark.entity.ts
+│   │   ├── common/
+│   │   │   ├── current-user.decorator.ts
+│   │   │   ├── roles.decorator.ts
+│   │   │   ├── timezone.util.ts
+│   │   │   └── guards/
+│   │   │       └── sse-jwt.guard.ts
+│   │   ├── config/
+│   │   │   ├── app.config.ts
+│   │   │   ├── database.config.ts
+│   │   │   ├── jwt.config.ts
+│   │   │   └── validation.schema.ts
+│   │   ├── drop-requests/
+│   │   │   ├── drop-requests.controller.ts
+│   │   │   ├── drop-requests.module.ts
+│   │   │   ├── drop-requests.service.ts
+│   │   │   ├── dto/
+│   │   │   │   ├── create-drop-request.dto.ts
+│   │   │   │   └── review-drop.dto.ts
+│   │   │   └── entities/
+│   │   │       └── drop-request.entity.ts
+│   │   ├── email/
+│   │   │   ├── email.module.ts
+│   │   │   └── email.service.ts
+│   │   ├── locations/
+│   │   │   ├── locations.controller.ts
+│   │   │   ├── locations.module.ts
+│   │   │   ├── locations.service.ts
+│   │   │   ├── dto/
+│   │   │   │   ├── create-location.dto.ts
+│   │   │   │   └── update-location.dto.ts
+│   │   │   └── entities/
+│   │   │       └── location.entity.ts
+│   │   ├── log-book/
+│   │   │   ├── log-book.controller.ts
+│   │   │   ├── log-book.module.ts
+│   │   │   ├── log-book.service.ts
+│   │   │   ├── dto/
+│   │   │   │   └── create-log-entry.dto.ts
+│   │   │   └── entities/
+│   │   │       └── log-entry.entity.ts
+│   │   ├── menu/
+│   │   │   ├── menu.controller.ts
+│   │   │   ├── menu.module.ts
+│   │   │   ├── menu.service.ts
+│   │   │   ├── dto/
+│   │   │   │   ├── create-menu-item.dto.ts
+│   │   │   │   └── update-menu-item.dto.ts
+│   │   │   └── entities/
+│   │   │       └── menu-item.entity.ts
+│   │   ├── notifications/
+│   │   │   ├── notifications.controller.ts
+│   │   │   ├── notifications.gateway.ts            # Socket.IO WebSocket gateway
+│   │   │   ├── notifications.module.ts
+│   │   │   ├── notifications.service.ts
+│   │   │   └── entities/
+│   │   │       └── notification.entity.ts
+│   │   ├── reservations/
+│   │   │   ├── reservations.controller.ts
+│   │   │   ├── reservations.module.ts
+│   │   │   ├── reservations.service.ts
+│   │   │   ├── dto/
+│   │   │   │   ├── create-reservation.dto.ts
+│   │   │   │   └── update-reservation.dto.ts
+│   │   │   └── entities/
+│   │   │       └── reservation.entity.ts
+│   │   ├── scheduler/
+│   │   │   ├── scheduler.module.ts
+│   │   │   └── scheduler.service.ts                # Cron jobs (expired drop requests, etc.)
+│   │   ├── shifts/
+│   │   │   ├── constraint-checker.service.ts       # Scheduling constraint validation
+│   │   │   ├── shifts.controller.ts
+│   │   │   ├── shifts.module.ts
+│   │   │   ├── shifts.service.ts
+│   │   │   ├── dto/
+│   │   │   │   ├── assign-staff.dto.ts
+│   │   │   │   ├── create-shift.dto.ts
+│   │   │   │   ├── publish-week.dto.ts
+│   │   │   │   └── update-shift.dto.ts
+│   │   │   └── entities/
+│   │   │       ├── shift-assignment.entity.ts
+│   │   │       └── shift.entity.ts
+│   │   ├── skills/
+│   │   │   ├── skills.controller.ts
+│   │   │   ├── skills.module.ts
+│   │   │   ├── skills.service.ts
+│   │   │   ├── dto/
+│   │   │   │   ├── create-skill.dto.ts
+│   │   │   │   └── update-skill.dto.ts
+│   │   │   └── entities/
+│   │   │       └── skill.entity.ts
+│   │   ├── swap-requests/
+│   │   │   ├── swap-requests.controller.ts
+│   │   │   ├── swap-requests.module.ts
+│   │   │   ├── swap-requests.service.ts
+│   │   │   ├── dto/
+│   │   │   │   ├── create-swap-request.dto.ts
+│   │   │   │   └── review-swap.dto.ts
+│   │   │   └── entities/
+│   │   │       └── swap-request.entity.ts
+│   │   ├── time-off-requests/
+│   │   │   ├── time-off-requests.controller.ts
+│   │   │   ├── time-off-requests.module.ts
+│   │   │   ├── time-off-requests.service.ts
+│   │   │   ├── dto/
+│   │   │   │   ├── create-time-off-request.dto.ts
+│   │   │   │   └── review-time-off.dto.ts
+│   │   │   └── entities/
+│   │   │       └── time-off-request.entity.ts
+│   │   └── users/
+│   │       ├── users.controller.ts
+│   │       ├── users.module.ts
+│   │       ├── users.service.ts
+│   │       ├── dto/
+│   │       │   ├── change-password.dto.ts
+│   │       │   ├── set-availability.dto.ts
+│   │       │   └── update-user.dto.ts
+│   │       └── entities/
+│   │           ├── availability-exception.entity.ts
+│   │           ├── availability.entity.ts
+│   │           └── user.entity.ts
+│   └── test/
+│       ├── app.e2e-spec.ts
+│       └── jest-e2e.json
+│
+└── frontend/                                       # Next.js 16 App Router — http://localhost:3000
+    ├── .env.example
+    ├── .gitignore
+    ├── components.json
+    ├── eslint.config.mjs
+    ├── next-env.d.ts
+    ├── next.config.ts
+    ├── package.json
+    ├── postcss.config.mjs
+    ├── proxy.ts                                    # Next.js v16 middleware — auth session guard
+    ├── tsconfig.json
     ├── app/
-    │   ├── (auth)/       # login page
-    │   ├── (dashboard)/  # protected routes
-    │   └── page.tsx      # public landing page
-    ├── contexts/
-    ├── lib/
+    │   ├── favicon.ico
+    │   ├── globals.css
+    │   ├── icon.svg
+    │   ├── layout.tsx                              # Root layout
+    │   ├── not-found.tsx
+    │   ├── page.tsx                                # Public landing page
+    │   ├── providers.tsx                           # React Query + theme providers
+    │   ├── (auth)/
+    │   │   ├── layout.tsx
+    │   │   └── login/
+    │   │       └── page.tsx
+    │   └── (dashboard)/
+    │       ├── layout.tsx                          # Sidebar shell + protected route wrapper
+    │       ├── analytics/
+    │       │   └── page.tsx                        # Hours distribution, fairness score, overtime
+    │       ├── audit/
+    │       │   └── page.tsx                        # Immutable audit log with CSV export
+    │       ├── dashboard/
+    │       │   └── page.tsx                        # Live stats overview
+    │       ├── locations/
+    │       │   ├── page.tsx                        # Location list
+    │       │   └── [id]/
+    │       │       ├── loading.tsx
+    │       │       └── page.tsx                    # 3D floor plan viewer + Edit layout (admin)
+    │       ├── log-book/
+    │       │   └── page.tsx                        # Operational shift log
+    │       ├── menu/
+    │       │   └── page.tsx                        # Digital menu management
+    │       ├── my-schedule/
+    │       │   └── page.tsx                        # Staff personal schedule
+    │       ├── notifications/
+    │       │   └── page.tsx
+    │       ├── pickup/
+    │       │   └── page.tsx                        # Available shifts for staff to pick up
+    │       ├── reservations/
+    │       │   └── page.tsx                        # Reservations board
+    │       ├── schedule/
+    │       │   └── page.tsx                        # Weekly schedule builder (manager/admin)
+    │       ├── settings/
+    │       │   ├── page.tsx                        # Profile & notification settings
+    │       │   └── availability/
+    │       │       └── page.tsx                    # Weekly availability + one-off exceptions
+    │       ├── skills/
+    │       │   └── page.tsx                        # Skills management (admin)
+    │       ├── staff/
+    │       │   └── page.tsx                        # Staff directory
+    │       ├── swap-requests/
+    │       │   └── page.tsx                        # Swap request workflows
+    │       └── time-off/
+    │           └── page.tsx                        # Time-off request management
     ├── components/
-    └── .env.example
+    │   ├── login-form.tsx
+    │   ├── floor-plan/
+    │   │   ├── floor-plan-canvas.tsx               # SSR-safe dynamic import wrapper
+    │   │   ├── floor-plan-editor.tsx               # Admin drag-and-drop 2D zone editor
+    │   │   ├── floor-plan-scene.tsx                # React Three Fiber 3D orthographic scene
+    │   │   ├── floor-plan-types.ts
+    │   │   ├── floor-zone.tsx                      # Individual 3D zone mesh + label
+    │   │   ├── zone-config.ts                      # Default hardcoded zone layout (fallback)
+    │   │   └── zone-detail-panel.tsx               # Selected zone staff panel
+    │   ├── layout/
+    │   │   └── app-sidebar.tsx                     # Navigation sidebar
+    │   ├── schedule/
+    │   │   ├── assign-dialog.tsx                   # Staff assignment modal with constraint preview
+    │   │   └── shift-card.tsx                      # Shift card with assignment slots
+    │   ├── ui/                                     # shadcn/ui primitives
+    │   │   ├── accordion.tsx
+    │   │   ├── alert-dialog.tsx
+    │   │   ├── alert.tsx
+    │   │   ├── aspect-ratio.tsx
+    │   │   ├── avatar.tsx
+    │   │   ├── badge.tsx
+    │   │   ├── breadcrumb.tsx
+    │   │   ├── button-group.tsx
+    │   │   ├── button.tsx
+    │   │   ├── calendar.tsx
+    │   │   ├── card.tsx
+    │   │   ├── carousel.tsx
+    │   │   ├── chart.tsx
+    │   │   ├── checkbox.tsx
+    │   │   ├── collapsible.tsx
+    │   │   ├── combobox.tsx
+    │   │   ├── command.tsx
+    │   │   ├── context-menu.tsx
+    │   │   ├── data-table.tsx
+    │   │   ├── date-picker.tsx
+    │   │   ├── dialog.tsx
+    │   │   ├── direction.tsx
+    │   │   ├── drawer.tsx
+    │   │   ├── dropdown-menu.tsx
+    │   │   ├── empty.tsx
+    │   │   ├── error-boundary.tsx
+    │   │   ├── field.tsx
+    │   │   ├── hover-card.tsx
+    │   │   ├── input-group.tsx
+    │   │   ├── input-otp.tsx
+    │   │   ├── input.tsx
+    │   │   ├── item.tsx
+    │   │   ├── kbd.tsx
+    │   │   ├── label.tsx
+    │   │   ├── menubar.tsx
+    │   │   ├── native-select.tsx
+    │   │   ├── navigation-menu.tsx
+    │   │   ├── page-transition.tsx
+    │   │   ├── pagination.tsx
+    │   │   ├── popover.tsx
+    │   │   ├── progress.tsx
+    │   │   ├── radio-group.tsx
+    │   │   ├── resizable.tsx
+    │   │   ├── scroll-area.tsx
+    │   │   ├── select.tsx
+    │   │   ├── separator.tsx
+    │   │   ├── sheet.tsx
+    │   │   ├── sidebar.tsx
+    │   │   ├── skeleton.tsx
+    │   │   ├── slider.tsx
+    │   │   ├── sonner.tsx
+    │   │   ├── spinner.tsx
+    │   │   ├── status-badge.tsx
+    │   │   ├── switch.tsx
+    │   │   ├── table.tsx
+    │   │   ├── tabs.tsx
+    │   │   ├── textarea.tsx
+    │   │   ├── toggle-group.tsx
+    │   │   ├── toggle.tsx
+    │   │   └── tooltip.tsx
+    │   └── welcome/                                # Public landing page 3D scene components
+    │       ├── login-scene.tsx
+    │       ├── scene-bar.tsx
+    │       ├── scene-config.ts
+    │       ├── scene-lighting.tsx
+    │       ├── scene-models.tsx
+    │       ├── scene-room.tsx
+    │       └── welcome-scene.tsx
+    ├── contexts/
+    │   ├── auth-context.tsx                        # JWT in-memory token + silent refresh
+    │   └── notifications-context.tsx              # Socket.IO real-time notification feed
+    ├── hooks/
+    │   ├── use-live-stats.ts                       # SSE analytics stream hook
+    │   ├── use-mobile.ts
+    │   └── use-sse.ts                              # Generic SSE subscription hook
+    ├── lib/
+    │   ├── api.ts                                  # Axios API client with all endpoint wrappers
+    │   ├── socket.ts                               # Socket.IO client singleton
+    │   ├── types.ts                                # Shared TypeScript domain types
+    │   └── utils.ts                                # Tailwind class merge utility
+    └── public/
+        ├── file.svg
+        ├── globe.svg
+        ├── next.svg
+        ├── vercel.svg
+        ├── window.svg
+        └── models/                                 # GLTF/GLB 3D models for landing page scene
+            ├── bar-stool.glb
+            ├── bottle.glb
+            ├── ceiling-fan.glb
+            ├── chair.glb
+            ├── cocktail-glass.glb
+            ├── column.glb
+            ├── hanging-plant-a.glb
+            ├── hanging-plant-b.glb
+            ├── hanging-plant-c.glb
+            ├── lantern.glb
+            ├── palm-tree.glb
+            ├── table.glb
+            ├── tropical-plant.glb
+            └── wine-glass.glb
 ```
