@@ -329,6 +329,7 @@ export default function SchedulePage() {
               <Input
                 type="number"
                 min="1"
+                max="100"
                 className="w-24"
                 value={form.headcount}
                 onChange={(e) => setForm({ ...form, headcount: e.target.value })}

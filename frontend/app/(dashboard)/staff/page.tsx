@@ -344,7 +344,7 @@ export default function StaffPage() {
               onClick={() => createMutation.mutate()}
               disabled={
                 !createForm.name || !createForm.email ||
-                createForm.password.length < 6 ||
+                createForm.password.length < 12 ||
                 createMutation.isPending
               }
             >
@@ -493,7 +493,7 @@ export default function StaffPage() {
                 resetUser &&
                 resetPasswordMutation.mutate({ id: resetUser.id, password: newPassword })
               }
-              disabled={newPassword.length < 6 || resetPasswordMutation.isPending}
+              disabled={newPassword.length < 12 || resetPasswordMutation.isPending}
             >
               {resetPasswordMutation.isPending ? 'Resetting…' : 'Reset password'}
             </Button>
