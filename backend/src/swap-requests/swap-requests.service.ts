@@ -195,18 +195,26 @@ export class SwapRequestsService {
     }
 
     const saved = await this.dataSource.transaction(async (em) => {
-      await em.update(ShiftAssignment, swap.fromAssignmentId, { status: AssignmentStatus.CANCELLED });
+      const locked = await em.findOne(SwapRequest, {
+        where: { id: swapId },
+        lock: { mode: 'pessimistic_write' },
+        relations: ['fromAssignment', 'fromAssignment.shift'],
+      });
+      if (!locked || locked.status !== SwapRequestStatus.ACCEPTED) {
+        throw new BadRequestException('Swap is no longer in an approvable state');
+      }
+      await em.update(ShiftAssignment, locked.fromAssignmentId, { status: AssignmentStatus.CANCELLED });
       const newAssignment = em.create(ShiftAssignment, {
-        shiftId: swap.fromAssignment.shiftId,
-        staffId: swap.toUserId,
+        shiftId: locked.fromAssignment.shiftId,
+        staffId: locked.toUserId,
         assignedById: manager.id,
       });
       await em.save(ShiftAssignment, newAssignment);
-      swap.status = SwapRequestStatus.APPROVED;
-      swap.managerId = manager.id;
-      swap.managerNote = dto.managerNote ?? null;
-      swap.reviewedAt = new Date();
-      return em.save(SwapRequest, swap);
+      locked.status = SwapRequestStatus.APPROVED;
+      locked.managerId = manager.id;
+      locked.managerNote = dto.managerNote ?? null;
+      locked.reviewedAt = new Date();
+      return em.save(SwapRequest, locked);
     });
 
     for (const userId of [swap.fromAssignment.staffId, swap.toUserId]) {

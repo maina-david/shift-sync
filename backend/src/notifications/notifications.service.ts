@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -24,6 +24,8 @@ export type BroadcastNotificationPayload = Omit<NotificationPayload, 'userId'>;
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     @InjectRepository(Notification) private notifRepo: Repository<Notification>,
     @InjectRepository(User) private userRepo: Repository<User>,
@@ -76,7 +78,11 @@ export class NotificationsService {
     }
 
     if (user.notificationPreferences?.email) {
-      await this.email.sendNotification(user.email, payload.title, payload.message);
+      try {
+        await this.email.sendNotification(user.email, payload.title, payload.message);
+      } catch (err) {
+        this.logger.error(`Email notification failed for user ${payload.userId}: ${(err as Error).message}`);
+      }
     }
   }
 

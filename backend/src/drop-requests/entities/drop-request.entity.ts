@@ -40,6 +40,7 @@ export class DropRequest {
   @Column({ type: 'varchar', nullable: true, default: null })
   claimedById: string | null;
 
+  @Index()
   @Column({ type: 'enum', enum: DropRequestStatus, default: DropRequestStatus.OPEN })
   status: DropRequestStatus;
 

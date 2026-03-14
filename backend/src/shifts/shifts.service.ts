@@ -692,26 +692,26 @@ export class ShiftsService {
       assignedDates.get(row.staffId)!.add(row.date);
     }
 
-    const createdShifts: Shift[] = [];
-    const createdAssignments: ShiftAssignment[] = [];
     const unfilledSlots: { date: string; startTime: string; endTime: string; reason: string }[] = [];
 
-    // 2. Iterate over each of the 7 days Mon–Sun
+    // 2. Plan all slots before writing — collect what would be created
+    type PlannedSlot = {
+      date: string; startTime: string; endTime: string; headcount: number;
+      isOvernight: boolean; staffIds: string[];
+    };
+    const plannedSlots: PlannedSlot[] = [];
+
     for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
       const date = addDays(wkStart, dayOffset);
-      // dayOfWeek: 0=Sun … 6=Sat — use UTC to be consistent with Availability entity
       const dow = new Date(date + 'T00:00:00Z').getUTCDay();
 
       for (const slot of slots) {
         const slotMinutes = minutesBetween(slot.startTime, slot.endTime);
 
-        // 2b. Find eligible candidates for this slot
         const candidates = certifiedStaff.filter((u) => {
-          // Must have availability covering this dayOfWeek
           if (u.availabilities && u.availabilities.length > 0) {
             const avail = u.availabilities.find((av) => av.dayOfWeek === dow);
             if (!avail) return false;
-            // Availability window must cover the slot
             const [avSH, avSM] = avail.startTime.split(':').map(Number);
             const [avEH, avEM] = avail.endTime.split(':').map(Number);
             const [slotSH, slotSM] = slot.startTime.split(':').map(Number);
@@ -722,25 +722,17 @@ export class ShiftsService {
             const slotEnd = slotEH * 60 + slotEM;
             if (slotStart < availStart || slotEnd > availEnd) return false;
           }
-          // Must not already be assigned to another shift that day
           if (assignedDates.get(u.id)?.has(date)) return false;
-          // Must not exceed weeklyOvertimeHours
           const currentHours = (weeklyMinutesMap.get(u.id) ?? 0) / 60;
           if (currentHours + slotMinutes / 60 > s.weeklyOvertimeHours) return false;
           return true;
         });
 
         if (candidates.length === 0) {
-          unfilledSlots.push({
-            date,
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-            reason: 'No eligible staff available for this slot',
-          });
+          unfilledSlots.push({ date, startTime: slot.startTime, endTime: slot.endTime, reason: 'No eligible staff available for this slot' });
           continue;
         }
 
-        // 2c. Sort: fewest scheduled hours first, then alphabetically by name
         candidates.sort((a, b) => {
           const hoursA = (weeklyMinutesMap.get(a.id) ?? 0) / 60;
           const hoursB = (weeklyMinutesMap.get(b.id) ?? 0) / 60;
@@ -748,50 +740,50 @@ export class ShiftsService {
           return a.name.localeCompare(b.name);
         });
 
-        // 2d. Pick min(minStaff, candidates.length) staff for this slot
         const picks = candidates.slice(0, Math.min(minStaff, candidates.length));
 
         if (picks.length < minStaff) {
-          // Record that we could not fully fill this slot
-          unfilledSlots.push({
-            date,
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-            reason: `Only ${picks.length} of ${minStaff} required staff available`,
-          });
+          unfilledSlots.push({ date, startTime: slot.startTime, endTime: slot.endTime, reason: `Only ${picks.length} of ${minStaff} required staff available` });
         }
 
-        // 2e. Create the DRAFT shift and assignments
-        const isOvernight = slot.endTime < slot.startTime;
-        const shift = this.shiftRepo.create({
-          locationId,
-          date,
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-          headcount: picks.length,
-          isOvernight,
-          status: ShiftStatus.DRAFT,
-          notes: 'Auto-generated draft',
+        plannedSlots.push({
+          date, startTime: slot.startTime, endTime: slot.endTime,
+          headcount: picks.length, isOvernight: slot.endTime < slot.startTime,
+          staffIds: picks.map((p) => p.id),
         });
-        const savedShift = await this.shiftRepo.save(shift);
-        createdShifts.push(savedShift);
 
+        // Update in-memory tracking so subsequent slots reflect the new load
         for (const staff of picks) {
-          const assignment = this.assignRepo.create({
-            shiftId: savedShift.id,
-            staffId: staff.id,
-            assignedById: requesterId,
-          });
-          const savedAssignment = await this.assignRepo.save(assignment);
-          createdAssignments.push(savedAssignment);
-
-          // Update in-memory tracking so subsequent slots in this week reflect the new load
           weeklyMinutesMap.set(staff.id, (weeklyMinutesMap.get(staff.id) ?? 0) + slotMinutes);
           if (!assignedDates.has(staff.id)) assignedDates.set(staff.id, new Set());
           assignedDates.get(staff.id)!.add(date);
         }
       }
     }
+
+    // 3. Persist all planned shifts and assignments in a single transaction
+    const { createdShifts, createdAssignments } = await this.dataSource.transaction(async (em) => {
+      const shifts: Shift[] = [];
+      const assignments: ShiftAssignment[] = [];
+
+      for (const plan of plannedSlots) {
+        const shift = em.create(Shift, {
+          locationId, date: plan.date, startTime: plan.startTime, endTime: plan.endTime,
+          headcount: plan.headcount, isOvernight: plan.isOvernight,
+          status: ShiftStatus.DRAFT, notes: 'Auto-generated draft',
+        });
+        const savedShift = await em.save(Shift, shift);
+        shifts.push(savedShift);
+
+        for (const staffId of plan.staffIds) {
+          const assignment = em.create(ShiftAssignment, { shiftId: savedShift.id, staffId, assignedById: requesterId });
+          const savedAssignment = await em.save(ShiftAssignment, assignment);
+          assignments.push(savedAssignment);
+        }
+      }
+
+      return { createdShifts: shifts, createdAssignments: assignments };
+    });
 
     this.safeEmit('schedule.updated', { locationId, weekStart: wkStart });
 

@@ -2,6 +2,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  Index,
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
@@ -22,7 +23,7 @@ export class Timesheet {
   @PrimaryGeneratedColumn('uuid') id: string;
 
   @ManyToOne(() => User, { eager: true }) @JoinColumn({ name: 'staffId' }) staff: User;
-  @Column() staffId: string;
+  @Index() @Column() staffId: string;
 
   @ManyToOne(() => Shift, { eager: true, nullable: true }) @JoinColumn({ name: 'shiftId' }) shift: Shift | null;
   @Column({ type: 'varchar', nullable: true, default: null }) shiftId: string | null;
@@ -34,7 +35,7 @@ export class Timesheet {
   @Column({ type: 'datetime' }) clockIn: Date;
 
   /** Actual clock-out time (ISO UTC) — null while still clocked in */
-  @Column({ type: 'datetime', nullable: true }) clockOut: Date | null;
+  @Index() @Column({ type: 'datetime', nullable: true }) clockOut: Date | null;
 
   /** Total break time in minutes */
   @Column({ type: 'int', default: 0 }) breakMinutes: number;
@@ -42,7 +43,7 @@ export class Timesheet {
   /** Computed actual hours worked (set on clock-out) */
   @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true }) actualHours: number | null;
 
-  @Column({ type: 'enum', enum: TimesheetStatus, default: TimesheetStatus.PENDING }) status: TimesheetStatus;
+  @Index() @Column({ type: 'enum', enum: TimesheetStatus, default: TimesheetStatus.PENDING }) status: TimesheetStatus;
 
   @ManyToOne(() => User, { nullable: true, eager: false }) @JoinColumn({ name: 'reviewedById' }) reviewedBy: User | null;
   @Column({ type: 'varchar', nullable: true }) reviewedById: string | null;

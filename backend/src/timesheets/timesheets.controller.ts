@@ -81,7 +81,7 @@ export class TimesheetsController {
     @Query('endDate')    endDate: string,
     @Query('locationId') locationId?: string,
     @Query('status')     status?: TimesheetStatus,
-    @Res() res?: Response,
+    @Res() res: Response,
   ) {
     const query: PayrollExportQuery = {
       locationId,
@@ -92,7 +92,7 @@ export class TimesheetsController {
 
     const csv = await this.svc.export(query);
 
-    res!
+    res
       .set('Content-Type', 'text/csv')
       .set(
         'Content-Disposition',

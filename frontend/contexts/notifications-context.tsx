@@ -38,15 +38,16 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
     const socket = getSocket();
 
-    socket.on('notification', (notif: Notification) => {
+    const handler = (notif: Notification) => {
       setNotifications((prev) => [notif, ...prev]);
       setUnreadCount((c) => c + 1);
-
       toast(notif.title, { description: notif.message });
-    });
+    };
+
+    socket.on('notification', handler);
 
     return () => {
-      socket.off('notification');
+      socket.off('notification', handler);
     };
   }, [user, refresh]);
 

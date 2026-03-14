@@ -7,7 +7,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { DataSource, Repository, IsNull, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Timesheet, TimesheetStatus } from './entities/timesheet.entity';
 import { ShiftAssignment } from '../shifts/entities/shift-assignment.entity';
@@ -59,6 +59,7 @@ export class TimesheetsService {
     private assignmentRepo: Repository<ShiftAssignment>,
     private readonly settingsService: SettingsService,
     private readonly events: EventEmitter2,
+    private readonly dataSource: DataSource,
   ) {}
 
   private safeEmit(event: string, payload: unknown): void {
@@ -76,20 +77,9 @@ export class TimesheetsService {
       throw new BadRequestException('Either assignmentId or shiftId must be provided to clock in');
     }
 
-    // Prevent double clock-in — one open timesheet per staff at a time
-    const open = await this.repo.findOne({
-      where: { staffId, clockOut: IsNull() },
-    });
-    if (open) {
-      throw new ConflictException(
-        'You are already clocked in. Please clock out before starting a new session.',
-      );
-    }
-
     let locationId: string | null = null;
     let resolvedShiftId: string | null = dto.shiftId ?? null;
 
-    // Resolve location and shift from the assignment when one is provided
     if (dto.assignmentId) {
       const assignment = await this.assignmentRepo.findOne({
         where: { id: dto.assignmentId, staffId },
@@ -101,7 +91,6 @@ export class TimesheetsService {
       resolvedShiftId = assignment.shiftId;
       locationId = assignment.shift?.locationId ?? null;
     } else if (dto.shiftId) {
-      // Load location from the shift directly
       const assignment = await this.assignmentRepo.findOne({
         where: { shiftId: dto.shiftId, staffId },
         relations: ['shift'],
@@ -109,19 +98,31 @@ export class TimesheetsService {
       locationId = assignment?.shift?.locationId ?? null;
     }
 
-    const timesheet = this.repo.create({
-      staffId,
-      shiftId: resolvedShiftId,
-      assignmentId: dto.assignmentId ?? null,
-      clockIn: new Date(),
-      clockOut: null,
-      breakMinutes: 0,
-      actualHours: null,
-      locationId,
-      status: TimesheetStatus.PENDING,
-    });
+    return this.dataSource.transaction(async (em) => {
+      const open = await em.findOne(Timesheet, {
+        where: { staffId, clockOut: IsNull() },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (open) {
+        throw new ConflictException(
+          'You are already clocked in. Please clock out before starting a new session.',
+        );
+      }
 
-    return this.repo.save(timesheet);
+      const timesheet = em.create(Timesheet, {
+        staffId,
+        shiftId: resolvedShiftId,
+        assignmentId: dto.assignmentId ?? null,
+        clockIn: new Date(),
+        clockOut: null,
+        breakMinutes: 0,
+        actualHours: null,
+        locationId,
+        status: TimesheetStatus.PENDING,
+      });
+
+      return em.save(Timesheet, timesheet);
+    });
   }
 
   // ─── Clock-Out ───────────────────────────────────────────────────────────────
