@@ -14,6 +14,7 @@ import { ShiftAssignment, AssignmentStatus } from '../shifts/entities/shift-assi
 import { User, UserRole } from '../users/entities/user.entity';
 import { ConstraintCheckerService } from '../shifts/constraint-checker.service';
 import { shiftToUTCRange } from '../common/timezone.util';
+import { NotificationType } from '../notifications/entities/notification.entity';
 import { CreateSwapRequestDto } from './dto/create-swap-request.dto';
 import { ReviewSwapDto } from './dto/review-swap.dto';
 
@@ -106,7 +107,7 @@ export class SwapRequestsService {
 
     this.safeEmit('notification.send', {
       userId: dto.toUserId,
-      type: 'SWAP_REQUEST_RECEIVED',
+      type: NotificationType.SWAP_REQUEST_RECEIVED,
       title: 'Swap Request',
       message: `${requester.name} wants to swap a shift with you on ${assignment.shift.date} at ${assignment.shift.location.name}.`,
       entityType: 'swap_request',
@@ -137,7 +138,7 @@ export class SwapRequestsService {
 
     this.safeEmit('notification.send', {
       userId: swap.fromAssignment.staffId,
-      type: 'SWAP_REQUEST_ACCEPTED',
+      type: NotificationType.SWAP_REQUEST_ACCEPTED,
       title: 'Swap Accepted',
       message: `${user.name} accepted your swap request. Awaiting manager approval.`,
       entityType: 'swap_request',
@@ -146,11 +147,19 @@ export class SwapRequestsService {
 
     this.safeEmit('notification.sendToManagers', {
       locationId: swap.fromAssignment.shift.locationId,
-      type: 'SWAP_REQUEST_RECEIVED',
+      type: NotificationType.SWAP_REQUEST_RECEIVED,
       title: 'Swap Awaiting Approval',
       message: `${swap.fromAssignment.staff.name} and ${user.name} have agreed to swap a shift on ${swap.fromAssignment.shift.date}. Requires your approval.`,
       entityType: 'swap_request',
       entityId: swapId,
+    });
+
+    this.safeEmit('audit.log', {
+      entity: 'swap_request',
+      entityId: swapId,
+      action: 'accepted',
+      locationId: swap.fromAssignment.shift.locationId,
+      performedById: user.id,
     });
 
     return saved;
@@ -172,11 +181,19 @@ export class SwapRequestsService {
 
     this.safeEmit('notification.send', {
       userId: swap.fromAssignment.staffId,
-      type: 'SWAP_REQUEST_REJECTED',
+      type: NotificationType.SWAP_REQUEST_REJECTED,
       title: 'Swap Rejected',
       message: `${user.name} rejected your swap request.`,
       entityType: 'swap_request',
       entityId: swapId,
+    });
+
+    this.safeEmit('audit.log', {
+      entity: 'swap_request',
+      entityId: swapId,
+      action: 'rejected',
+      locationId: swap.fromAssignment.shift.locationId,
+      performedById: user.id,
     });
 
     return saved;
@@ -220,7 +237,7 @@ export class SwapRequestsService {
     for (const userId of [swap.fromAssignment.staffId, swap.toUserId]) {
       this.safeEmit('notification.send', {
         userId,
-        type: 'SWAP_REQUEST_APPROVED',
+        type: NotificationType.SWAP_REQUEST_APPROVED,
         title: 'Swap Approved',
         message: `Your shift swap has been approved by ${manager.name}.`,
         entityType: 'swap_request',
@@ -266,7 +283,7 @@ export class SwapRequestsService {
     for (const userId of [swap.fromAssignment.staffId, swap.toUserId]) {
       this.safeEmit('notification.send', {
         userId,
-        type: 'SWAP_REQUEST_DENIED',
+        type: NotificationType.SWAP_REQUEST_DENIED,
         title: 'Swap Denied',
         message: `Your shift swap has been denied by ${manager.name}. ${dto.managerNote ?? ''}`,
         entityType: 'swap_request',
@@ -293,7 +310,7 @@ export class SwapRequestsService {
 
     this.safeEmit('notification.send', {
       userId: swap.toUserId,
-      type: 'SWAP_REQUEST_REJECTED',
+      type: NotificationType.SWAP_REQUEST_REJECTED,
       title: 'Swap Cancelled',
       message: `${user.name} cancelled the swap request.`,
       entityType: 'swap_request',
@@ -329,7 +346,7 @@ export class SwapRequestsService {
       for (const userId of [swap.fromAssignment.staffId, swap.toUserId]) {
         this.safeEmit('notification.send', {
           userId,
-          type: 'SWAP_REQUEST_EXPIRED',
+          type: NotificationType.SWAP_REQUEST_EXPIRED,
           title: 'Swap Request Expired',
           message: `A pending swap request for the shift on ${shift.date} was automatically cancelled because the shift starts in less than 24 hours.`,
           entityType: 'swap_request',

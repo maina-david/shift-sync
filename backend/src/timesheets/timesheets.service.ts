@@ -20,6 +20,7 @@ import { SettingsService } from '../settings/settings.service';
 export interface TimesheetQuery {
   staffId?: string;
   locationId?: string;
+  allowedLocationIds?: string[];
   status?: TimesheetStatus;
   startDate?: string;
   endDate?: string;
@@ -160,6 +161,9 @@ export class TimesheetsService {
     }
     if (query.locationId) {
       qb.andWhere('ts.locationId = :locationId', { locationId: query.locationId });
+    } else if (query.allowedLocationIds) {
+      const ids = query.allowedLocationIds.length > 0 ? query.allowedLocationIds : ['__none__'];
+      qb.andWhere('ts.locationId IN (:...allowedLocationIds)', { allowedLocationIds: ids });
     }
     if (query.status) {
       qb.andWhere('ts.status = :status', { status: query.status });
@@ -190,7 +194,7 @@ export class TimesheetsService {
     });
   }
 
-  async review(id: string, dto: ReviewTimesheetDto, reviewerId: string): Promise<Timesheet> {
+  async review(id: string, dto: ReviewTimesheetDto, reviewer: User): Promise<Timesheet> {
     const timesheet = await this.repo.findOne({ where: { id } });
     if (!timesheet) {
       throw new NotFoundException('Timesheet not found');
@@ -204,8 +208,15 @@ export class TimesheetsService {
       );
     }
 
+    if (reviewer.role === UserRole.MANAGER) {
+      const managedIds = reviewer.managedLocations?.map((l) => l.id) ?? [];
+      if (timesheet.locationId && !managedIds.includes(timesheet.locationId)) {
+        throw new ForbiddenException('You do not manage this timesheet\'s location');
+      }
+    }
+
     timesheet.status = dto.status;
-    timesheet.reviewedById = reviewerId;
+    timesheet.reviewedById = reviewer.id;
     timesheet.managerNote = dto.managerNote ?? null;
     timesheet.reviewedAt = new Date();
 
@@ -215,7 +226,16 @@ export class TimesheetsService {
       timesheetId: saved.id,
       staffId: saved.staffId,
       status: saved.status,
-      reviewerId,
+      reviewerId: reviewer.id,
+    });
+
+    this.safeEmit('audit.log', {
+      entity: 'timesheet',
+      entityId: id,
+      action: dto.status === TimesheetStatus.APPROVED ? 'approved' : 'rejected',
+      locationId: timesheet.locationId,
+      performedById: reviewer.id,
+      after: { status: dto.status, managerNote: dto.managerNote },
     });
 
     return saved;

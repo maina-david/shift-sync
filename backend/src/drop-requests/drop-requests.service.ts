@@ -104,7 +104,7 @@ export class DropRequestsService {
 
     this.safeEmit('notification.sendToManagers', {
       locationId: assignment.shift.locationId,
-      type: 'DROP_REQUEST_CREATED',
+      type: NotificationType.DROP_REQUEST_CREATED,
       title: 'Shift Drop Request',
       message: `${requester.name} wants to drop their shift on ${assignment.shift.date}.`,
       entityType: 'drop_request',
@@ -162,11 +162,19 @@ export class DropRequestsService {
 
     this.safeEmit('notification.sendToManagers', {
       locationId: drop.assignment.shift.locationId,
-      type: 'DROP_REQUEST_CLAIMED',
+      type: NotificationType.DROP_REQUEST_CLAIMED,
       title: 'Shift Claimed',
       message: `${claimer.name} wants to pick up ${drop.assignment.staff.name}'s shift on ${drop.assignment.shift.date}. Requires approval.`,
       entityType: 'drop_request',
       entityId: dropId,
+    });
+
+    this.safeEmit('audit.log', {
+      entity: 'drop_request',
+      entityId: dropId,
+      action: 'claimed',
+      locationId: drop.assignment.shift.locationId,
+      performedById: claimer.id,
     });
 
     return saved;
@@ -217,7 +225,7 @@ export class DropRequestsService {
     for (const userId of [drop.assignment.staffId, drop.claimedById!]) {
       this.safeEmit('notification.send', {
         userId,
-        type: 'DROP_REQUEST_APPROVED',
+        type: NotificationType.DROP_REQUEST_APPROVED,
         title: 'Shift Transfer Approved',
         message: `The shift transfer has been approved by ${manager.name}.`,
         entityType: 'drop_request',
@@ -277,6 +285,15 @@ export class DropRequestsService {
       });
     }
 
+    this.safeEmit('audit.log', {
+      entity: 'drop_request',
+      entityId: dropId,
+      action: 'rejected',
+      locationId: drop.assignment.shift.locationId,
+      performedById: manager.id,
+      note: saved.managerNote,
+    });
+
     return saved;
   }
 
@@ -311,7 +328,7 @@ export class DropRequestsService {
 
       this.safeEmit('notification.send', {
         userId: drop.assignment.staffId,
-        type: 'DROP_REQUEST_EXPIRED',
+        type: NotificationType.DROP_REQUEST_EXPIRED,
         title: 'Drop Request Expired',
         message: `Your drop request for the shift on ${drop.assignment.shift.date} has expired with no one claiming it.`,
         entityType: 'drop_request',

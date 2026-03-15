@@ -111,6 +111,7 @@ export class TimesheetsController {
   @ApiQuery({ name: 'startDate',  required: false, description: 'ISO date string — only timesheets with clockIn on or after this date' })
   @ApiQuery({ name: 'endDate',    required: false, description: 'ISO date string — only timesheets with clockIn on or before this date' })
   findAll(
+    @CurrentUser() user: User,
     @Query('staffId')    staffId?: string,
     @Query('locationId') locationId?: string,
     @Query('status')     status?: TimesheetStatus,
@@ -118,6 +119,18 @@ export class TimesheetsController {
     @Query('endDate')    endDate?: string,
   ) {
     const query: TimesheetQuery = { staffId, locationId, status, startDate, endDate };
+
+    if (user.role === UserRole.MANAGER) {
+      const managedIds = user.managedLocations?.map((l) => l.id) ?? [];
+      if (locationId) {
+        if (!managedIds.includes(locationId)) {
+          throw new ForbiddenException('You do not manage this location');
+        }
+      } else {
+        query.allowedLocationIds = managedIds;
+      }
+    }
+
     return this.svc.findAll(query);
   }
 
@@ -129,6 +142,6 @@ export class TimesheetsController {
     @Body() dto: ReviewTimesheetDto,
     @CurrentUser() user: User,
   ) {
-    return this.svc.review(id, dto, user.id);
+    return this.svc.review(id, dto, user);
   }
 }

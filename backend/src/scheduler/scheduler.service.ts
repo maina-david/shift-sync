@@ -131,7 +131,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       const skillPart = s.requiredSkill ? ` · ${s.requiredSkill.name}` : '';
       this.safeEmit('notification.send', {
         userId: a.staffId,
-        type: 'SHIFT_REMINDER',
+        type: NotificationType.SHIFT_REMINDER,
         title: 'Shift Reminder — Today',
         message: `You have a shift today at ${s.location.name} from ${s.startTime}–${s.endTime}${skillPart}.`,
         entityType: 'shift',
@@ -166,7 +166,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     for (const manager of managers) {
       this.safeEmit('notification.send', {
         userId: manager.id,
-        type: 'TIME_OFF_REMINDER',
+        type: NotificationType.TIME_OFF_REMINDER,
         title: `${count} Time-Off Request${count > 1 ? 's' : ''} Pending Review`,
         message:
           `${count} time-off request${count > 1 ? 's have' : ' has'} been waiting for ` +
@@ -223,7 +223,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     for (const manager of managers) {
       this.safeEmit('notification.send', {
         userId: manager.id,
-        type: 'SCHEDULE_UNPUBLISHED_WARNING',
+        type: NotificationType.SCHEDULE_UNPUBLISHED_WARNING,
         title: 'Next Week Schedule Not Published',
         message:
           `No shifts have been published for next week (${weekLabel}). ` +
@@ -410,7 +410,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     for (const swap of stale) {
       this.safeEmit('notification.send', {
         userId: swap.toUserId,
-        type: 'SWAP_PENDING_REMINDER',
+        type: NotificationType.SWAP_PENDING_REMINDER,
         title: 'Swap Request Awaiting Your Response',
         message:
           `A swap request for the shift on ${swap.fromAssignment?.shift?.date} ` +

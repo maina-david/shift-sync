@@ -6,7 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TimeOffRequest, TimeOffStatus } from './entities/time-off-request.entity';
 import { CreateTimeOffRequestDto } from './dto/create-time-off-request.dto';
@@ -35,6 +35,7 @@ export class TimeOffRequestsService {
 
   async list(requestingUser: User, limit = 50, offset = 0) {
     const take = Math.min(limit, 100);
+
     if (requestingUser.role === UserRole.STAFF) {
       const [items, total] = await this.repo.findAndCount({
         where: { staffId: requestingUser.id },
@@ -44,6 +45,30 @@ export class TimeOffRequestsService {
       });
       return { items, total, limit: take, offset };
     }
+
+    if (requestingUser.role === UserRole.MANAGER) {
+      const managedIds = requestingUser.managedLocations?.map((l) => l.id) ?? [];
+      if (managedIds.length === 0) return { items: [], total: 0, limit: take, offset };
+
+      const staffAtLocations = await this.userRepo
+        .createQueryBuilder('u')
+        .innerJoin('u.certifiedLocations', 'loc')
+        .where('loc.id IN (:...managedIds)', { managedIds })
+        .select('u.id')
+        .getMany();
+
+      const staffIds = staffAtLocations.map((u) => u.id);
+      if (staffIds.length === 0) return { items: [], total: 0, limit: take, offset };
+
+      const [items, total] = await this.repo.findAndCount({
+        where: { staffId: In(staffIds) },
+        order: { createdAt: 'DESC' },
+        take,
+        skip: offset,
+      });
+      return { items, total, limit: take, offset };
+    }
+
     const [items, total] = await this.repo.findAndCount({
       order: { createdAt: 'DESC' },
       take,
@@ -113,6 +138,13 @@ export class TimeOffRequestsService {
     request.reviewedAt = new Date();
     const saved = await this.repo.save(request);
     this.safeEmit('time-off.approved', { requestId: saved.id, staffId: saved.staffId });
+    this.safeEmit('audit.log', {
+      entity: 'time_off_request',
+      entityId: id,
+      action: 'approved',
+      performedById: manager.id,
+      after: { status: TimeOffStatus.APPROVED, managerNote },
+    });
     return saved;
   }
 
@@ -128,6 +160,13 @@ export class TimeOffRequestsService {
     request.reviewedAt = new Date();
     const saved = await this.repo.save(request);
     this.safeEmit('time-off.denied', { requestId: saved.id, staffId: saved.staffId });
+    this.safeEmit('audit.log', {
+      entity: 'time_off_request',
+      entityId: id,
+      action: 'denied',
+      performedById: manager.id,
+      after: { status: TimeOffStatus.DENIED, managerNote },
+    });
     return saved;
   }
 
