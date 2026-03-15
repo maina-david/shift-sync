@@ -9,7 +9,7 @@ import {
 export interface FloorZoneConfig {
   id: string;
   label: string;
-  position: [number, number, number];
+  position: [number, number];
   size: [number, number];
   skills: string[];
   colorLight: string;
@@ -23,7 +23,7 @@ export const DEFAULT_FLOOR_ZONES: FloorZoneConfig[] = [
   {
     id: 'dining',
     label: 'Dining Room',
-    position: [0, 0, 0],
+    position: [0, 0],
     size: [6, 5],
     skills: ['Server'],
     colorLight: '#818cf8',
@@ -34,7 +34,7 @@ export const DEFAULT_FLOOR_ZONES: FloorZoneConfig[] = [
   {
     id: 'bar',
     label: 'Bar',
-    position: [-4, 0, -3.5],
+    position: [-4, -3.5],
     size: [3, 2],
     skills: ['Bartender', 'Barback'],
     colorLight: '#fb923c',
@@ -45,7 +45,7 @@ export const DEFAULT_FLOOR_ZONES: FloorZoneConfig[] = [
   {
     id: 'kitchen',
     label: 'Kitchen',
-    position: [4, 0, -3.5],
+    position: [4, -3.5],
     size: [3, 2],
     skills: ['Line Cook', 'Shift Lead'],
     colorLight: '#facc15',
@@ -56,7 +56,7 @@ export const DEFAULT_FLOOR_ZONES: FloorZoneConfig[] = [
   {
     id: 'host-stand',
     label: 'Host Stand',
-    position: [0, 0, 3.5],
+    position: [0, 3.5],
     size: [2, 1.5],
     skills: ['Host/Hostess'],
     colorLight: '#4ade80',
@@ -88,7 +88,7 @@ export class Location {
   @Column({ type: 'double', nullable: true })
   lng: number | null;
 
-  /** Per-location floor plan zone configuration — editable by admins via PATCH /locations/:id/zones */
+  /** Per-location floor plan zone configuration — editable by admins via PUT /locations/:id/zones */
   @Column({ type: 'json', nullable: true, default: null })
   zones: FloorZoneConfig[] | null;
 

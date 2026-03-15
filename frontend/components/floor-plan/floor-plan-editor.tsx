@@ -12,9 +12,8 @@ import { locationsApi } from '@/lib/api';
 import type { FloorZoneConfig } from '@/lib/types';
 import { ZONES as DEFAULT_ZONES } from './zone-config';
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-const FLOOR_W = 20; // total floor units, x: -10 → +10
-const FLOOR_H = 16; // total floor units, z: -8  → +8
+const FLOOR_W = 20;
+const FLOOR_H = 16;
 
 const COLOR_PRESETS = [
   { light: '#818cf8', dark: '#4f46e5', selLight: '#6366f1', selDark: '#4338ca' },
@@ -27,21 +26,13 @@ const COLOR_PRESETS = [
   { light: '#34d399', dark: '#059669', selLight: '#10b981', selDark: '#047857' },
 ];
 
-// ─── Coordinate helpers ───────────────────────────────────────────────────────
-function toPx(worldX: number, worldZ: number, scale: number) {
+function toPx(worldX: number, worldY: number, scale: number) {
   return {
     px: (worldX + FLOOR_W / 2) * scale,
-    pz: (worldZ + FLOOR_H / 2) * scale,
+    py: (worldY + FLOOR_H / 2) * scale,
   };
 }
-function toWorld(px: number, pz: number, scale: number): [number, number] {
-  return [
-    +(px / scale - FLOOR_W / 2).toFixed(2),
-    +(pz / scale - FLOOR_H / 2).toFixed(2),
-  ];
-}
 
-// ─── Main component ───────────────────────────────────────────────────────────
 interface Props {
   locationId: string;
   initialZones: FloorZoneConfig[] | null;
@@ -58,13 +49,12 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
   );
   const [selected, setSelected] = useState<string | null>(null);
 
-  // Track drag state without re-renders
   const drag = useRef<{
     zoneId: string;
     startMouseX: number;
-    startMouseZ: number;
+    startMouseY: number;
     startWorldX: number;
-    startWorldZ: number;
+    startWorldY: number;
   } | null>(null);
 
   const { mutate: save, isPending: saving } = useMutation({
@@ -87,11 +77,8 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
     onError: () => toast.error('Reset failed'),
   });
 
-  // ─── Scale ─────────────────────────────────────────────────────────────────
-  // Canvas is rendered at a fixed 700×560 px in the container, scale = px per unit
-  const SCALE = 700 / FLOOR_W; // 35 px per unit
+  const SCALE = 700 / FLOOR_W;
 
-  // ─── Drag handlers ─────────────────────────────────────────────────────────
   const onMouseDown = useCallback(
     (e: React.MouseEvent, zoneId: string) => {
       e.stopPropagation();
@@ -102,9 +89,9 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
       drag.current = {
         zoneId,
         startMouseX: e.clientX,
-        startMouseZ: e.clientY,
+        startMouseY: e.clientY,
         startWorldX: zone.position[0],
-        startWorldZ: zone.position[2],
+        startWorldY: zone.position[1],
       };
     },
     [zones],
@@ -114,16 +101,14 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
     (e: React.MouseEvent) => {
       if (!drag.current) return;
       const dx = e.clientX - drag.current.startMouseX;
-      const dz = e.clientY - drag.current.startMouseZ;
-      const dWorldX = dx / SCALE;
-      const dWorldZ = dz / SCALE;
-      const newX = +(drag.current.startWorldX + dWorldX).toFixed(2);
-      const newZ = +(drag.current.startWorldZ + dWorldZ).toFixed(2);
+      const dy = e.clientY - drag.current.startMouseY;
+      const newX = +(drag.current.startWorldX + dx / SCALE).toFixed(2);
+      const newY = +(drag.current.startWorldY + dy / SCALE).toFixed(2);
 
       setZones((prev) =>
         prev.map((z) =>
           z.id === drag.current!.zoneId
-            ? { ...z, position: [newX, 0, newZ] as [number, number, number] }
+            ? { ...z, position: [newX, newY] as [number, number] }
             : z,
         ),
       );
@@ -135,7 +120,6 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
     drag.current = null;
   }, []);
 
-  // ─── Zone mutations ────────────────────────────────────────────────────────
   const updateZone = (id: string, patch: Partial<FloorZoneConfig>) =>
     setZones((prev) => prev.map((z) => (z.id === id ? { ...z, ...patch } : z)));
 
@@ -145,7 +129,7 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
     const newZone: FloorZoneConfig = {
       id: newId,
       label: 'New Zone',
-      position: [0, 0, 0],
+      position: [0, 0],
       size: [3, 2],
       skills: [],
       colorLight: preset.light,
@@ -162,13 +146,10 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
     if (selected === id) setSelected(null);
   };
 
-  // ─── Selected zone ─────────────────────────────────────────────────────────
   const sel = zones.find((z) => z.id === selected) ?? null;
 
-  // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-full">
-      {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 shrink-0">
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={addZone}>
@@ -187,7 +168,6 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
         </div>
       </div>
 
-      {/* Body: canvas + side panel */}
       <div className="flex flex-1 overflow-hidden">
         {/* 2D canvas */}
         <div className="flex-1 overflow-auto bg-muted/30 flex items-center justify-center p-4">
@@ -198,7 +178,8 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
               width: FLOOR_W * SCALE,
               height: FLOOR_H * SCALE,
               backgroundImage:
-                'repeating-linear-gradient(0deg,transparent,transparent 34px,var(--border) 34px,var(--border) 35px),repeating-linear-gradient(90deg,transparent,transparent 34px,var(--border) 34px,var(--border) 35px)',
+                'repeating-linear-gradient(0deg,transparent,transparent 34px,var(--border) 34px,var(--border) 35px),' +
+                'repeating-linear-gradient(90deg,transparent,transparent 34px,var(--border) 34px,var(--border) 35px)',
             }}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
@@ -206,7 +187,7 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
             onClick={() => setSelected(null)}
           >
             {zones.map((zone) => {
-              const { px, pz } = toPx(zone.position[0], zone.position[2], SCALE);
+              const { px, py } = toPx(zone.position[0], zone.position[1], SCALE);
               const w = zone.size[0] * SCALE;
               const h = zone.size[1] * SCALE;
               const isSelected = zone.id === selected;
@@ -217,7 +198,7 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
                   className="absolute rounded-md border-2 flex items-center justify-center cursor-grab active:cursor-grabbing transition-shadow"
                   style={{
                     left: px - w / 2,
-                    top: pz - h / 2,
+                    top: py - h / 2,
                     width: w,
                     height: h,
                     backgroundColor: isSelected ? zone.colorSelectedLight : zone.colorLight,
@@ -238,7 +219,6 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
               );
             })}
 
-            {/* Axis labels */}
             <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground/50 pointer-events-none">
               ← West · East →
             </span>
@@ -290,26 +270,22 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
                     max={10}
                     value={sel.position[0]}
                     onChange={(e) =>
-                      updateZone(sel.id, {
-                        position: [+e.target.value, 0, sel.position[2]] as [number, number, number],
-                      })
+                      updateZone(sel.id, { position: [+e.target.value, sel.position[1]] })
                     }
                     className="h-8 text-sm"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor={`${uid}-z`} className="text-xs">Position Z</Label>
+                  <Label htmlFor={`${uid}-y`} className="text-xs">Position Y</Label>
                   <Input
-                    id={`${uid}-z`}
+                    id={`${uid}-y`}
                     type="number"
                     step="0.5"
                     min={-8}
                     max={8}
-                    value={sel.position[2]}
+                    value={sel.position[1]}
                     onChange={(e) =>
-                      updateZone(sel.id, {
-                        position: [sel.position[0], 0, +e.target.value] as [number, number, number],
-                      })
+                      updateZone(sel.id, { position: [sel.position[0], +e.target.value] })
                     }
                     className="h-8 text-sm"
                   />
@@ -327,13 +303,13 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
                     max={10}
                     value={sel.size[0]}
                     onChange={(e) =>
-                      updateZone(sel.id, { size: [+e.target.value, sel.size[1]] as [number, number] })
+                      updateZone(sel.id, { size: [+e.target.value, sel.size[1]] })
                     }
                     className="h-8 text-sm"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor={`${uid}-d`} className="text-xs">Depth (units)</Label>
+                  <Label htmlFor={`${uid}-d`} className="text-xs">Height (units)</Label>
                   <Input
                     id={`${uid}-d`}
                     type="number"
@@ -342,7 +318,7 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
                     max={10}
                     value={sel.size[1]}
                     onChange={(e) =>
-                      updateZone(sel.id, { size: [sel.size[0], +e.target.value] as [number, number] })
+                      updateZone(sel.id, { size: [sel.size[0], +e.target.value] })
                     }
                     className="h-8 text-sm"
                   />
@@ -377,8 +353,7 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
                       style={{
                         backgroundColor: p.light,
                         borderColor: p.dark,
-                        outline:
-                          sel.colorLight === p.light ? `2px solid ${p.dark}` : undefined,
+                        outline: sel.colorLight === p.light ? `2px solid ${p.dark}` : undefined,
                         outlineOffset: 2,
                       }}
                       onClick={() =>

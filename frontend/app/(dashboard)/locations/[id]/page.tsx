@@ -1,22 +1,17 @@
 'use client';
 
 import { use, useState } from 'react';
-import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { ArrowLeft, MapPin, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { locationsApi, shiftsApi } from '@/lib/api';
 import { useAuth } from '@/contexts/auth-context';
 import type { Location, ShiftAssignment } from '@/lib/types';
+import { FloorPlanCanvas } from '@/components/floor-plan/floor-plan-canvas';
 import { FloorPlanEditor } from '@/components/floor-plan/floor-plan-editor';
-import LocationLoading from './loading';
-
-const FloorPlanCanvas = dynamic(
-  () => import('@/components/floor-plan/floor-plan-canvas').then((m) => m.FloorPlanCanvas),
-  { ssr: false, loading: () => <LocationLoading /> }
-);
 
 export default function LocationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -35,12 +30,19 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
   });
 
   const locationAssignments = onDuty.filter(
-    (a) => a.shift?.locationId === id || a.shift?.location?.id === id
+    (a) => a.shift?.locationId === id || a.shift?.location?.id === id,
   );
 
-  if (locLoading) return <LocationLoading />;
+  if (locLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="flex-1 h-[calc(100vh-12rem)] w-full rounded-xl" />
+      </div>
+    );
+  }
 
-  // ─── Editor overlay ───────────────────────────────────────────────────────
   if (editingLayout) {
     return (
       <div className="flex flex-col h-[calc(100vh-6rem)]">
@@ -61,7 +63,6 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
     );
   }
 
-  // ─── Normal view ──────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] space-y-4">
       <div className="flex items-start justify-between shrink-0">
@@ -89,11 +90,7 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
 
         <div className="flex items-center gap-2">
           {user?.role === 'admin' && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setEditingLayout(true)}
-            >
+            <Button size="sm" variant="outline" onClick={() => setEditingLayout(true)}>
               <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
               Edit layout
             </Button>

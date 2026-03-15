@@ -331,8 +331,8 @@ describe('DropRequestsService', () => {
       await expect(service.cancel('drop-1', otherUser)).rejects.toThrow(ForbiddenException);
     });
 
-    it('throws BadRequestException when drop is not OPEN', async () => {
-      const drop = makeDropRequest({ status: DropRequestStatus.CLAIMED });
+    it('throws BadRequestException when drop is not OPEN or CLAIMED', async () => {
+      const drop = makeDropRequest({ status: DropRequestStatus.APPROVED });
       dropRepo.findOne.mockResolvedValue(drop);
       await expect(service.cancel('drop-1', makeStaff())).rejects.toThrow(BadRequestException);
     });

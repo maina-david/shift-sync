@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import type { ZoneConfig } from './floor-plan-types';
+import type { FloorZoneConfig as ZoneConfig } from '@/lib/types';
 import type { ShiftAssignment } from '@/lib/types';
 
 interface Props {

@@ -34,7 +34,7 @@ export interface User {
 export interface FloorZoneConfig {
   id: string;
   label: string;
-  position: [number, number, number];
+  position: [number, number];
   size: [number, number];
   skills: string[];
   colorLight: string;
