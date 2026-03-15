@@ -12,6 +12,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DropRequest, DropRequestStatus } from './entities/drop-request.entity';
 import { ShiftAssignment, AssignmentStatus } from '../shifts/entities/shift-assignment.entity';
 import { User, UserRole } from '../users/entities/user.entity';
+import { NotificationType } from '../notifications/entities/notification.entity';
 import { ConstraintCheckerService } from '../shifts/constraint-checker.service';
 import { shiftToUTCRange } from '../common/timezone.util';
 import { CreateDropRequestDto } from './dto/create-drop-request.dto';
@@ -268,7 +269,7 @@ export class DropRequestsService {
     for (const userId of notifyIds) {
       this.safeEmit('notification.send', {
         userId,
-        type: 'DROP_REQUEST_APPROVED',
+        type: NotificationType.DROP_REQUEST_REJECTED,
         title: 'Drop Request Rejected',
         message: `The shift drop/pickup request was rejected by ${manager.name}.`,
         entityType: 'drop_request',
@@ -286,9 +287,11 @@ export class DropRequestsService {
       throw new BadRequestException('Can only cancel open drop requests.');
     }
 
-    drop.status = DropRequestStatus.CANCELLED;
-    await this.assignRepo.update(drop.assignmentId, { status: AssignmentStatus.ASSIGNED });
-    return this.dropRepo.save(drop);
+    return this.dataSource.transaction(async (em) => {
+      drop.status = DropRequestStatus.CANCELLED;
+      await em.update(ShiftAssignment, drop.assignmentId, { status: AssignmentStatus.ASSIGNED });
+      return em.save(DropRequest, drop);
+    });
   }
 
   @Cron('*/5 * * * *') // every 5 minutes
