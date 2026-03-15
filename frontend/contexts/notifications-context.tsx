@@ -87,9 +87,13 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const markAllRead = useCallback(async () => {
-    await notificationsApi.markAllRead();
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    setUnreadCount(0);
+    try {
+      await notificationsApi.markAllRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch {
+      toast.error('Failed to mark notifications as read');
+    }
   }, []);
 
   return (

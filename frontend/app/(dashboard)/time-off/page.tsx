@@ -55,7 +55,7 @@ const requestSchema = z.object({
   startDate: z.string().min(1, 'Required').refine(isValidISODate, 'Invalid date'),
   endDate: z.string().min(1, 'Required').refine(isValidISODate, 'Invalid date'),
   reason: z.string().optional(),
-}).refine((d) => d.startDate >= todayISO(), {
+}).refine((d) => d.startDate >= format(new Date(), 'yyyy-MM-dd'), {
   message: 'Start date cannot be in the past',
   path: ['startDate'],
 }).refine((d) => d.endDate >= d.startDate, {

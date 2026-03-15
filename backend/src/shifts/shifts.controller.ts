@@ -135,7 +135,7 @@ export class ShiftsController {
     summary: 'Auto-generate a draft schedule for a full week at a location (heuristic)',
   })
   autoSchedule(@Body() dto: AutoScheduleDto, @CurrentUser() user: User) {
-    return this.svc.autoSchedule(dto, user.id);
+    return this.svc.autoSchedule(dto, user);
   }
 
   @Post('publish-week')

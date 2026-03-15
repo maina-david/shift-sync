@@ -58,9 +58,9 @@ export default function MySchedulePage() {
   });
 
   const myShifts = shifts.filter((s) =>
-    s.assignments.some(
+    s.assignments?.some(
       (a) => a.staffId === user?.id && (a.status === 'assigned' || a.status === 'pending_swap'),
-    ),
+    ) ?? false,
   );
 
   const thisWeekDays = getWeekDays(weekStart);

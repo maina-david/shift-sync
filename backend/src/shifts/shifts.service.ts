@@ -201,6 +201,49 @@ export class ShiftsService {
     const shift = await this.findOne(id);
     this.assertCanManage(shift, manager);
     const locationId = shift.locationId;
+
+    // Cancel all active assignments and their related drop/swap requests
+    const activeAssignments = shift.assignments.filter(
+      (a) => a.status === AssignmentStatus.ASSIGNED || a.status === AssignmentStatus.PENDING_SWAP,
+    );
+    for (const assignment of activeAssignments) {
+      assignment.status = AssignmentStatus.CANCELLED;
+      await this.assignRepo.save(assignment);
+
+      const openDrops = await this.dropRepo.find({
+        where: { assignmentId: assignment.id, status: In([DropRequestStatus.OPEN, DropRequestStatus.CLAIMED]) },
+      });
+      for (const drop of openDrops) {
+        drop.status = DropRequestStatus.CANCELLED;
+        await this.dropRepo.save(drop);
+      }
+
+      const pendingSwaps = await this.swapRepo.find({
+        where: { fromAssignmentId: assignment.id, status: SwapRequestStatus.PENDING },
+      });
+      for (const swap of pendingSwaps) {
+        swap.status = SwapRequestStatus.CANCELLED;
+        await this.swapRepo.save(swap);
+        this.safeEmit('notification.send', {
+          userId: swap.toUserId,
+          type: 'SWAP_CANCELLED_SHIFT_EDIT',
+          title: 'Swap Request Cancelled',
+          message: `A pending swap request was cancelled because the shift was deleted.`,
+          entityType: 'swap_request',
+          entityId: swap.id,
+        });
+      }
+
+      this.safeEmit('notification.send', {
+        userId: assignment.staffId,
+        type: 'SHIFT_CANCELLED',
+        title: 'Shift Deleted',
+        message: `Your shift on ${shift.date} at ${shift.location.name} (${shift.startTime}–${shift.endTime}) has been removed.`,
+        entityType: 'shift',
+        entityId: id,
+      });
+    }
+
     await this.shiftRepo.softRemove(shift);
     this.safeEmit('schedule.updated', { locationId });
   }
@@ -678,8 +721,14 @@ export class ShiftsService {
     });
   }
 
-  async autoSchedule(dto: AutoScheduleDto, requesterId: string) {
+  async autoSchedule(dto: AutoScheduleDto, requester: User) {
     const { locationId, weekStart: wkStart } = dto;
+
+    // Authorization: managers may only auto-schedule for their own locations
+    if (requester.role === UserRole.MANAGER) {
+      const manages = requester.managedLocations?.some((l) => l.id === locationId);
+      if (!manages) throw new ForbiddenException('You do not manage this location');
+    }
     const slotsPerDay = dto.shiftsPerDay ?? 3;
     const minStaff = dto.minStaffPerShift ?? 1;
 
@@ -828,7 +877,7 @@ export class ShiftsService {
         shifts.push(savedShift);
 
         for (const staffId of plan.staffIds) {
-          const assignment = em.create(ShiftAssignment, { shiftId: savedShift.id, staffId, assignedById: requesterId });
+          const assignment = em.create(ShiftAssignment, { shiftId: savedShift.id, staffId, assignedById: requester.id });
           const savedAssignment = await em.save(ShiftAssignment, assignment);
           assignments.push(savedAssignment);
         }
