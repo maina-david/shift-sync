@@ -95,7 +95,7 @@ export function AssignDialog({ shift, open, onOpenChange }: AssignDialogProps) {
         <div className="grid flex-1 auto-rows-min gap-6 px-4">
           <div className="grid gap-3">
             <Label>Staff member</Label>
-            <Select value={selectedStaffId} onValueChange={handleStaffChange}>
+            <Select value={selectedStaffId} onValueChange={handleStaffChange} disabled={validateMutation.isPending}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a staff member…" />
               </SelectTrigger>
@@ -196,6 +196,7 @@ export function AssignDialog({ shift, open, onOpenChange }: AssignDialogProps) {
             onClick={() => assignMutation.mutate()}
             disabled={
               !selectedStaffId ||
+              validateMutation.isPending ||
               assignMutation.isPending ||
               hasErrors ||
               (needsOverride && !overrideReason.trim())

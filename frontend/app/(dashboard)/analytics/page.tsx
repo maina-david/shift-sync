@@ -477,8 +477,12 @@ function KpiDashboardTab() {
                         axisLine={{ stroke: colors.border }}
                         tickLine={false}
                         tickFormatter={(v) => {
-                          const [year, month] = v.split('-');
-                          return `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(month, 10) - 1]} ${year.slice(2)}`;
+                          const parts = String(v).split('-');
+                          if (parts.length < 2) return String(v);
+                          const [year, month] = parts;
+                          const idx = parseInt(month, 10) - 1;
+                          const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                          return `${MONTHS[idx] ?? month} ${year.slice(2)}`;
                         }}
                       />
                       <YAxis

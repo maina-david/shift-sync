@@ -61,7 +61,7 @@ export default function SwapRequestsPage() {
   const [newSwapPartnerId, setNewSwapPartnerId] = useState('');
   const [newSwapReason, setNewSwapReason] = useState('');
 
-  const { data: swaps = [] } = useQuery<SwapRequest[]>({
+  const { data: swaps = [], isLoading: swapsLoading } = useQuery<SwapRequest[]>({
     queryKey: ['swap-requests'],
     queryFn: swapRequestsApi.list,
   });
@@ -110,7 +110,7 @@ export default function SwapRequestsPage() {
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 
-  const { data: drops = [] } = useQuery<DropRequest[]>({
+  const { data: drops = [], isLoading: dropsLoading } = useQuery<DropRequest[]>({
     queryKey: ['drop-requests'],
     queryFn: dropRequestsApi.list,
   });
@@ -420,6 +420,7 @@ export default function SwapRequestsPage() {
           <DataTable
             columns={swapColumns}
             data={swaps}
+            isLoading={swapsLoading}
             emptyState={
               <Empty className="border">
                 <EmptyHeader>
@@ -435,6 +436,7 @@ export default function SwapRequestsPage() {
           <DataTable
             columns={dropColumns}
             data={drops}
+            isLoading={dropsLoading}
             emptyState={
               <Empty className="border">
                 <EmptyHeader>

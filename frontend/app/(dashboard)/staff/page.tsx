@@ -174,7 +174,7 @@ export default function StaffPage() {
             <Badge key={s.id} variant="secondary" className="text-xs">{s.name}</Badge>
           ))}
           {(row.original.skills?.length ?? 0) > 3 && (
-            <Badge variant="secondary" className="text-xs">+{row.original.skills.length - 3}</Badge>
+            <Badge variant="secondary" className="text-xs">+{(row.original.skills?.length ?? 0) - 3}</Badge>
           )}
         </div>
       ),
@@ -189,7 +189,7 @@ export default function StaffPage() {
           ))}
           {(row.original.certifiedLocations?.length ?? 0) > 2 && (
             <Badge variant="outline" className="text-xs">
-              +{row.original.certifiedLocations.length - 2}
+              +{(row.original.certifiedLocations?.length ?? 0) - 2}
             </Badge>
           )}
         </div>

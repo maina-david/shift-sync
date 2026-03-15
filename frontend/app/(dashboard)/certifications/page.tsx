@@ -47,8 +47,11 @@ import { cn } from '@/lib/utils';
 
 type CertStatus = 'valid' | 'expiring' | 'expired';
 
-function certStatus(expiryDate: string): CertStatus {
-  const days = Math.floor((new Date(expiryDate).getTime() - Date.now()) / 86400000);
+function certStatus(expiryDate: string | null | undefined): CertStatus {
+  if (!expiryDate) return 'expired';
+  const d = new Date(expiryDate);
+  if (isNaN(d.getTime())) return 'expired';
+  const days = Math.floor((d.getTime() - Date.now()) / 86400000);
   if (days < 0) return 'expired';
   if (days <= 30) return 'expiring';
   return 'valid';
@@ -193,13 +196,17 @@ export default function CertificationsPage() {
   const handleCreate = () => {
     const targetId = isTeamDialog ? forStaffId : (user?.id ?? '');
     if (!targetId) return;
-    createMutation.mutate({ userId: targetId, data: certForm });
+    createMutation.mutate({
+      userId: targetId,
+      data: { ...certForm, name: certForm.name.trim(), issuer: certForm.issuer.trim() },
+    });
   };
 
   const canSubmit =
     certForm.name.trim() &&
     certForm.issuedDate &&
     certForm.expiryDate &&
+    certForm.expiryDate >= certForm.issuedDate &&
     (!isTeamDialog || forStaffId) &&
     !createMutation.isPending;
 
@@ -465,6 +472,9 @@ export default function CertificationsPage() {
                 />
               </div>
             </div>
+            {certForm.issuedDate && certForm.expiryDate && certForm.expiryDate < certForm.issuedDate && (
+              <p className="text-xs text-destructive">Expiry date must be on or after the issued date.</p>
+            )}
 
             <div className="grid gap-2">
               <Label>Document URL <span className="text-muted-foreground font-normal">(optional)</span></Label>

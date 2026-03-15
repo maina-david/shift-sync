@@ -16,7 +16,7 @@ import { shiftsApi, swapRequestsApi, dropRequestsApi, analyticsApi, timeOffApi, 
 import { SetupChecklist } from '@/components/ui/setup-checklist';
 import { getSocket } from '@/lib/socket';
 import { Shift, SwapRequest, DropRequest, OvertimeEntry, TimeOffRequest } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, parseTimeMinutes } from '@/lib/utils';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -32,11 +32,13 @@ export default function DashboardPage() {
     if (user?.role === 'staff') return;
     const socket = getSocket();
     const handler = () => {
-      queryClient.invalidateQueries({ queryKey: ['on-duty-now', today] });
+      // Compute today fresh inside the handler so it's never stale past midnight.
+      const currentDay = format(new Date(), 'yyyy-MM-dd');
+      queryClient.invalidateQueries({ queryKey: ['on-duty-now', currentDay] });
     };
     socket.on('schedule:updated', handler);
     return () => { socket.off('schedule:updated', handler); };
-  }, [user?.role, queryClient, today]);
+  }, [user?.role, queryClient]);
 
   const { data: todayShifts = [], isLoading: shiftsLoading } = useQuery<Shift[]>({
     queryKey: ['shifts', 'today'],
@@ -90,9 +92,10 @@ export default function DashboardPage() {
 
   const myWeekShifts = myUpcoming.filter((s) => s.date >= weekStart && s.date < nextWeekStart);
   const myWeekHours = myWeekShifts.reduce((acc, s) => {
-    const [sh, sm] = s.startTime.split(':').map(Number);
-    const [eh, em] = s.endTime.split(':').map(Number);
-    const mins = (eh * 60 + em) - (sh * 60 + sm);
+    const start = parseTimeMinutes(s.startTime);
+    const end = parseTimeMinutes(s.endTime);
+    if (start === null || end === null) return acc;
+    const mins = end - start;
     return acc + (mins > 0 ? mins : mins + 1440) / 60;
   }, 0);
 
@@ -150,7 +153,7 @@ export default function DashboardPage() {
               <p className="text-[0.625rem] font-semibold uppercase tracking-widest text-primary/70 mb-2">Today's Shift</p>
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-base font-semibold">{todayShift.location.name}</p>
+                  <p className="text-base font-semibold">{todayShift.location?.name ?? '—'}</p>
                   <p className="text-sm text-muted-foreground">
                     {todayShift.startTime}–{todayShift.endTime}
                     {todayShift.requiredSkill && ` · ${todayShift.requiredSkill.name}`}
@@ -316,7 +319,7 @@ function StaffDashboard({
                         <div className="text-xs font-bold">{format(new Date(shift.date + 'T00:00:00'), 'd')}</div>
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{shift.location.name}</p>
+                        <p className="text-sm font-medium truncate">{shift.location?.name ?? '—'}</p>
                         <p className="text-xs text-muted-foreground">
                           {shift.startTime}–{shift.endTime}
                           {shift.requiredSkill && ` · ${shift.requiredSkill.name}`}
@@ -483,7 +486,7 @@ function ManagerDashboard({
                     className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/10 px-3 py-2.5 hover:bg-muted/30 transition-colors"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{shift.location.name}</p>
+                      <p className="text-sm font-medium truncate">{shift.location?.name ?? '—'}</p>
                       <p className="text-xs text-muted-foreground">
                         {shift.startTime}–{shift.endTime}
                         {shift.requiredSkill && ` · ${shift.requiredSkill.name}`}
@@ -528,7 +531,7 @@ function ManagerDashboard({
                   className="rounded-lg border border-chart-success/15 bg-chart-success/5 px-3 py-2.5"
                 >
                   <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-sm font-medium">{shift.location.name}</p>
+                    <p className="text-sm font-medium">{shift.location?.name ?? '—'}</p>
                     <span className="text-xs tabular-nums text-muted-foreground">
                       {shift.startTime}–{shift.endTime}
                     </span>

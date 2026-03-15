@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -41,13 +42,17 @@ export default function PickupPage() {
     (d) => d.status === 'open' && d.assignment?.staffId !== user?.id,
   );
 
+  const [claimingId, setClaimingId] = useState<string | null>(null);
+
   const claimMutation = useMutation({
     mutationFn: (id: string) => dropRequestsApi.claim(id),
+    onMutate: (id) => setClaimingId(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['drop-requests'] });
       toast.success('Shift claimed — pending manager approval');
     },
     onError: (err) => toast.error(getErrorMessage(err)),
+    onSettled: () => setClaimingId(null),
   });
 
   return (
@@ -152,9 +157,9 @@ export default function PickupPage() {
                   size="sm"
                   className="w-full"
                   onClick={() => claimMutation.mutate(drop.id)}
-                  disabled={claimMutation.isPending}
+                  disabled={claimingId !== null}
                 >
-                  Claim shift
+                  {claimingId === drop.id ? 'Claiming…' : 'Claim shift'}
                 </Button>
               </div>
             );
