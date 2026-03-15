@@ -42,9 +42,9 @@ function exportCsv(violations: ScheduleChangeLog[]) {
     const shiftDate = v.shift?.date ?? '';
     const location = v.shift?.location?.name ?? '';
     const changedAt = format(new Date(v.changedAt), 'yyyy-MM-dd HH:mm');
-    const hoursBeforeShift = v.hoursBeforeShift.toFixed(1);
+    const hoursBeforeShift = Number(v.hoursBeforeShift).toFixed(1);
     const triggered = v.triggersPredictabilityPay ? 'Yes' : 'No';
-    const amount = v.predictabilityPayAmount != null ? `${v.predictabilityPayAmount.toFixed(2)} hrs` : '';
+    const amount = v.predictabilityPayAmount != null ? `${Number(v.predictabilityPayAmount).toFixed(2)} hrs` : '';
     return [shiftDate, location, v.changeType, changedAt, hoursBeforeShift, triggered, amount]
       .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
       .join(',');
@@ -92,7 +92,7 @@ export default function FairWorkweekPage() {
   const totalViolations: number = summary?.totalViolations ?? violations.length;
   const totalPayOwed: number =
     summary?.totalPredictabilityPayOwed ??
-    violations.reduce((sum, v) => sum + (v.predictabilityPayAmount ?? 0), 0);
+    violations.reduce((sum, v) => sum + (v.predictabilityPayAmount != null ? Number(v.predictabilityPayAmount) : 0), 0);
 
   if (user === null) return null;
   if (user.role !== 'admin' && user.role !== 'manager') return (
@@ -233,7 +233,7 @@ export default function FairWorkweekPage() {
                         {format(new Date(v.changedAt), 'MMM d, yyyy HH:mm')}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {v.hoursBeforeShift.toFixed(1)}h
+                        {Number(v.hoursBeforeShift).toFixed(1)}h
                       </TableCell>
                       <TableCell className="text-right">
                         {v.triggersPredictabilityPay ? (
@@ -241,7 +241,7 @@ export default function FairWorkweekPage() {
                             variant="outline"
                             className="border-destructive/40 text-destructive bg-destructive/10 tabular-nums"
                           >
-                            {(v.predictabilityPayAmount ?? 0).toFixed(2)} hrs
+                            {Number(v.predictabilityPayAmount ?? 0).toFixed(2)} hrs
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground text-xs">—</span>

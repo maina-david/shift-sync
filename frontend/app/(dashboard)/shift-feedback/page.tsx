@@ -148,8 +148,10 @@ function TeamFeedbackTab() {
       label: 'Avg Rating',
       value: summary ? (
         <div className="flex items-center gap-2">
-          <span className="text-3xl font-bold tabular-nums">{summary.avgRating.toFixed(1)}</span>
-          <RatingStars rating={Math.round(summary.avgRating)} />
+          <span className="text-3xl font-bold tabular-nums">
+            {summary.averageRating != null ? Number(summary.averageRating).toFixed(1) : '—'}
+          </span>
+          {summary.averageRating != null && <RatingStars rating={Math.round(summary.averageRating)} />}
         </div>
       ) : null,
     },
@@ -163,7 +165,7 @@ function TeamFeedbackTab() {
       label: '% Adequately Staffed',
       value: summary ? (
         <span className="text-3xl font-bold tabular-nums text-green-600">
-          {summary.adequatelyStaffedPct.toFixed(0)}%
+          {summary.pctAdequatelyStaffed != null ? `${Number(summary.pctAdequatelyStaffed).toFixed(0)}%` : '—'}
         </span>
       ) : null,
     },
@@ -171,7 +173,7 @@ function TeamFeedbackTab() {
       label: '% Would Repeat',
       value: summary ? (
         <span className="text-3xl font-bold tabular-nums text-blue-600">
-          {summary.wouldRepeatPct.toFixed(0)}%
+          {summary.pctWouldRepeat != null ? `${Number(summary.pctWouldRepeat).toFixed(0)}%` : '—'}
         </span>
       ) : null,
     },
@@ -255,21 +257,23 @@ function TeamFeedbackTab() {
                   <TableCell>Average Rating</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <span className="tabular-nums font-medium">{summary.avgRating.toFixed(2)}</span>
-                      <RatingStars rating={Math.round(summary.avgRating)} />
+                      <span className="tabular-nums font-medium">
+                        {summary.averageRating != null ? Number(summary.averageRating).toFixed(2) : '—'}
+                      </span>
+                      {summary.averageRating != null && <RatingStars rating={Math.round(summary.averageRating)} />}
                     </div>
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell>Adequately Staffed</TableCell>
                   <TableCell className="text-right tabular-nums font-medium text-green-600">
-                    {summary.adequatelyStaffedPct.toFixed(1)}%
+                    {summary.pctAdequatelyStaffed != null ? `${Number(summary.pctAdequatelyStaffed).toFixed(1)}%` : '—'}
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell>Would Repeat</TableCell>
                   <TableCell className="text-right tabular-nums font-medium text-blue-600">
-                    {summary.wouldRepeatPct.toFixed(1)}%
+                    {summary.pctWouldRepeat != null ? `${Number(summary.pctWouldRepeat).toFixed(1)}%` : '—'}
                   </TableCell>
                 </TableRow>
               </TableBody>

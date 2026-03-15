@@ -565,7 +565,7 @@ function ManagerDashboard({
                     <p className="text-sm font-medium">{entry.name}</p>
                     <div className="flex items-center gap-2">
                       {entry.overtimeCost !== null && entry.overtimeCost > 0 && (
-                        <span className="text-xs text-muted-foreground">${entry.overtimeCost.toFixed(2)} OT cost</span>
+                        <span className="text-xs text-muted-foreground">${Number(entry.overtimeCost).toFixed(2)} OT cost</span>
                       )}
                       <span className={cn(
                         'text-xs font-semibold tabular-nums',

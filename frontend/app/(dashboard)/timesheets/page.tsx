@@ -235,7 +235,7 @@ function MyTimesheets() {
       header: 'Hours',
       cell: ({ row }) =>
         row.original.actualHours != null ? (
-          <span className="tabular-nums text-sm font-medium">{row.original.actualHours.toFixed(2)}h</span>
+          <span className="tabular-nums text-sm font-medium">{Number(row.original.actualHours).toFixed(2)}h</span>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
         ),
@@ -368,7 +368,7 @@ function ManageTimesheets() {
       header: 'Hours',
       cell: ({ row }) =>
         row.original.actualHours != null ? (
-          <span className="tabular-nums text-sm font-medium">{row.original.actualHours.toFixed(2)}h</span>
+          <span className="tabular-nums text-sm font-medium">{Number(row.original.actualHours).toFixed(2)}h</span>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
         ),

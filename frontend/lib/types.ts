@@ -397,10 +397,10 @@ export interface ShiftFeedback {
   createdAt: string;
 }
 export interface FeedbackSummary {
-  avgRating: number;
   totalResponses: number;
-  adequatelyStaffedPct: number;
-  wouldRepeatPct: number;
+  averageRating: number | null;
+  pctAdequatelyStaffed: number | null;
+  pctWouldRepeat: number | null;
 }
 
 // ─── Fair Workweek ────────────────────────────────────────────────────────────

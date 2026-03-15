@@ -33,7 +33,6 @@ import {
   TurnoverReport,
 } from '@/lib/types';
 import { AlertTriangle, TrendingUp, Users, ShieldAlert } from 'lucide-react';
-import Link from 'next/link';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { DateRangePresets } from '@/components/ui/date-range-presets';
@@ -109,8 +108,8 @@ function LaborCostTab({ locations }: { locations: Location[] }) {
   });
 
   const avgCostPerHour =
-    report && report.totalScheduledHours > 0
-      ? report.totalLaborCost / report.totalScheduledHours
+    report && Number(report.totalScheduledHours) > 0
+      ? Number(report.totalLaborCost) / Number(report.totalScheduledHours)
       : 0;
 
   return (
@@ -149,11 +148,11 @@ function LaborCostTab({ locations }: { locations: Location[] }) {
         {[
           {
             label: 'Total Scheduled Hours',
-            value: isLoading ? null : `${report?.totalScheduledHours.toFixed(1) ?? '0'}h`,
+            value: isLoading ? null : `${report ? Number(report.totalScheduledHours).toFixed(1) : '0'}h`,
           },
           {
             label: 'Total Labor Cost',
-            value: isLoading ? null : `$${report?.totalLaborCost.toFixed(2) ?? '0.00'}`,
+            value: isLoading ? null : `$${report ? Number(report.totalLaborCost).toFixed(2) : '0.00'}`,
           },
           {
             label: 'Avg Cost / Hour',
@@ -230,8 +229,8 @@ function LaborCostTab({ locations }: { locations: Location[] }) {
                 {report.byLocation.map((row) => (
                   <TableRow key={row.locationId}>
                     <TableCell className="font-medium">{row.name}</TableCell>
-                    <TableCell className="text-right tabular-nums">{row.scheduledHours.toFixed(1)}h</TableCell>
-                    <TableCell className="text-right tabular-nums">${row.laborCost.toFixed(2)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{Number(row.scheduledHours).toFixed(1)}h</TableCell>
+                    <TableCell className="text-right tabular-nums">${Number(row.laborCost).toFixed(2)}</TableCell>
                     <TableCell className="text-right tabular-nums">{row.shiftCount}</TableCell>
                   </TableRow>
                 ))}
@@ -318,9 +317,9 @@ function KpiDashboardTab() {
                     <span className="text-muted-foreground">Draft</span>
                     <span className="font-medium tabular-nums text-right">{kpi.draftShifts}</span>
                     <span className="text-muted-foreground">Total Hours</span>
-                    <span className="font-medium tabular-nums text-right">{kpi.totalScheduledHours.toFixed(1)}h</span>
+                    <span className="font-medium tabular-nums text-right">{Number(kpi.totalScheduledHours).toFixed(1)}h</span>
                     <span className="text-muted-foreground">Est. Labor Cost</span>
-                    <span className="font-medium tabular-nums text-right">${kpi.estimatedLaborCost.toFixed(2)}</span>
+                    <span className="font-medium tabular-nums text-right">${Number(kpi.estimatedLaborCost).toFixed(2)}</span>
                   </div>
                   {/* Fill Rate progress bar */}
                   <div className="space-y-1">
@@ -543,6 +542,7 @@ export default function AnalyticsPage() {
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
   const thisWeekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
+  const [activeTab, setActiveTab] = useState('hours');
   const [startDate, setStartDate] = useState(thirtyDaysAgo);
   const [endDate, setEndDate] = useState(today);
   const [weekStart, setWeekStart] = useState(thisWeekStart);
@@ -640,9 +640,12 @@ export default function AnalyticsPage() {
                 {atRisk.map((o) => o.name).join(', ')}
               </p>
             </div>
-            <Link href="#overtime" onClick={() => {}} className="shrink-0 text-xs text-chart-warning underline underline-offset-2">
+            <button
+              onClick={() => setActiveTab('overtime')}
+              className="shrink-0 text-xs text-chart-warning underline underline-offset-2"
+            >
               Review schedule
-            </Link>
+            </button>
           </div>
         );
       })()}
@@ -659,7 +662,7 @@ export default function AnalyticsPage() {
         );
       })()}
 
-      <Tabs defaultValue="hours">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="hours">Hours Distribution</TabsTrigger>
           <TabsTrigger value="fairness">Fairness</TabsTrigger>
@@ -886,7 +889,7 @@ export default function AnalyticsPage() {
                               className="border"
                             >
                               Overtime +{entry.overtimeHours}h
-                              {entry.overtimeCost !== null && ` · $${entry.overtimeCost.toFixed(2)}`}
+                              {entry.overtimeCost !== null && ` · $${Number(entry.overtimeCost).toFixed(2)}`}
                             </Badge>
                           )}
                           {!entry.isOvertime && entry.isAtRisk && (
