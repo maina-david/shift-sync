@@ -111,6 +111,50 @@ cd frontend && npm run dev
 
 ---
 
+## Testing
+
+Backend unit tests use **Jest + `@nestjs/testing`** with mocked repositories and event emitters — no database required.
+
+```bash
+cd backend
+npm test              # run all tests
+npm test -- --watch   # watch mode
+```
+
+**317 tests across 27 service spec files — all passing.**
+
+| Area | Spec file | Tests |
+|---|---|---|
+| Constraint checker | `shifts/constraint-checker.service.spec.ts` | 13 |
+| Timesheets | `timesheets/timesheets.service.spec.ts` | 13 |
+| Time-off requests | `time-off-requests/time-off-requests.service.spec.ts` | 17 |
+| Drop requests | `drop-requests/drop-requests.service.spec.ts` | 18 |
+| Swap requests | `swap-requests/swap-requests.service.spec.ts` | 26 |
+| Auth | `auth/auth.service.spec.ts` | 13 |
+| Shifts & assignments | `shifts/shifts.service.spec.ts` | 17 |
+| Notifications routing | `notifications/notifications.service.spec.ts` | 13 |
+| Users & availability | `users/users.service.spec.ts` | 14 |
+| Analytics | `analytics/analytics.service.spec.ts` | 12 |
+| Certifications | `certifications/certifications.service.spec.ts` | 12 |
+| Audit log | `audit/audit.service.spec.ts` | 13 |
+| Scheduler crons | `scheduler/scheduler.service.spec.ts` | 16 |
+| Checklists | `checklists/checklists.service.spec.ts` | 11 |
+| Shift feedback | `shift-feedback/shift-feedback.service.spec.ts` | 10 |
+| Messages | `messages/messages.service.spec.ts` | 10 |
+| Schedule templates | `schedule-templates/schedule-templates.service.spec.ts` | 9 |
+| Reservations | `reservations/reservations.service.spec.ts` | 9 |
+| Locations | `locations/locations.service.spec.ts` | 10 |
+| Settings | `settings/settings.service.spec.ts` | 8 |
+| Log book | `log-book/log-book.service.spec.ts` | 8 |
+| Fair workweek | `fair-workweek/fair-workweek.service.spec.ts` | 7 |
+| Email | `email/email.service.spec.ts` | 6 |
+| Skills | `skills/skills.service.spec.ts` | 6 |
+| Menu | `menu/menu.service.spec.ts` | 10 |
+| Bookmarks | `bookmarks/bookmarks.service.spec.ts` | 5 |
+| App controller | `app.controller.spec.ts` | 1 |
+
+---
+
 ## Login Credentials
 
 All seeded accounts share the same password: **`Coastal2024!`**
