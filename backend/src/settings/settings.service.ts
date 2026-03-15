@@ -28,7 +28,7 @@ export class SettingsService implements OnModuleInit {
     for (const [key, value] of Object.entries(flat)) {
       const existing = await this.repo.findOne({ where: { key } });
       if (!existing) {
-        await this.repo.save(this.repo.create({ key, value, description: null }));
+        await this.repo.save(this.repo.create({ key, value, description: null, isEnabled: true }));
       }
     }
   }
@@ -72,23 +72,32 @@ export class SettingsService implements OnModuleInit {
     return this.repo.find({ order: { key: 'ASC' } });
   }
 
-  async set(key: string, value: unknown, description?: string): Promise<SystemSetting> {
+  async set(
+    key: string,
+    patch: { value?: unknown; description?: string | null; isEnabled?: boolean },
+  ): Promise<SystemSetting> {
     let setting = await this.repo.findOne({ where: { key } });
     if (setting) {
-      setting.value = value;
-      if (description !== undefined) setting.description = description;
+      if (patch.value !== undefined) setting.value = patch.value;
+      if (patch.description !== undefined) setting.description = patch.description;
+      if (patch.isEnabled !== undefined) setting.isEnabled = patch.isEnabled;
     } else {
-      setting = this.repo.create({ key, value, description: description ?? null });
+      setting = this.repo.create({
+        key,
+        value: patch.value,
+        description: patch.description ?? null,
+        isEnabled: patch.isEnabled ?? true,
+      });
     }
     const saved = await this.repo.save(setting);
-    this.cache[key] = value;   // keep cache in sync
+    if (patch.value !== undefined) this.cache[key] = patch.value;
     return saved;
   }
 
   async resetToDefaults(): Promise<void> {
     const flat = flattenObject(DEFAULT_SETTINGS as unknown as Record<string, unknown>);
     for (const [key, value] of Object.entries(flat)) {
-      await this.set(key, value);
+      await this.set(key, { value, isEnabled: true });
     }
   }
 }

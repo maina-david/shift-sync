@@ -13,6 +13,10 @@ export class SystemSetting {
   @Column({ nullable: true, type: 'varchar', length: 255 })
   description: string | null;
 
+  /** Whether this setting is active. Disabled settings are stored but ignored by the runtime. */
+  @Column({ type: 'boolean', default: true })
+  isEnabled: boolean;
+
   @UpdateDateColumn()
   updatedAt: Date;
 }

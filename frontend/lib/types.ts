@@ -423,6 +423,7 @@ export interface SystemSetting {
   key: string;
   value: unknown;
   description: string | null;
+  isEnabled: boolean;
   updatedAt: string;
 }
 

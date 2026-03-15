@@ -34,9 +34,9 @@ export class SettingsController {
   @ApiOperation({ summary: 'Update a system setting by key (admin only)' })
   update(
     @Param('key') key: string,
-    @Body() body: { value: unknown; description?: string },
+    @Body() body: { value?: unknown; description?: string; isEnabled?: boolean },
   ) {
-    return this.settingsService.set(key, body.value, body.description);
+    return this.settingsService.set(key, body);
   }
 
   @Post('reset')

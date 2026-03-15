@@ -33,7 +33,7 @@ describe('SettingsService', () => {
 
   describe('get', () => {
     it('returns the cached value for a known key', async () => {
-      await service.set('scheduling.minRestHours', 12);
+      await service.set('scheduling.minRestHours', { value: 12 });
       expect(service.get('scheduling.minRestHours')).toBe(12);
     });
 
@@ -64,13 +64,13 @@ describe('SettingsService', () => {
       repo.findOne.mockResolvedValue(makeSetting('scheduling.minRestHours', 10));
       repo.save.mockImplementation((s: any) => Promise.resolve(s));
 
-      await service.set('scheduling.minRestHours', 8);
+      await service.set('scheduling.minRestHours', { value: 8 });
       expect(service.get('scheduling.minRestHours')).toBe(8);
     });
 
     it('creates a new setting when key does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await service.set('custom.key', 42);
+      await service.set('custom.key', { value: 42 });
       expect(repo.create).toHaveBeenCalledWith(
         expect.objectContaining({ key: 'custom.key', value: 42 }),
       );
@@ -81,8 +81,19 @@ describe('SettingsService', () => {
       repo.findOne.mockResolvedValue(existing);
       repo.save.mockImplementation((s: any) => Promise.resolve(s));
 
-      await service.set('scheduling.minRestHours', 10, 'New description');
+      await service.set('scheduling.minRestHours', { value: 10, description: 'New description' });
       expect(existing.description).toBe('New description');
+    });
+
+    it('toggles isEnabled without changing value', async () => {
+      const existing = { ...makeSetting('scheduling.minRestHours', 10), isEnabled: true };
+      repo.findOne.mockResolvedValue(existing);
+      repo.save.mockImplementation((s: any) => Promise.resolve(s));
+
+      await service.set('scheduling.minRestHours', { isEnabled: false });
+      expect(existing.isEnabled).toBe(false);
+      // value should be unchanged
+      expect(service.get('scheduling.minRestHours')).not.toBe(false);
     });
   });
 
