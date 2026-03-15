@@ -79,9 +79,9 @@ export class TimesheetsController {
   async exportCsv(
     @Query('startDate')  startDate: string,
     @Query('endDate')    endDate: string,
+    @Res() res: Response,
     @Query('locationId') locationId?: string,
     @Query('status')     status?: TimesheetStatus,
-    @Res() res: Response,
   ) {
     const query: PayrollExportQuery = {
       locationId,

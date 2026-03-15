@@ -34,6 +34,7 @@ import {
 } from '../swap-requests/entities/swap-request.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { Notification, NotificationType } from '../notifications/entities/notification.entity';
+import { Certification } from '../certifications/entities/certification.entity';
 
 @Injectable()
 export class SchedulerService implements OnModuleInit, OnModuleDestroy {
@@ -54,6 +55,8 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Notification)
     private readonly notifRepo: Repository<Notification>,
+    @InjectRepository(Certification)
+    private readonly certRepo: Repository<Certification>,
     private readonly events: EventEmitter2,
     private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
@@ -86,14 +89,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  // ─── CRON: 00:05 nightly ───────────────────────────────────────────────────
-
-  /**
-   * Marks all ASSIGNED shift-assignments whose shift date has passed as
-   * COMPLETED so the history is accurate and queries stay fast.
-   *
-   * Runs at 00:05 so the calendar day has firmly rolled over.
-   */
   @Cron('5 0 * * *', { name: 'complete-past-assignments' })
   async completePastAssignments(): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
@@ -118,12 +113,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  // ─── CRON: 07:00 every day ─────────────────────────────────────────────────
-
-  /**
-   * Sends an in-app (and optionally email) reminder to every staff member
-   * who has a shift today, so they can plan their commute and preparation.
-   */
   @Cron(CronExpression.EVERY_DAY_AT_7AM, { name: 'daily-shift-reminders' })
   async sendDailyShiftReminders(): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
@@ -155,14 +144,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  // ─── CRON: 09:00 on weekdays ───────────────────────────────────────────────
-
-  /**
-   * Reminds every active manager/admin about time-off requests that have
-   * been sitting in PENDING status for more than 48 hours without a decision.
-   *
-   * Only fires Mon–Fri to avoid noise over the weekend.
-   */
   @Cron('0 9 * * 1-5', { name: 'pending-timeoff-reminders' })
   async remindStalePendingTimeOff(): Promise<void> {
     const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
@@ -200,13 +181,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  // ─── CRON: 10:00 every Friday ──────────────────────────────────────────────
-
-  /**
-   * Checks whether any shifts have been published for next week.
-   * If none exist, warns every active manager/admin so the schedule
-   * can be released before the weekend — giving staff enough lead time.
-   */
   @Cron('0 10 * * 5', { name: 'weekly-schedule-check' })
   async warnUnpublishedSchedule(): Promise<void> {
     const now = new Date();
@@ -264,16 +238,51 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  // ─── CRON: every 30 minutes ────────────────────────────────────────────────
+  @Cron('0 8 * * 1', { name: 'cert-expiry-check' })
+  async warnExpiringCertifications(): Promise<void> {
+    const today = new Date();
+    const cutoff = new Date();
+    cutoff.setDate(today.getDate() + 30);
 
-  /**
-   * Auto-marks reservations as NO_SHOW when the guest has not arrived
-   * within 30 minutes of their booked time and the status is still
-   * PENDING or CONFIRMED.
-   *
-   * Compares purely on date/time strings so no timezone conversion is needed
-   * (reservation times are already stored in local restaurant time).
-   */
+    const todayStr = today.toISOString().slice(0, 10);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+    const expiring = await this.certRepo
+      .createQueryBuilder('cert')
+      .leftJoinAndSelect('cert.user', 'user')
+      .where('cert.expiryDate >= :today', { today: todayStr })
+      .andWhere('cert.expiryDate <= :cutoff', { cutoff: cutoffStr })
+      .orderBy('cert.expiryDate', 'ASC')
+      .getMany();
+
+    if (expiring.length === 0) return;
+
+    const managers = await this.userRepo
+      .createQueryBuilder('u')
+      .where('u.role IN (:...roles)', { roles: [UserRole.ADMIN, UserRole.MANAGER] })
+      .andWhere('u.isActive = :active', { active: true })
+      .getMany();
+
+    const count = expiring.length;
+    const names = [...new Set(expiring.map((c) => c.user?.name).filter(Boolean))];
+    const namesSummary = names.slice(0, 3).join(', ') + (names.length > 3 ? ` and ${names.length - 3} more` : '');
+
+    for (const manager of managers) {
+      this.safeEmit('notification.send', {
+        userId: manager.id,
+        type: NotificationType.CERT_EXPIRY_WARNING,
+        title: `${count} Certification${count > 1 ? 's' : ''} Expiring Within 30 Days`,
+        message: `${namesSummary} ${count > 1 ? 'have certifications' : 'has a certification'} expiring within 30 days. Please review and arrange renewals.`,
+        entityType: 'certification',
+        entityId: null,
+      });
+    }
+
+    this.logger.log(
+      `[cert-expiry-check] ${count} expiring cert(s) → notified ${managers.length} manager(s)`,
+    );
+  }
+
   @Cron(CronExpression.EVERY_30_MINUTES, { name: 'reservation-no-show' })
   async markNoShowReservations(): Promise<void> {
     const now = new Date();
@@ -308,23 +317,11 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  // ─── CRON: every 30 minutes — upcoming shift reminders ────────────────────
-
-  /**
-   * Sends an in-app SHIFT_REMINDER notification for every ASSIGNED staff
-   * member whose shift starts within the next 2 hours, provided a reminder
-   * has not already been sent for that assignment today.
-   *
-   * Runs every 30 minutes so staff are notified close to shift start without
-   * spamming them — the duplicate check ensures at most one reminder per
-   * assignment per calendar day.
-   */
   @Cron('0 */30 * * * *', { name: 'shift-reminders' })
   async sendShiftReminders(): Promise<void> {
     const now = new Date();
     const windowEnd = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
-    // Fetch published shifts whose date is today or tomorrow (covers overnight boundary)
     const todayDate = now.toISOString().split('T')[0];
     const tomorrowDate = new Date(now.getTime() + 86400000).toISOString().split('T')[0];
 
@@ -338,11 +335,9 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       .andWhere('a.status = :assignedStatus', { assignedStatus: AssignmentStatus.ASSIGNED })
       .getMany();
 
-    // Determine which shifts start within [now, now+2h]
     const upcomingAssignments: Array<{ assignmentId: string; staffId: string; shift: Shift }> = [];
 
     for (const shift of candidates) {
-      // Build a UTC Date from date + startTime (treated as UTC for comparison)
       const shiftStart = new Date(`${shift.date}T${shift.startTime}:00Z`);
       if (shiftStart >= now && shiftStart <= windowEnd) {
         for (const assignment of shift.assignments) {
@@ -357,7 +352,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
 
     if (upcomingAssignments.length === 0) return;
 
-    // Check which assignments already have a SHIFT_REMINDER notification created today
     const remindersSentToday = await this.notifRepo
       .createQueryBuilder('n')
       .where('n.type = :type', { type: NotificationType.SHIFT_REMINDER })
@@ -401,13 +395,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  // ─── INTERVAL: every 12 hours ──────────────────────────────────────────────
-
-  /**
-   * Sends a nudge to every staff member who has a swap request sitting
-   * in PENDING status (i.e. they haven't accepted or rejected yet) for
-   * more than 12 hours, so the requester isn't left hanging.
-   */
   @Interval('swap-pending-reminder', 12 * 60 * 60 * 1000)
   async remindUnansweredSwapRequests(): Promise<void> {
     const cutoff = new Date(Date.now() - 12 * 60 * 60 * 1000);
@@ -440,13 +427,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  // ─── TIMEOUT: 10 seconds after startup ─────────────────────────────────────
-
-  /**
-   * Fires once, 10 seconds after the application starts.
-   * Logs a quick snapshot of actionable pending items so operators have
-   * immediate visibility without opening a dashboard.
-   */
   @Timeout('startup-check', 10_000)
   async startupCheck(): Promise<void> {
     const [pendingTimeOff, swapsAwaitingResponse, swapsAwaitingManager, pendingReservations] =
@@ -466,13 +446,6 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  // ─── DYNAMIC (SchedulerRegistry) ───────────────────────────────────────────
-
-  /**
-   * Registered dynamically via SchedulerRegistry in onModuleInit.
-   * Deletes read notifications older than 30 days to keep the table lean.
-   * Not a decorator — demonstrates the programmatic scheduling API.
-   */
   async cleanupOldReadNotifications(): Promise<void> {
     const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 

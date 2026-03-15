@@ -9,6 +9,7 @@ import { Reservation } from '../reservations/entities/reservation.entity';
 import { SwapRequest } from '../swap-requests/entities/swap-request.entity';
 import { User } from '../users/entities/user.entity';
 import { Notification } from '../notifications/entities/notification.entity';
+import { Certification } from '../certifications/entities/certification.entity';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { Notification } from '../notifications/entities/notification.entity';
       SwapRequest,
       User,
       Notification,
+      Certification,
     ]),
   ],
   providers: [SchedulerService],
