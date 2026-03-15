@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Trash2, Save, ShieldAlert } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -110,6 +110,16 @@ export default function AvailabilityPage() {
   const updateSlot = (dayOfWeek: number, field: 'startTime' | 'endTime', value: string) => {
     setSlots((prev) => prev.map((s) => (s.dayOfWeek === dayOfWeek ? { ...s, [field]: value } : s)));
   };
+
+  if (user && user.role !== 'staff') return (
+    <div className="flex flex-col items-center justify-center py-24 gap-4 text-muted-foreground">
+      <ShieldAlert className="h-10 w-10 opacity-40" />
+      <div className="text-center">
+        <p className="font-semibold text-foreground">Access Restricted</p>
+        <p className="text-sm mt-1">Availability settings are only available to staff members.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
