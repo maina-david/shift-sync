@@ -343,6 +343,7 @@ export default function StaffPage() {
                 <button
                   type="button"
                   onClick={() => setShowCreatePassword((v) => !v)}
+                  aria-label={showCreatePassword ? 'Hide password' : 'Show password'}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
                 >
@@ -517,6 +518,7 @@ export default function StaffPage() {
               <button
                 type="button"
                 onClick={() => setShowNewPassword((v) => !v)}
+                aria-label={showNewPassword ? 'Hide password' : 'Show password'}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 tabIndex={-1}
               >

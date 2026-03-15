@@ -94,9 +94,9 @@ export class NotificationsService {
       .where('u.role IN (:...roles)', { roles: [UserRole.MANAGER, UserRole.ADMIN] })
       .getMany();
 
-    for (const manager of managers) {
-      await this.handleSendNotification({ ...payload, userId: manager.id });
-    }
+    await Promise.all(
+      managers.map((manager) => this.handleSendNotification({ ...payload, userId: manager.id })),
+    );
   }
 
   @OnEvent('notification.sendToAdmins')
@@ -104,8 +104,8 @@ export class NotificationsService {
     const admins = await this.userRepo.find({
       where: { role: UserRole.ADMIN, isActive: true },
     });
-    for (const admin of admins) {
-      await this.handleSendNotification({ ...payload, userId: admin.id });
-    }
+    await Promise.all(
+      admins.map((admin) => this.handleSendNotification({ ...payload, userId: admin.id })),
+    );
   }
 }

@@ -290,8 +290,8 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
 
     const cutoff = new Date(now.getTime() - 30 * 60 * 1000);
     const cutoffTime = [
-      String(cutoff.getHours()).padStart(2, '0'),
-      String(cutoff.getMinutes()).padStart(2, '0'),
+      String(cutoff.getUTCHours()).padStart(2, '0'),
+      String(cutoff.getUTCMinutes()).padStart(2, '0'),
     ].join(':');
 
     const eligible = await this.reservRepo

@@ -42,7 +42,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/auth-context';
-import { bookmarksApi } from '@/lib/api';
+import { toast } from 'sonner';
+import { bookmarksApi, getErrorMessage } from '@/lib/api';
 import { Bookmark as BookmarkType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -182,6 +183,7 @@ export function AppSidebar({ selectedGroupId, onSelectGroup, secondaryOpen }: Ap
       return existing ? bookmarksApi.remove(existing.id) : bookmarksApi.create({ href, label });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['bookmarks'] }),
+    onError: (err) => toast.error(getErrorMessage(err)),
   });
 
   const userRole = user?.role ?? 'staff';

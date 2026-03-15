@@ -234,7 +234,7 @@ export class ShiftsService {
       if (!manages) throw new ForbiddenException('You do not manage this location');
     }
 
-    const weekEnd = addDays(dto.weekStart, 7);
+    const weekEnd = addDays(dto.weekStart, 6); // Mon + 6 = Sun (inclusive both ends via Between)
     const shifts = await this.shiftRepo.find({
       where: {
         locationId: dto.locationId,
@@ -281,8 +281,8 @@ export class ShiftsService {
       if (!manages) throw new ForbiddenException('You do not manage this location');
     }
 
-    const sourceEnd = addDays(sourceWeekStart, 7);
-    const targetEnd = addDays(targetWeekStart, 7);
+    const sourceEnd = addDays(sourceWeekStart, 6); // Mon + 6 = Sun (inclusive both ends via Between)
+    const targetEnd = addDays(targetWeekStart, 6);
 
     const [sourceShifts, existingCount] = await Promise.all([
       this.shiftRepo.find({
@@ -742,8 +742,8 @@ export class ShiftsService {
             if (slotStart < availStart || slotEnd > availEnd) return false;
           }
           if (assignedDates.get(u.id)?.has(date)) return false;
-          const currentHours = (weeklyMinutesMap.get(u.id) ?? 0) / 60;
-          if (currentHours + slotMinutes / 60 > s.weeklyOvertimeHours) return false;
+          const currentMinutes = weeklyMinutesMap.get(u.id) ?? 0;
+          if (currentMinutes + slotMinutes > s.weeklyOvertimeHours * 60) return false;
           return true;
         });
 

@@ -1,5 +1,6 @@
 import {
   Injectable,
+  BadRequestException,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -67,6 +68,10 @@ export class CertificationsService {
       if (!hasOverlap) {
         throw new ForbiddenException('You do not manage any location this staff member is certified for');
       }
+    }
+
+    if (dto.expiryDate && new Date(dto.expiryDate) < new Date(dto.issuedDate)) {
+      throw new BadRequestException('Expiry date must be on or after issued date');
     }
 
     const cert = this.repo.create({

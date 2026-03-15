@@ -4,6 +4,7 @@ import {
   Max,
   IsOptional,
   IsString,
+  MaxLength,
   IsBoolean,
   IsUUID,
 } from 'class-validator';
@@ -23,6 +24,7 @@ export class CreateFeedbackDto {
   @ApiPropertyOptional({ description: 'Optional free-text comment about the shift' })
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   comment?: string;
 
   @ApiPropertyOptional({ description: 'Was the shift adequately staffed?' })

@@ -125,7 +125,9 @@ export default function MessagesPage() {
     mutationFn: (id: string) => messagesApi.markRead(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages-inbox'] });
-      queryClient.invalidateQueries({ queryKey: ['thread', selectedUserId] });
+      if (selectedUserId) {
+        queryClient.invalidateQueries({ queryKey: ['thread', selectedUserId] });
+      }
     },
   });
 
@@ -373,7 +375,7 @@ export default function MessagesPage() {
                   value={replyBody}
                   onChange={(e) => setReplyBody(e.target.value)}
                   placeholder={`Message ${selection.user.name}…`}
-                  className="min-h-[2.5rem] max-h-32 resize-none text-sm"
+                  className="min-h-10 max-h-32 resize-none text-sm"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -429,7 +431,7 @@ export default function MessagesPage() {
                 value={composeBody}
                 onChange={(e) => setComposeBody(e.target.value)}
                 placeholder="Write your message…"
-                className="min-h-[100px] resize-none"
+                className="min-h-25 resize-none"
               />
             </div>
           </div>
