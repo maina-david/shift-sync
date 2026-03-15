@@ -1,10 +1,17 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { User } from '@/lib/types';
-import { authApi, setAccessToken } from '@/lib/api';
-import { disconnectSocket, reconnectSocket } from '@/lib/socket';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
+import { useRouter } from "next/navigation";
+import { User } from "@/lib/types";
+import { authApi, setAccessToken } from "@/lib/api";
+import { disconnectSocket, reconnectSocket } from "@/lib/socket";
 
 // Proactively refresh 60 seconds before the 15-minute access token expires
 const REFRESH_INTERVAL_MS = 14 * 60 * 1000;
@@ -17,7 +24,8 @@ function setSessionCookie() {
 }
 
 function clearSessionCookie() {
-  document.cookie = 'auth_session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+  document.cookie =
+    "auth_session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
 }
 
 interface AuthContextValue {
@@ -50,8 +58,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     clearSessionCookie();
     disconnectSocket();
-    try { await authApi.logout(); } catch { /* fire-and-forget */ }
-    router.push('/login');
+    try {
+      await authApi.logout();
+    } catch {
+      /* fire-and-forget */
+    }
+    router.push("/login");
   }, [router]);
 
   // Recursive proactive refresh — called every 14 minutes while logged in
@@ -68,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       clearSessionCookie();
       disconnectSocket();
-      router.push('/login');
+      router.push("/login");
     }
   }, [router, scheduleRefresh]);
 
@@ -104,18 +116,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [doRefresh, scheduleRefresh]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const data = await authApi.login(email, password);
-    setAccessToken(data.token);
-    setToken(data.token);
-    setUser(data.user);
-    setSessionCookie();
-    reconnectSocket();
-    scheduleRefresh(doRefresh);
-  }, [doRefresh, scheduleRefresh]);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const data = await authApi.login(email, password);
+      setAccessToken(data.token);
+      setToken(data.token);
+      setUser(data.user);
+      setSessionCookie();
+      reconnectSocket();
+      scheduleRefresh(doRefresh);
+    },
+    [doRefresh, scheduleRefresh],
+  );
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout, refreshUser }}>
+    <AuthContext.Provider
+      value={{ user, token, isLoading, login, logout, refreshUser }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -123,6 +140,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }

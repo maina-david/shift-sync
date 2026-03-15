@@ -45,7 +45,10 @@ export class User {
   @Column({ type: 'int', default: 0 })
   desiredHoursPerWeek: number;
 
-  @Transform(({ value }) => (value !== null && value !== undefined ? parseFloat(value) : null))
+  @Transform(({ value }) =>
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    value !== null && value !== undefined ? parseFloat(value) : null,
+  )
   @Column({ type: 'decimal', precision: 8, scale: 2, nullable: true })
   hourlyRate: number | null;
 

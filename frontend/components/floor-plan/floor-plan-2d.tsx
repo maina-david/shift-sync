@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useRef, useCallback } from 'react';
-import { ZoneDetailPanel } from './zone-detail-panel';
-import { ZONES as DEFAULT_ZONES } from './zone-config';
-import type { FloorZoneConfig, ShiftAssignment } from '@/lib/types';
+import { useState, useRef, useCallback } from "react";
+import { ZoneDetailPanel } from "./zone-detail-panel";
+import { ZONES as DEFAULT_ZONES } from "./zone-config";
+import type { FloorZoneConfig, ShiftAssignment } from "@/lib/types";
 
 const FLOOR_W = 20;
 const FLOOR_H = 16;
@@ -29,7 +29,12 @@ export function FloorPlan2D({ assignments, zones: zoneProp }: Props) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
-  const panDrag = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
+  const panDrag = useRef<{
+    startX: number;
+    startY: number;
+    panX: number;
+    panY: number;
+  } | null>(null);
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId) ?? null;
 
@@ -39,7 +44,9 @@ export function FloorPlan2D({ assignments, zones: zoneProp }: Props) {
         ? []
         : assignments.filter((a) =>
             zone.skills.some((skill) =>
-              a.shift?.requiredSkill?.name?.toLowerCase().includes(skill.toLowerCase()),
+              a.shift?.requiredSkill?.name
+                ?.toLowerCase()
+                .includes(skill.toLowerCase()),
             ),
           ),
     [assignments],
@@ -54,7 +61,12 @@ export function FloorPlan2D({ assignments, zones: zoneProp }: Props) {
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
-      panDrag.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y };
+      panDrag.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        panX: pan.x,
+        panY: pan.y,
+      };
     },
     [pan],
   );
@@ -83,11 +95,11 @@ export function FloorPlan2D({ assignments, zones: zoneProp }: Props) {
     >
       <div
         style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
+          position: "absolute",
+          top: "50%",
+          left: "50%",
           transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px)) scale(${zoom})`,
-          transformOrigin: 'center center',
+          transformOrigin: "center center",
         }}
       >
         <div
@@ -96,8 +108,8 @@ export function FloorPlan2D({ assignments, zones: zoneProp }: Props) {
             width: FLOOR_W * SCALE,
             height: FLOOR_H * SCALE,
             backgroundImage:
-              'repeating-linear-gradient(0deg,transparent,transparent 34px,var(--border) 34px,var(--border) 35px),' +
-              'repeating-linear-gradient(90deg,transparent,transparent 34px,var(--border) 34px,var(--border) 35px)',
+              "repeating-linear-gradient(0deg,transparent,transparent 34px,var(--border) 34px,var(--border) 35px)," +
+              "repeating-linear-gradient(90deg,transparent,transparent 34px,var(--border) 34px,var(--border) 35px)",
           }}
         >
           {zones.map((zone) => {
@@ -130,7 +142,10 @@ export function FloorPlan2D({ assignments, zones: zoneProp }: Props) {
                 }}
               >
                 <div className="flex flex-col h-full p-1.5 gap-1">
-                  <span className="text-[10px] font-bold leading-tight truncate" style={{ color: text }}>
+                  <span
+                    className="text-[10px] font-bold leading-tight truncate"
+                    style={{ color: text }}
+                  >
                     {zone.label}
                   </span>
                   <div className="flex flex-wrap gap-0.5 mt-auto">
@@ -140,7 +155,7 @@ export function FloorPlan2D({ assignments, zones: zoneProp }: Props) {
                         className="text-[9px] font-medium rounded-full px-1.5 py-0.5 leading-none"
                         style={{ backgroundColor: `${text}22`, color: text }}
                       >
-                        {a.staff.name.split(' ')[0]}
+                        {a.staff.name.split(" ")[0]}
                       </span>
                     ))}
                     {zoneAssignments.length > 4 && (
@@ -162,7 +177,10 @@ export function FloorPlan2D({ assignments, zones: zoneProp }: Props) {
           </span>
           <span
             className="absolute left-1 top-1/2 text-[10px] text-muted-foreground/40 pointer-events-none"
-            style={{ writingMode: 'vertical-rl', transform: 'translateY(-50%) rotate(180deg)' }}
+            style={{
+              writingMode: "vertical-rl",
+              transform: "translateY(-50%) rotate(180deg)",
+            }}
           >
             ← Back · Front →
           </span>

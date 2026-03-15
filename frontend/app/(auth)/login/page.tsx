@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { Suspense } from 'react';
-import Image from 'next/image';
-import { GalleryVerticalEnd } from 'lucide-react';
-import { motion } from 'motion/react';
-import { LoginForm } from '@/components/login-form';
+import { Suspense } from "react";
+import Image from "next/image";
+import { GalleryVerticalEnd } from "lucide-react";
+import { motion } from "motion/react";
+import { LoginForm } from "@/components/login-form";
 
 export default function LoginPage() {
   return (
@@ -13,7 +13,7 @@ export default function LoginPage() {
         className="relative hidden lg:block overflow-hidden"
         initial={{ opacity: 0, x: -24 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
       >
         <Image
           src="/login-bg.jpg"
@@ -30,7 +30,7 @@ export default function LoginPage() {
         className="flex flex-col gap-4 p-6 md:p-10"
         initial={{ opacity: 0, x: 24 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
       >
         <div className="flex justify-center gap-2 md:justify-start">
           <a href="/" className="flex items-center gap-2 font-medium">
@@ -45,7 +45,7 @@ export default function LoginPage() {
             className="w-full max-w-xs"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: 'easeOut', delay: 0.15 }}
+            transition={{ duration: 0.35, ease: "easeOut", delay: 0.15 }}
           >
             <Suspense fallback={null}>
               <LoginForm />

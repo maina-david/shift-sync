@@ -12,12 +12,12 @@ import { ShiftAssignment } from '../../shifts/entities/shift-assignment.entity';
 import { User } from '../../users/entities/user.entity';
 
 export enum DropRequestStatus {
-  OPEN = 'open',             // Waiting to be claimed
-  CLAIMED = 'claimed',       // Someone claimed it; waiting for manager
-  APPROVED = 'approved',     // Manager approved transfer
-  REJECTED = 'rejected',     // Manager rejected
-  EXPIRED = 'expired',       // 24h before shift; auto-expired
-  CANCELLED = 'cancelled',   // Original staff cancelled
+  OPEN = 'open', // Waiting to be claimed
+  CLAIMED = 'claimed', // Someone claimed it; waiting for manager
+  APPROVED = 'approved', // Manager approved transfer
+  REJECTED = 'rejected', // Manager rejected
+  EXPIRED = 'expired', // 24h before shift; auto-expired
+  CANCELLED = 'cancelled', // Original staff cancelled
 }
 
 @Entity('drop_requests')
@@ -41,7 +41,11 @@ export class DropRequest {
   claimedById: string | null;
 
   @Index()
-  @Column({ type: 'enum', enum: DropRequestStatus, default: DropRequestStatus.OPEN })
+  @Column({
+    type: 'enum',
+    enum: DropRequestStatus,
+    default: DropRequestStatus.OPEN,
+  })
   status: DropRequestStatus;
 
   @Column({ nullable: true, type: 'text', default: null })

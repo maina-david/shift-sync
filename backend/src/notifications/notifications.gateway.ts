@@ -15,10 +15,15 @@ import { Repository } from 'typeorm';
 import { User, UserRole } from '../users/entities/user.entity';
 
 @WebSocketGateway({
-  cors: { origin: process.env.FRONTEND_URL || 'http://localhost:3000', credentials: true },
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  },
   namespace: '/ws',
 })
-export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class NotificationsGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -32,10 +37,12 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
   async handleConnection(client: Socket) {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const token =
         client.handshake.auth?.token ||
         client.handshake.headers.authorization?.replace('Bearer ', '');
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const payload = this.jwtService.verify<{ sub: string }>(token);
       const user = await this.userRepo.findOne({
         where: { id: payload.sub },
@@ -78,21 +85,30 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   @SubscribeMessage('typing:start')
-  handleTypingStart(@ConnectedSocket() client: Socket, @MessageBody() recipientId: string) {
+  handleTypingStart(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() recipientId: string,
+  ) {
     const userId = this.socketUser.get(client.id);
     if (!userId || !recipientId) return;
     this.server.to(`user:${recipientId}`).emit('typing:start', { userId });
   }
 
   @SubscribeMessage('typing:stop')
-  handleTypingStop(@ConnectedSocket() client: Socket, @MessageBody() recipientId: string) {
+  handleTypingStop(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() recipientId: string,
+  ) {
     const userId = this.socketUser.get(client.id);
     if (!userId || !recipientId) return;
     this.server.to(`user:${recipientId}`).emit('typing:stop', { userId });
   }
 
   @SubscribeMessage('join_location')
-  async handleJoinLocation(@ConnectedSocket() client: Socket, @MessageBody() locationId: string) {
+  async handleJoinLocation(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() locationId: string,
+  ) {
     const userId = this.socketUser.get(client.id);
     if (!userId) return;
 
@@ -129,31 +145,49 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     locationId: string | null;
   }) {
     if (payload.recipientId) {
-      this.server.to(`user:${payload.recipientId}`).emit('message:new', payload);
+      this.server
+        .to(`user:${payload.recipientId}`)
+        .emit('message:new', payload);
     }
 
     // Notify sender too so their other open tabs update immediately
     this.server.to(`user:${payload.senderId}`).emit('message:new', payload);
 
     if (payload.type === 'announcement' && payload.locationId) {
-      this.server.to(`location:${payload.locationId}`).emit('message:new', payload);
+      this.server
+        .to(`location:${payload.locationId}`)
+        .emit('message:new', payload);
     }
   }
 
   @OnEvent('schedule.updated')
-  handleScheduleUpdated(payload: { locationId?: string; shiftId?: string; weekStart?: string }) {
+  handleScheduleUpdated(payload: {
+    locationId?: string;
+    shiftId?: string;
+    weekStart?: string;
+  }) {
     if (payload.locationId) {
-      this.server.to(`location:${payload.locationId}`).emit('schedule:updated', payload);
+      this.server
+        .to(`location:${payload.locationId}`)
+        .emit('schedule:updated', payload);
       this.server.to('admin').emit('schedule:updated', payload);
     }
   }
 
-  emitConflict(locationId: string, data: { shiftId: string; staffId: string; message: string }) {
+  emitConflict(
+    locationId: string,
+    data: { shiftId: string; staffId: string; message: string },
+  ) {
     this.server.to(`location:${locationId}`).emit('assignment:conflict', data);
   }
 
   @OnEvent('assignment.conflict')
-  handleAssignmentConflict(payload: { locationId: string; shiftId: string; staffId: string; message: string }) {
+  handleAssignmentConflict(payload: {
+    locationId: string;
+    shiftId: string;
+    staffId: string;
+    message: string;
+  }) {
     this.emitConflict(payload.locationId, {
       shiftId: payload.shiftId,
       staffId: payload.staffId,

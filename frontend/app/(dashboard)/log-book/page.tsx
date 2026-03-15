@@ -1,15 +1,27 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { format, subDays, addDays } from 'date-fns';
-import { ChevronLeft, ChevronRight, Trash2, BookOpen, ShieldAlert } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { format, subDays, addDays } from "date-fns";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+  BookOpen,
+  ShieldAlert,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,11 +31,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { locationsApi, logBookApi, getErrorMessage } from '@/lib/api';
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import { Location } from '@/lib/types';
-import { useAuth } from '@/contexts/auth-context';
+} from "@/components/ui/alert-dialog";
+import { locationsApi, logBookApi, getErrorMessage } from "@/lib/api";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty";
+import { Location } from "@/lib/types";
+import { useAuth } from "@/contexts/auth-context";
 
 interface LogEntry {
   id: string;
@@ -40,21 +58,21 @@ export default function LogBookPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
-  const [note, setNote] = useState('');
+  const [selectedLocationId, setSelectedLocationId] = useState<string>("");
+  const [note, setNote] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const dateStr = format(currentDate, 'yyyy-MM-dd');
+  const dateStr = format(currentDate, "yyyy-MM-dd");
 
   const { data: locations = [] } = useQuery<Location[]>({
-    queryKey: ['locations'],
+    queryKey: ["locations"],
     queryFn: locationsApi.list,
   });
 
-  const locationId = selectedLocationId || locations[0]?.id || '';
+  const locationId = selectedLocationId || locations[0]?.id || "";
 
   const { data: entries = [], isLoading } = useQuery<LogEntry[]>({
-    queryKey: ['log-book', dateStr, locationId],
+    queryKey: ["log-book", dateStr, locationId],
     queryFn: () => logBookApi.list(dateStr, locationId || undefined),
     enabled: !!dateStr,
   });
@@ -62,9 +80,9 @@ export default function LogBookPage() {
   const createMutation = useMutation({
     mutationFn: () => logBookApi.create({ date: dateStr, locationId, note }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['log-book', dateStr] });
-      toast.success('Log entry added');
-      setNote('');
+      queryClient.invalidateQueries({ queryKey: ["log-book", dateStr] });
+      toast.success("Log entry added");
+      setNote("");
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
@@ -72,31 +90,38 @@ export default function LogBookPage() {
   const removeMutation = useMutation({
     mutationFn: (id: string) => logBookApi.remove(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['log-book', dateStr] });
-      toast.success('Entry deleted');
+      queryClient.invalidateQueries({ queryKey: ["log-book", dateStr] });
+      toast.success("Entry deleted");
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 
-  const isToday = dateStr === format(new Date(), 'yyyy-MM-dd');
+  const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
 
   if (user === null) return null;
-  if (user.role !== 'admin' && user.role !== 'manager') return (
-    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
-      <ShieldAlert className="h-10 w-10 opacity-40" />
-      <div className="text-center">
-        <p className="font-semibold text-foreground">Access Restricted</p>
-        <p className="text-sm mt-1">This page is only available to managers and administrators.</p>
+  if (user.role !== "admin" && user.role !== "manager")
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+        <ShieldAlert className="h-10 w-10 opacity-40" />
+        <div className="text-center">
+          <p className="font-semibold text-foreground">Access Restricted</p>
+          <p className="text-sm mt-1">
+            This page is only available to managers and administrators.
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Manager Log Book</h1>
-          <p className="text-muted-foreground text-sm">Daily notes per location</p>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Manager Log Book
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Daily notes per location
+          </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -107,18 +132,29 @@ export default function LogBookPage() {
               </SelectTrigger>
               <SelectContent>
                 {locations.map((loc) => (
-                  <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                  <SelectItem key={loc.id} value={loc.id}>
+                    {loc.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
 
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" onClick={() => setCurrentDate((d) => subDays(d, 1))}>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setCurrentDate((d) => subDays(d, 1))}
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())} className="min-w-27.5">
-              {isToday ? 'Today' : format(currentDate, 'MMM d, yyyy')}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentDate(new Date())}
+              className="min-w-27.5"
+            >
+              {isToday ? "Today" : format(currentDate, "MMM d, yyyy")}
             </Button>
             <Button
               variant="outline"
@@ -133,7 +169,7 @@ export default function LogBookPage() {
       </div>
 
       <div className="text-sm font-medium text-muted-foreground">
-        {format(currentDate, 'EEEE, MMMM d, yyyy')}
+        {format(currentDate, "EEEE, MMMM d, yyyy")}
       </div>
 
       {locationId && (
@@ -150,7 +186,7 @@ export default function LogBookPage() {
             onClick={() => createMutation.mutate()}
             disabled={!note.trim() || createMutation.isPending}
           >
-            {createMutation.isPending ? 'Saving…' : 'Add entry'}
+            {createMutation.isPending ? "Saving…" : "Add entry"}
           </Button>
         </div>
       )}
@@ -159,14 +195,20 @@ export default function LogBookPage() {
 
       {isLoading ? (
         <div className="space-y-3">
-          {[1, 2].map((i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+          {[1, 2].map((i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-xl" />
+          ))}
         </div>
       ) : entries.length === 0 ? (
         <Empty className="border">
           <EmptyHeader>
-            <EmptyMedia variant="icon"><BookOpen /></EmptyMedia>
+            <EmptyMedia variant="icon">
+              <BookOpen />
+            </EmptyMedia>
             <EmptyTitle>No entries for this day</EmptyTitle>
-            <EmptyDescription>Add a note above to start the daily log for this location.</EmptyDescription>
+            <EmptyDescription>
+              Add a note above to start the daily log for this location.
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
@@ -178,15 +220,19 @@ export default function LogBookPage() {
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-primary">{entry.author?.name}</span>
+                  <span className="text-xs font-semibold text-primary">
+                    {entry.author?.name}
+                  </span>
                   <span className="text-[0.625rem] text-muted-foreground">
-                    {format(new Date(entry.createdAt), 'HH:mm')}
+                    {format(new Date(entry.createdAt), "HH:mm")}
                   </span>
                   {entry.location && (
-                    <span className="text-[0.625rem] text-muted-foreground">· {entry.location.name}</span>
+                    <span className="text-[0.625rem] text-muted-foreground">
+                      · {entry.location.name}
+                    </span>
                   )}
                 </div>
-                {(user?.role === 'admin' || entry.authorId === user?.id) && (
+                {(user?.role === "admin" || entry.authorId === user?.id) && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -204,7 +250,12 @@ export default function LogBookPage() {
         </div>
       )}
 
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+      <AlertDialog
+        open={!!deleteId}
+        onOpenChange={(open) => {
+          if (!open) setDeleteId(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete log entry?</AlertDialogTitle>

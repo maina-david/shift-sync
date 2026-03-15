@@ -6,7 +6,10 @@ export class PublishWeekDto {
   @IsUUID()
   locationId: string;
 
-  @ApiProperty({ description: 'Monday of the week to publish', example: '2024-08-12' })
+  @ApiProperty({
+    description: 'Monday of the week to publish',
+    example: '2024-08-12',
+  })
   @IsDateString()
   weekStart: string;
 }

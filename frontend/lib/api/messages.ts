@@ -1,15 +1,15 @@
-import { api } from './client';
-import type { Message } from '../types';
+import { api } from "./client";
+import type { Message } from "../types";
 
 export const messagesApi = {
   send: (data: {
-    type: 'direct' | 'announcement';
+    type: "direct" | "announcement";
     recipientId?: string;
     locationId?: string;
     body: string;
-  }) => api.post('/messages', data).then((r) => r.data),
+  }) => api.post("/messages", data).then((r) => r.data),
   getInbox: (): Promise<{ threads: Message[]; announcements: Message[] }> =>
-    api.get('/messages/inbox').then((r) => ({
+    api.get("/messages/inbox").then((r) => ({
       threads: r.data.threads ?? (Array.isArray(r.data) ? r.data : []),
       announcements: r.data.announcements ?? [],
     })),
@@ -17,8 +17,11 @@ export const messagesApi = {
     api.get(`/messages/thread/${userId}`).then((r) => r.data),
   getAnnouncements: (locationId?: string): Promise<Message[]> =>
     api
-      .get('/messages/announcements', { params: locationId ? { locationId } : undefined })
+      .get("/messages/announcements", {
+        params: locationId ? { locationId } : undefined,
+      })
       .then((r) => r.data),
-  markRead: (id: string) => api.patch(`/messages/${id}/read`).then((r) => r.data),
-  markAllRead: () => api.patch('/messages/read-all').then((r) => r.data),
+  markRead: (id: string) =>
+    api.patch(`/messages/${id}/read`).then((r) => r.data),
+  markAllRead: () => api.patch("/messages/read-all").then((r) => r.data),
 };

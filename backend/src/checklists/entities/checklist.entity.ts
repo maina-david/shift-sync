@@ -14,7 +14,7 @@ import { Location } from '../../locations/entities/location.entity';
 export enum ChecklistType {
   OPENING = 'opening',
   CLOSING = 'closing',
-  CUSTOM  = 'custom',
+  CUSTOM = 'custom',
 }
 
 export interface ChecklistItem {

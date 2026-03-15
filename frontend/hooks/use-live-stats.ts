@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useAuth } from '@/contexts/auth-context';
-import { useSse } from './use-sse';
+import { useAuth } from "@/contexts/auth-context";
+import { useSse } from "./use-sse";
 
 export interface LiveStats {
   /** Number of shift assignments in ASSIGNED status for today */
@@ -34,7 +34,7 @@ export interface LiveStats {
 export function useLiveStats() {
   const { token, user } = useAuth();
 
-  const isAllowed = user?.role === 'admin' || user?.role === 'manager';
+  const isAllowed = user?.role === "admin" || user?.role === "manager";
   const url =
     token && isAllowed
       ? `${process.env.NEXT_PUBLIC_API_URL}/analytics/live?token=${encodeURIComponent(token)}`
@@ -88,7 +88,7 @@ export interface ScheduleChangePayload {
 export function useScheduleStream() {
   const { token, user } = useAuth();
 
-  const isAllowed = user?.role === 'admin' || user?.role === 'manager';
+  const isAllowed = user?.role === "admin" || user?.role === "manager";
   const url =
     token && isAllowed
       ? `${process.env.NEXT_PUBLIC_API_URL}/shifts/stream?token=${encodeURIComponent(token)}`

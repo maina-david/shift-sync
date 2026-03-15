@@ -16,7 +16,10 @@ export interface NotificationPayload {
   entityId?: string;
 }
 
-export interface LocationNotificationPayload extends Omit<NotificationPayload, 'userId'> {
+export interface LocationNotificationPayload extends Omit<
+  NotificationPayload,
+  'userId'
+> {
   locationId: string;
 }
 
@@ -55,7 +58,9 @@ export class NotificationsService {
   }
 
   async getUnreadCount(userId: string) {
-    const count = await this.notifRepo.count({ where: { userId, isRead: false } });
+    const count = await this.notifRepo.count({
+      where: { userId, isRead: false },
+    });
     return { count };
   }
 
@@ -79,9 +84,15 @@ export class NotificationsService {
 
     if (user.notificationPreferences?.email) {
       try {
-        await this.email.sendNotification(user.email, payload.title, payload.message);
+        await this.email.sendNotification(
+          user.email,
+          payload.title,
+          payload.message,
+        );
       } catch (err) {
-        this.logger.error(`Email notification failed for user ${payload.userId}: ${(err as Error).message}`);
+        this.logger.error(
+          `Email notification failed for user ${payload.userId}: ${(err as Error).message}`,
+        );
       }
     }
   }
@@ -90,12 +101,18 @@ export class NotificationsService {
   async handleSendToManagers(payload: LocationNotificationPayload) {
     const managers = await this.userRepo
       .createQueryBuilder('u')
-      .innerJoin('u.managedLocations', 'ml', 'ml.id = :locId', { locId: payload.locationId })
-      .where('u.role IN (:...roles)', { roles: [UserRole.MANAGER, UserRole.ADMIN] })
+      .innerJoin('u.managedLocations', 'ml', 'ml.id = :locId', {
+        locId: payload.locationId,
+      })
+      .where('u.role IN (:...roles)', {
+        roles: [UserRole.MANAGER, UserRole.ADMIN],
+      })
       .getMany();
 
     await Promise.all(
-      managers.map((manager) => this.handleSendNotification({ ...payload, userId: manager.id })),
+      managers.map((manager) =>
+        this.handleSendNotification({ ...payload, userId: manager.id }),
+      ),
     );
   }
 
@@ -105,7 +122,9 @@ export class NotificationsService {
       where: { role: UserRole.ADMIN, isActive: true },
     });
     await Promise.all(
-      admins.map((admin) => this.handleSendNotification({ ...payload, userId: admin.id })),
+      admins.map((admin) =>
+        this.handleSendNotification({ ...payload, userId: admin.id }),
+      ),
     );
   }
 }

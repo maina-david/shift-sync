@@ -2,15 +2,37 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AnalyticsService } from './analytics.service';
 import { Shift, ShiftStatus } from '../shifts/entities/shift.entity';
-import { ShiftAssignment, AssignmentStatus } from '../shifts/entities/shift-assignment.entity';
+import {
+  ShiftAssignment,
+  AssignmentStatus,
+} from '../shifts/entities/shift-assignment.entity';
 import { User, UserRole } from '../users/entities/user.entity';
-import { TimeOffRequest, TimeOffStatus } from '../time-off-requests/entities/time-off-request.entity';
-import { SwapRequest, SwapRequestStatus } from '../swap-requests/entities/swap-request.entity';
-import { DropRequest, DropRequestStatus } from '../drop-requests/entities/drop-request.entity';
-import { Reservation, ReservationStatus } from '../reservations/entities/reservation.entity';
+import {
+  TimeOffRequest,
+  TimeOffStatus,
+} from '../time-off-requests/entities/time-off-request.entity';
+import {
+  SwapRequest,
+  SwapRequestStatus,
+} from '../swap-requests/entities/swap-request.entity';
+import {
+  DropRequest,
+  DropRequestStatus,
+} from '../drop-requests/entities/drop-request.entity';
+import {
+  Reservation,
+  ReservationStatus,
+} from '../reservations/entities/reservation.entity';
 import { Location } from '../locations/entities/location.entity';
 
-function buildQb(opts: { getMany?: any[]; getCount?: number; getManyAndCount?: [any[], number]; getRawMany?: any[] } = {}) {
+function buildQb(
+  opts: {
+    getMany?: any[];
+    getCount?: number;
+    getManyAndCount?: [any[], number];
+    getRawMany?: any[];
+  } = {},
+) {
   return {
     leftJoinAndSelect: jest.fn().mockReturnThis(),
     innerJoinAndSelect: jest.fn().mockReturnThis(),
@@ -25,20 +47,22 @@ function buildQb(opts: { getMany?: any[]; getCount?: number; getManyAndCount?: [
     orderBy: jest.fn().mockReturnThis(),
     getMany: jest.fn().mockResolvedValue(opts.getMany ?? []),
     getCount: jest.fn().mockResolvedValue(opts.getCount ?? 0),
-    getManyAndCount: jest.fn().mockResolvedValue(opts.getManyAndCount ?? [[], 0]),
+    getManyAndCount: jest
+      .fn()
+      .mockResolvedValue(opts.getManyAndCount ?? [[], 0]),
     getRawMany: jest.fn().mockResolvedValue(opts.getRawMany ?? []),
   };
 }
 
 const makeLocation = (id = 'loc-1'): Location =>
-  ({ id, name: 'North Beach', timezone: 'America/Los_Angeles' } as Location);
+  ({ id, name: 'North Beach', timezone: 'America/Los_Angeles' }) as Location;
 
 const makeManager = (): User =>
   ({
     id: 'manager-1',
     role: UserRole.MANAGER,
     managedLocations: [makeLocation()],
-  } as unknown as User);
+  }) as unknown as User;
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
@@ -104,7 +128,10 @@ describe('AnalyticsService', () => {
   describe('getHoursDistribution', () => {
     it('returns empty array when no assignments exist', async () => {
       assignRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: [] }));
-      const result = await service.getHoursDistribution('2026-01-01', '2026-01-31');
+      const result = await service.getHoursDistribution(
+        '2026-01-01',
+        '2026-01-31',
+      );
       expect(result).toEqual([]);
     });
 
@@ -113,27 +140,47 @@ describe('AnalyticsService', () => {
         {
           staffId: 'staff-1',
           staff: { name: 'Alice', desiredHoursPerWeek: 40 },
-          shift: { date: '2026-01-05', startTime: '09:00', endTime: '17:00', locationId: 'loc-1' },
+          shift: {
+            date: '2026-01-05',
+            startTime: '09:00',
+            endTime: '17:00',
+            locationId: 'loc-1',
+          },
         },
         {
           staffId: 'staff-1',
           staff: { name: 'Alice', desiredHoursPerWeek: 40 },
-          shift: { date: '2026-01-06', startTime: '09:00', endTime: '17:00', locationId: 'loc-1' },
+          shift: {
+            date: '2026-01-06',
+            startTime: '09:00',
+            endTime: '17:00',
+            locationId: 'loc-1',
+          },
         },
       ];
-      assignRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: assignments }));
+      assignRepo.createQueryBuilder.mockReturnValue(
+        buildQb({ getMany: assignments }),
+      );
 
-      const result = await service.getHoursDistribution('2026-01-01', '2026-01-31');
+      const result = await service.getHoursDistribution(
+        '2026-01-01',
+        '2026-01-31',
+      );
       expect(result).toHaveLength(1);
       expect(result[0].staffId).toBe('staff-1');
       expect(result[0].totalHours).toBe(16);
     });
 
-    it('scopes results to manager\'s managed locations', async () => {
+    it("scopes results to manager's managed locations", async () => {
       const qb = buildQb({ getMany: [] });
       assignRepo.createQueryBuilder.mockReturnValue(qb);
 
-      await service.getHoursDistribution('2026-01-01', '2026-01-31', undefined, makeManager());
+      await service.getHoursDistribution(
+        '2026-01-01',
+        '2026-01-31',
+        undefined,
+        makeManager(),
+      );
       expect(qb.andWhere).toHaveBeenCalledWith(
         expect.stringContaining('locationId'),
         expect.objectContaining({ ids: ['loc-1'] }),
@@ -144,7 +191,10 @@ describe('AnalyticsService', () => {
   describe('getFairnessReport', () => {
     it('returns fairnessScore null when no assignments', async () => {
       assignRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: [] }));
-      const result = await service.getFairnessReport('2026-01-01', '2026-01-31');
+      const result = await service.getFairnessReport(
+        '2026-01-01',
+        '2026-01-31',
+      );
       expect(result.fairnessScore).toBeNull();
       expect(result.staff).toEqual([]);
     });
@@ -155,23 +205,56 @@ describe('AnalyticsService', () => {
         {
           staffId: 'staff-1',
           staff: { name: 'Alice' },
-          shift: { date: '2026-01-03', startTime: '18:00', endTime: '23:00', locationId: 'loc-1' },
+          shift: {
+            date: '2026-01-03',
+            startTime: '18:00',
+            endTime: '23:00',
+            locationId: 'loc-1',
+          },
         },
       ];
-      assignRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: assignments }));
+      assignRepo.createQueryBuilder.mockReturnValue(
+        buildQb({ getMany: assignments }),
+      );
 
-      const result = await service.getFairnessReport('2026-01-01', '2026-01-31');
+      const result = await service.getFairnessReport(
+        '2026-01-01',
+        '2026-01-31',
+      );
       expect(result.staff[0].premiumShifts).toBe(1);
     });
 
     it('returns fairnessScore = 1.0 when all staff have equal premium ratios', async () => {
       const assignments = [
-        { staffId: 'staff-1', staff: { name: 'Alice' }, shift: { date: '2026-01-03', startTime: '18:00', endTime: '23:00', locationId: 'loc-1' } },
-        { staffId: 'staff-2', staff: { name: 'Bob' }, shift: { date: '2026-01-10', startTime: '18:00', endTime: '23:00', locationId: 'loc-1' } },
+        {
+          staffId: 'staff-1',
+          staff: { name: 'Alice' },
+          shift: {
+            date: '2026-01-03',
+            startTime: '18:00',
+            endTime: '23:00',
+            locationId: 'loc-1',
+          },
+        },
+        {
+          staffId: 'staff-2',
+          staff: { name: 'Bob' },
+          shift: {
+            date: '2026-01-10',
+            startTime: '18:00',
+            endTime: '23:00',
+            locationId: 'loc-1',
+          },
+        },
       ];
-      assignRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: assignments }));
+      assignRepo.createQueryBuilder.mockReturnValue(
+        buildQb({ getMany: assignments }),
+      );
 
-      const result = await service.getFairnessReport('2026-01-01', '2026-01-31');
+      const result = await service.getFairnessReport(
+        '2026-01-01',
+        '2026-01-31',
+      );
       expect(result.fairnessScore).toBe(1);
     });
   });
@@ -188,9 +271,16 @@ describe('AnalyticsService', () => {
         staffId: 'staff-1',
         shiftId: `shift-${i}`,
         staff: { name: 'Alice', hourlyRate: 20 },
-        shift: { date: `2026-01-${13 + i}`, startTime: '09:00', endTime: '18:00', locationId: 'loc-1' },
+        shift: {
+          date: `2026-01-${13 + i}`,
+          startTime: '09:00',
+          endTime: '18:00',
+          locationId: 'loc-1',
+        },
       }));
-      assignRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: assignments }));
+      assignRepo.createQueryBuilder.mockReturnValue(
+        buildQb({ getMany: assignments }),
+      );
 
       const result = await service.getOvertimeProjection('2026-01-13');
       expect(result[0].weeklyHours).toBe(45);

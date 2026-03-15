@@ -13,7 +13,10 @@ import { Location } from '../locations/entities/location.entity';
 import { Availability } from './entities/availability.entity';
 import { AvailabilityException } from './entities/availability-exception.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { SetAvailabilityDto, AvailabilityExceptionDto } from './dto/set-availability.dto';
+import {
+  SetAvailabilityDto,
+  AvailabilityExceptionDto,
+} from './dto/set-availability.dto';
 
 @Injectable()
 export class UsersService {
@@ -22,9 +25,10 @@ export class UsersService {
     @InjectRepository(Skill) private skillRepo: Repository<Skill>,
     @InjectRepository(Location) private locationRepo: Repository<Location>,
     @InjectRepository(Availability) private availRepo: Repository<Availability>,
-    @InjectRepository(AvailabilityException) private exceptRepo: Repository<AvailabilityException>,
+    @InjectRepository(AvailabilityException)
+    private exceptRepo: Repository<AvailabilityException>,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   /** Lightweight list of active users for messaging / mentions — any authenticated user. */
   async directory(): Promise<Pick<User, 'id' | 'name' | 'role'>[]> {
@@ -36,7 +40,12 @@ export class UsersService {
       .getMany();
   }
 
-  async findAll(requestingUser: User, locationId?: string, page = 1, limit = 50) {
+  async findAll(
+    requestingUser: User,
+    locationId?: string,
+    page = 1,
+    limit = 50,
+  ) {
     const take = Math.min(limit, 200);
     const skip = (Math.max(1, page) - 1) * take;
 
@@ -52,7 +61,11 @@ export class UsersService {
     if (requestingUser.role === UserRole.MANAGER) {
       qb.innerJoin('u.certifiedLocations', 'cl').where(
         'cl.id IN (:...locationIds)',
-        { locationIds: requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'] },
+        {
+          locationIds: requestingUser.managedLocations?.map((l) => l.id) ?? [
+            '__none__',
+          ],
+        },
       );
     }
 
@@ -67,7 +80,13 @@ export class UsersService {
   async findOne(id: string, requester?: User) {
     const user = await this.userRepo.findOne({
       where: { id },
-      relations: ['skills', 'certifiedLocations', 'managedLocations', 'availabilities', 'availabilityExceptions'],
+      relations: [
+        'skills',
+        'certifiedLocations',
+        'managedLocations',
+        'availabilities',
+        'availabilityExceptions',
+      ],
     });
     if (!user) throw new NotFoundException('User not found');
 
@@ -91,7 +110,8 @@ export class UsersService {
     if (dto.isActive !== undefined && requestingUser.role === UserRole.ADMIN) {
       user.isActive = dto.isActive;
     }
-    if (dto.desiredHoursPerWeek !== undefined) user.desiredHoursPerWeek = dto.desiredHoursPerWeek;
+    if (dto.desiredHoursPerWeek !== undefined)
+      user.desiredHoursPerWeek = dto.desiredHoursPerWeek;
     if (dto.hourlyRate !== undefined) user.hourlyRate = dto.hourlyRate ?? null;
     if (dto.notificationPreferences !== undefined) {
       user.notificationPreferences = dto.notificationPreferences;
@@ -108,10 +128,17 @@ export class UsersService {
       user.skills = await this.skillRepo.findBy({ id: In(dto.skillIds) });
     }
     if (dto.certifiedLocationIds !== undefined) {
-      user.certifiedLocations = await this.locationRepo.findBy({ id: In(dto.certifiedLocationIds) });
+      user.certifiedLocations = await this.locationRepo.findBy({
+        id: In(dto.certifiedLocationIds),
+      });
     }
-    if (dto.managedLocationIds !== undefined && requestingUser.role === UserRole.ADMIN) {
-      user.managedLocations = await this.locationRepo.findBy({ id: In(dto.managedLocationIds) });
+    if (
+      dto.managedLocationIds !== undefined &&
+      requestingUser.role === UserRole.ADMIN
+    ) {
+      user.managedLocations = await this.locationRepo.findBy({
+        id: In(dto.managedLocationIds),
+      });
     }
 
     return this.userRepo.save(user);
@@ -126,7 +153,12 @@ export class UsersService {
     return { message: 'Password reset successfully' };
   }
 
-  async changePassword(id: string, currentPassword: string, newPassword: string, requestingUser: User) {
+  async changePassword(
+    id: string,
+    currentPassword: string,
+    newPassword: string,
+    requestingUser: User,
+  ) {
     if (requestingUser.role !== UserRole.ADMIN && requestingUser.id !== id) {
       throw new ForbiddenException();
     }
@@ -148,7 +180,10 @@ export class UsersService {
   }
 
   async getAvailability(userId: string) {
-    const slots = await this.availRepo.find({ where: { userId }, order: { dayOfWeek: 'ASC' } });
+    const slots = await this.availRepo.find({
+      where: { userId },
+      order: { dayOfWeek: 'ASC' },
+    });
     const exceptions = await this.exceptRepo.find({
       where: { userId },
       order: { date: 'ASC' },
@@ -156,22 +191,36 @@ export class UsersService {
     return { slots, exceptions };
   }
 
-  async setAvailability(userId: string, dto: SetAvailabilityDto, requestingUserId: string) {
+  async setAvailability(
+    userId: string,
+    dto: SetAvailabilityDto,
+    requestingUserId: string,
+  ) {
     if (userId !== requestingUserId) {
-      const requester = await this.userRepo.findOne({ where: { id: requestingUserId } });
+      const requester = await this.userRepo.findOne({
+        where: { id: requestingUserId },
+      });
       if (requester?.role !== UserRole.ADMIN) throw new ForbiddenException();
     }
 
     return this.dataSource.transaction(async (em) => {
       await em.delete(Availability, { userId });
-      const slots = dto.slots.map((s) => em.create(Availability, { userId, ...s }));
+      const slots = dto.slots.map((s) =>
+        em.create(Availability, { userId, ...s }),
+      );
       return em.save(Availability, slots);
     });
   }
 
-  async addAvailabilityException(userId: string, dto: AvailabilityExceptionDto, requestingUserId: string) {
+  async addAvailabilityException(
+    userId: string,
+    dto: AvailabilityExceptionDto,
+    requestingUserId: string,
+  ) {
     if (userId !== requestingUserId) {
-      const requester = await this.userRepo.findOne({ where: { id: requestingUserId } });
+      const requester = await this.userRepo.findOne({
+        where: { id: requestingUserId },
+      });
       if (requester?.role !== UserRole.ADMIN) throw new ForbiddenException();
     }
     const ex = this.exceptRepo.create({
@@ -184,21 +233,32 @@ export class UsersService {
     return this.exceptRepo.save(ex);
   }
 
-  async removeAvailabilityException(exceptionId: string, requestingUserId: string) {
+  async removeAvailabilityException(
+    exceptionId: string,
+    requestingUserId: string,
+  ) {
     const ex = await this.exceptRepo.findOne({ where: { id: exceptionId } });
     if (!ex) throw new NotFoundException();
     if (ex.userId !== requestingUserId) {
-      const requester = await this.userRepo.findOne({ where: { id: requestingUserId } });
+      const requester = await this.userRepo.findOne({
+        where: { id: requestingUserId },
+      });
       if (requester?.role !== UserRole.ADMIN) throw new ForbiddenException();
     }
     return this.exceptRepo.remove(ex);
   }
 
   /** Return all staff who are qualified and available for a shift (used for "suggest alternatives") */
-  async findQualifiedForShift(skillId: string | null, locationId: string, excludeUserIds: string[] = []) {
+  async findQualifiedForShift(
+    skillId: string | null,
+    locationId: string,
+    excludeUserIds: string[] = [],
+  ) {
     const qb = this.userRepo
       .createQueryBuilder('u')
-      .innerJoin('u.certifiedLocations', 'cl', 'cl.id = :locationId', { locationId })
+      .innerJoin('u.certifiedLocations', 'cl', 'cl.id = :locationId', {
+        locationId,
+      })
       .leftJoinAndSelect('u.skills', 'skills')
       .where('u.isActive = true AND u.role = :role', { role: UserRole.STAFF });
 
@@ -206,7 +266,9 @@ export class UsersService {
       qb.innerJoin('u.skills', 'sk', 'sk.id = :skillId', { skillId });
     }
     if (excludeUserIds.length > 0) {
-      qb.andWhere('u.id NOT IN (:...excludeIds)', { excludeIds: excludeUserIds });
+      qb.andWhere('u.id NOT IN (:...excludeIds)', {
+        excludeIds: excludeUserIds,
+      });
     }
 
     return qb.getMany();

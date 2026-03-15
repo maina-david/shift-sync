@@ -16,7 +16,10 @@ export class ChecklistsService {
     private readonly repo: Repository<Checklist>,
   ) {}
 
-  async create(dto: CreateChecklistDto, _creatorId: string): Promise<Checklist> {
+  async create(
+    dto: CreateChecklistDto,
+    _creatorId: string,
+  ): Promise<Checklist> {
     const items = dto.items.map((item) => ({
       id: crypto.randomUUID(),
       label: item.label,
@@ -39,7 +42,11 @@ export class ChecklistsService {
     return this.repo.save(checklist);
   }
 
-  async findAll(locationId?: string, date?: string, user?: User): Promise<Checklist[]> {
+  async findAll(
+    locationId?: string,
+    date?: string,
+    user?: User,
+  ): Promise<Checklist[]> {
     const qb = this.repo
       .createQueryBuilder('cl')
       .leftJoinAndSelect('cl.location', 'location')
@@ -62,7 +69,12 @@ export class ChecklistsService {
     }
 
     if (date) {
-      qb.innerJoin('shifts', 'shift', 'shift.id = cl.shiftId AND shift.date = :date', { date });
+      qb.innerJoin(
+        'shifts',
+        'shift',
+        'shift.id = cl.shiftId AND shift.date = :date',
+        { date },
+      );
     }
 
     return qb.getMany();
@@ -76,12 +88,18 @@ export class ChecklistsService {
     return checklist;
   }
 
-  async completeItem(checklistId: string, itemId: string, userId: string): Promise<Checklist> {
+  async completeItem(
+    checklistId: string,
+    itemId: string,
+    userId: string,
+  ): Promise<Checklist> {
     const checklist = await this.findOne(checklistId);
 
     const itemIndex = checklist.items.findIndex((i) => i.id === itemId);
     if (itemIndex === -1) {
-      throw new NotFoundException(`Item ${itemId} not found in checklist ${checklistId}`);
+      throw new NotFoundException(
+        `Item ${itemId} not found in checklist ${checklistId}`,
+      );
     }
 
     const now = new Date().toISOString();

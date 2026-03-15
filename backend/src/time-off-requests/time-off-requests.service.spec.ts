@@ -1,21 +1,30 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TimeOffRequestsService } from './time-off-requests.service';
-import { TimeOffRequest, TimeOffStatus } from './entities/time-off-request.entity';
+import {
+  TimeOffRequest,
+  TimeOffStatus,
+} from './entities/time-off-request.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { Location } from '../locations/entities/location.entity';
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-function buildQb(opts: {
-  getOne?: any;
-  getMany?: any[];
-  getManyAndCount?: [any[], number];
-} = {}) {
+function buildQb(
+  opts: {
+    getOne?: any;
+    getMany?: any[];
+    getManyAndCount?: [any[], number];
+  } = {},
+) {
   return {
     createQueryBuilder: jest.fn().mockReturnThis(),
     innerJoin: jest.fn().mockReturnThis(),
@@ -28,7 +37,9 @@ function buildQb(opts: {
     setLock: jest.fn().mockReturnThis(),
     getOne: jest.fn().mockResolvedValue(opts.getOne ?? null),
     getMany: jest.fn().mockResolvedValue(opts.getMany ?? []),
-    getManyAndCount: jest.fn().mockResolvedValue(opts.getManyAndCount ?? [[], 0]),
+    getManyAndCount: jest
+      .fn()
+      .mockResolvedValue(opts.getManyAndCount ?? [[], 0]),
   };
 }
 
@@ -43,15 +54,15 @@ const makeStaff = (overrides: Partial<User> = {}): User =>
     role: UserRole.STAFF,
     certifiedLocations: [{ id: 'loc-1' } as Location],
     ...overrides,
-  } as User);
+  }) as User;
 
 const makeManager = (managedLocationIds: string[] = ['loc-1']): User =>
   ({
     id: 'manager-1',
     name: 'Marcus Johnson',
     role: UserRole.MANAGER,
-    managedLocations: managedLocationIds.map((id) => ({ id } as Location)),
-  } as User);
+    managedLocations: managedLocationIds.map((id) => ({ id }) as Location),
+  }) as User;
 
 const makeAdmin = (): User =>
   ({
@@ -59,7 +70,7 @@ const makeAdmin = (): User =>
     name: 'Sarah Chen',
     role: UserRole.ADMIN,
     managedLocations: [],
-  } as unknown as User);
+  }) as unknown as User;
 
 const makeRequest = (overrides: Partial<TimeOffRequest> = {}): TimeOffRequest =>
   ({
@@ -73,7 +84,7 @@ const makeRequest = (overrides: Partial<TimeOffRequest> = {}): TimeOffRequest =>
     managerNote: null,
     reviewedAt: null,
     ...overrides,
-  } as unknown as TimeOffRequest);
+  }) as unknown as TimeOffRequest;
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -124,7 +135,10 @@ describe('TimeOffRequestsService', () => {
 
     it('throws BadRequestException when startDate is in the past', async () => {
       await expect(
-        service.create({ startDate: '2020-01-01', endDate: '2020-01-05' }, makeStaff()),
+        service.create(
+          { startDate: '2020-01-01', endDate: '2020-01-05' },
+          makeStaff(),
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -135,13 +149,17 @@ describe('TimeOffRequestsService', () => {
       em.createQueryBuilder.mockReturnValue(qb);
       dataSource.transaction.mockImplementation((fn: any) => fn(em));
 
-      await expect(service.create(dto, makeStaff())).rejects.toThrow(BadRequestException);
+      await expect(service.create(dto, makeStaff())).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('creates and returns the request when no conflicts exist', async () => {
       const saved = makeRequest();
       const em = {
-        createQueryBuilder: jest.fn().mockReturnValue(buildQb({ getOne: null })),
+        createQueryBuilder: jest
+          .fn()
+          .mockReturnValue(buildQb({ getOne: null })),
         create: jest.fn().mockReturnValue(saved),
         save: jest.fn().mockResolvedValue(saved),
       };
@@ -155,7 +173,9 @@ describe('TimeOffRequestsService', () => {
     it('emits time-off.requested after successful creation', async () => {
       const saved = makeRequest();
       const em = {
-        createQueryBuilder: jest.fn().mockReturnValue(buildQb({ getOne: null })),
+        createQueryBuilder: jest
+          .fn()
+          .mockReturnValue(buildQb({ getOne: null })),
         create: jest.fn().mockReturnValue(saved),
         save: jest.fn().mockResolvedValue(saved),
       };
@@ -171,7 +191,7 @@ describe('TimeOffRequestsService', () => {
 
   // ---------------------------------------------------------------------------
   describe('list', () => {
-    it('returns only the requesting staff member\'s own requests', async () => {
+    it("returns only the requesting staff member's own requests", async () => {
       const staffRequest = makeRequest({ staffId: 'staff-1' });
       repo.findAndCount.mockResolvedValue([[staffRequest], 1]);
 
@@ -200,7 +220,9 @@ describe('TimeOffRequestsService', () => {
 
       const result = await service.list(manager);
       expect(repo.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ staffId: expect.anything() }) }),
+        expect.objectContaining({
+          where: expect.objectContaining({ staffId: expect.anything() }),
+        }),
       );
       expect(result.total).toBe(1);
     });
@@ -216,7 +238,10 @@ describe('TimeOffRequestsService', () => {
     });
 
     it('returns all requests for admins without location filtering', async () => {
-      const allRequests = [makeRequest({ staffId: 'staff-1' }), makeRequest({ staffId: 'staff-2' })];
+      const allRequests = [
+        makeRequest({ staffId: 'staff-1' }),
+        makeRequest({ staffId: 'staff-2' }),
+      ];
       repo.findAndCount.mockResolvedValue([allRequests, 2]);
 
       const result = await service.list(makeAdmin());
@@ -228,30 +253,50 @@ describe('TimeOffRequestsService', () => {
   describe('approve', () => {
     it('throws NotFoundException when request does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.approve('missing-id', makeAdmin())).rejects.toThrow(NotFoundException);
+      await expect(service.approve('missing-id', makeAdmin())).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws BadRequestException when request is not PENDING', async () => {
-      repo.findOne.mockResolvedValue(makeRequest({ status: TimeOffStatus.APPROVED }));
-      await expect(service.approve('tor-1', makeAdmin())).rejects.toThrow(BadRequestException);
+      repo.findOne.mockResolvedValue(
+        makeRequest({ status: TimeOffStatus.APPROVED }),
+      );
+      await expect(service.approve('tor-1', makeAdmin())).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
-    it('throws ForbiddenException when manager does not manage the staff member\'s location', async () => {
+    it("throws ForbiddenException when manager does not manage the staff member's location", async () => {
       repo.findOne.mockResolvedValue(makeRequest());
       // Manager manages loc-99, staff is certified for loc-1 only
       userRepo.findOne
-        .mockResolvedValueOnce({ id: 'manager-1', managedLocations: [{ id: 'loc-99' }] })
-        .mockResolvedValueOnce({ id: 'staff-1', certifiedLocations: [{ id: 'loc-1' }] });
+        .mockResolvedValueOnce({
+          id: 'manager-1',
+          managedLocations: [{ id: 'loc-99' }],
+        })
+        .mockResolvedValueOnce({
+          id: 'staff-1',
+          certifiedLocations: [{ id: 'loc-1' }],
+        });
 
-      await expect(service.approve('tor-1', makeManager(['loc-99']))).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.approve('tor-1', makeManager(['loc-99'])),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('approves when manager manages a location the staff is certified for', async () => {
       const request = makeRequest();
       repo.findOne.mockResolvedValue(request);
       userRepo.findOne
-        .mockResolvedValueOnce({ id: 'manager-1', managedLocations: [{ id: 'loc-1' }] })
-        .mockResolvedValueOnce({ id: 'staff-1', certifiedLocations: [{ id: 'loc-1' }] });
+        .mockResolvedValueOnce({
+          id: 'manager-1',
+          managedLocations: [{ id: 'loc-1' }],
+        })
+        .mockResolvedValueOnce({
+          id: 'staff-1',
+          certifiedLocations: [{ id: 'loc-1' }],
+        });
       repo.save.mockImplementation((r: any) => Promise.resolve(r));
 
       const result = await service.approve('tor-1', makeManager(['loc-1']));
@@ -261,14 +306,23 @@ describe('TimeOffRequestsService', () => {
     it('emits audit.log after approval', async () => {
       repo.findOne.mockResolvedValue(makeRequest());
       userRepo.findOne
-        .mockResolvedValueOnce({ id: 'manager-1', managedLocations: [{ id: 'loc-1' }] })
-        .mockResolvedValueOnce({ id: 'staff-1', certifiedLocations: [{ id: 'loc-1' }] });
+        .mockResolvedValueOnce({
+          id: 'manager-1',
+          managedLocations: [{ id: 'loc-1' }],
+        })
+        .mockResolvedValueOnce({
+          id: 'staff-1',
+          certifiedLocations: [{ id: 'loc-1' }],
+        });
       repo.save.mockImplementation((r: any) => Promise.resolve(r));
 
       await service.approve('tor-1', makeManager(['loc-1']));
       expect(events.emit).toHaveBeenCalledWith(
         'audit.log',
-        expect.objectContaining({ entity: 'time_off_request', action: 'approved' }),
+        expect.objectContaining({
+          entity: 'time_off_request',
+          action: 'approved',
+        }),
       );
     });
   });
@@ -276,19 +330,33 @@ describe('TimeOffRequestsService', () => {
   // ---------------------------------------------------------------------------
   describe('deny', () => {
     it('throws BadRequestException when request is not PENDING', async () => {
-      repo.findOne.mockResolvedValue(makeRequest({ status: TimeOffStatus.DENIED }));
-      await expect(service.deny('tor-1', makeAdmin())).rejects.toThrow(BadRequestException);
+      repo.findOne.mockResolvedValue(
+        makeRequest({ status: TimeOffStatus.DENIED }),
+      );
+      await expect(service.deny('tor-1', makeAdmin())).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('denies the request and emits audit.log', async () => {
       const request = makeRequest();
       repo.findOne.mockResolvedValue(request);
       userRepo.findOne
-        .mockResolvedValueOnce({ id: 'manager-1', managedLocations: [{ id: 'loc-1' }] })
-        .mockResolvedValueOnce({ id: 'staff-1', certifiedLocations: [{ id: 'loc-1' }] });
+        .mockResolvedValueOnce({
+          id: 'manager-1',
+          managedLocations: [{ id: 'loc-1' }],
+        })
+        .mockResolvedValueOnce({
+          id: 'staff-1',
+          certifiedLocations: [{ id: 'loc-1' }],
+        });
       repo.save.mockImplementation((r: any) => Promise.resolve(r));
 
-      const result = await service.deny('tor-1', makeManager(['loc-1']), 'No coverage available');
+      const result = await service.deny(
+        'tor-1',
+        makeManager(['loc-1']),
+        'No coverage available',
+      );
       expect(result.status).toBe(TimeOffStatus.DENIED);
       expect(events.emit).toHaveBeenCalledWith(
         'audit.log',
@@ -302,12 +370,18 @@ describe('TimeOffRequestsService', () => {
     it('throws ForbiddenException when a different user tries to cancel', async () => {
       repo.findOne.mockResolvedValue(makeRequest({ staffId: 'staff-1' }));
       const otherStaff = makeStaff({ id: 'staff-99' });
-      await expect(service.cancel('tor-1', otherStaff)).rejects.toThrow(ForbiddenException);
+      await expect(service.cancel('tor-1', otherStaff)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('throws BadRequestException when request is not PENDING', async () => {
-      repo.findOne.mockResolvedValue(makeRequest({ status: TimeOffStatus.APPROVED }));
-      await expect(service.cancel('tor-1', makeStaff())).rejects.toThrow(BadRequestException);
+      repo.findOne.mockResolvedValue(
+        makeRequest({ status: TimeOffStatus.APPROVED }),
+      );
+      await expect(service.cancel('tor-1', makeStaff())).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('cancels the request when called by the owner', async () => {

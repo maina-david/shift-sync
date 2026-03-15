@@ -17,7 +17,9 @@ export interface AuditPayload {
 
 @Injectable()
 export class AuditService {
-  constructor(@InjectRepository(AuditLog) private auditRepo: Repository<AuditLog>) {}
+  constructor(
+    @InjectRepository(AuditLog) private auditRepo: Repository<AuditLog>,
+  ) {}
 
   @OnEvent('audit.log')
   async log(payload: AuditPayload) {
@@ -45,7 +47,11 @@ export class AuditService {
     limit?: number;
     managedLocationIds?: string[];
   }) {
-    if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
+    if (
+      filters.startDate &&
+      filters.endDate &&
+      filters.endDate < filters.startDate
+    ) {
       throw new BadRequestException('endDate must be on or after startDate');
     }
 
@@ -59,15 +65,27 @@ export class AuditService {
       .skip(offset)
       .take(limit);
 
-    if (filters.entity) qb.andWhere('al.entity = :entity', { entity: filters.entity });
-    if (filters.entityId) qb.andWhere('al.entityId = :entityId', { entityId: filters.entityId });
-    if (filters.performedById) qb.andWhere('al.performedById = :pid', { pid: filters.performedById });
-    if (filters.startDate) qb.andWhere('al.timestamp >= :start', { start: filters.startDate });
-    if (filters.endDate) qb.andWhere('al.timestamp <= :end', { end: filters.endDate + 'T23:59:59Z' });
+    if (filters.entity)
+      qb.andWhere('al.entity = :entity', { entity: filters.entity });
+    if (filters.entityId)
+      qb.andWhere('al.entityId = :entityId', { entityId: filters.entityId });
+    if (filters.performedById)
+      qb.andWhere('al.performedById = :pid', { pid: filters.performedById });
+    if (filters.startDate)
+      qb.andWhere('al.timestamp >= :start', { start: filters.startDate });
+    if (filters.endDate)
+      qb.andWhere('al.timestamp <= :end', {
+        end: filters.endDate + 'T23:59:59Z',
+      });
     if (filters.locationId) {
-      qb.andWhere('al.locationId = :locationId', { locationId: filters.locationId });
+      qb.andWhere('al.locationId = :locationId', {
+        locationId: filters.locationId,
+      });
     } else if (filters.managedLocationIds) {
-      const ids = filters.managedLocationIds.length > 0 ? filters.managedLocationIds : ['__none__'];
+      const ids =
+        filters.managedLocationIds.length > 0
+          ? filters.managedLocationIds
+          : ['__none__'];
       qb.andWhere('al.locationId IN (:...managedIds)', { managedIds: ids });
     }
 
@@ -96,23 +114,44 @@ export class AuditService {
       .leftJoinAndSelect('al.performedBy', 'user')
       .orderBy('al.timestamp', 'ASC');
 
-    if (filters.entity) qb.andWhere('al.entity = :entity', { entity: filters.entity });
-    if (filters.locationId) qb.andWhere('al.locationId = :locationId', { locationId: filters.locationId });
-    if (filters.startDate) qb.andWhere('al.timestamp >= :start', { start: filters.startDate });
-    if (filters.endDate) qb.andWhere('al.timestamp <= :end', { end: filters.endDate + 'T23:59:59Z' });
+    if (filters.entity)
+      qb.andWhere('al.entity = :entity', { entity: filters.entity });
+    if (filters.locationId)
+      qb.andWhere('al.locationId = :locationId', {
+        locationId: filters.locationId,
+      });
+    if (filters.startDate)
+      qb.andWhere('al.timestamp >= :start', { start: filters.startDate });
+    if (filters.endDate)
+      qb.andWhere('al.timestamp <= :end', {
+        end: filters.endDate + 'T23:59:59Z',
+      });
 
     const logs = await qb.getMany();
-    const header = ['timestamp', 'entity', 'entityId', 'action', 'performedBy', 'note', 'before', 'after'];
-    const rows = logs.map((l) => [
-      l.timestamp.toISOString(),
-      l.entity,
-      l.entityId,
-      l.action,
-      l.performedBy?.name ?? l.performedById ?? '',
-      l.note ?? '',
-      l.before ? JSON.stringify(l.before) : '',
-      l.after ? JSON.stringify(l.after) : '',
-    ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','));
+    const header = [
+      'timestamp',
+      'entity',
+      'entityId',
+      'action',
+      'performedBy',
+      'note',
+      'before',
+      'after',
+    ];
+    const rows = logs.map((l) =>
+      [
+        l.timestamp.toISOString(),
+        l.entity,
+        l.entityId,
+        l.action,
+        l.performedBy?.name ?? l.performedById ?? '',
+        l.note ?? '',
+        l.before ? JSON.stringify(l.before) : '',
+        l.after ? JSON.stringify(l.after) : '',
+      ]
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(','),
+    );
     return [header.join(','), ...rows].join('\n');
   }
 }

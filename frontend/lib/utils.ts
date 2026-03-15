@@ -1,9 +1,9 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
-import { format as dateFnsFormat } from "date-fns"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { format as dateFnsFormat } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 /**
@@ -13,11 +13,11 @@ export function cn(...inputs: ClassValue[]) {
 export function safeFormat(
   dateInput: string | Date | null | undefined,
   fmt: string,
-  fallback = '—',
+  fallback = "—",
 ): string {
   if (!dateInput) return fallback;
   try {
-    const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+    const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
     if (isNaN(d.getTime())) return fallback;
     return dateFnsFormat(d, fmt);
   } catch {
@@ -28,9 +28,11 @@ export function safeFormat(
 /**
  * Parse a "HH:MM" time string into total minutes. Returns null if malformed.
  */
-export function parseTimeMinutes(time: string | null | undefined): number | null {
+export function parseTimeMinutes(
+  time: string | null | undefined,
+): number | null {
   if (!time) return null;
-  const parts = time.split(':');
+  const parts = time.split(":");
   if (parts.length < 2) return null;
   const h = parseInt(parts[0], 10);
   const m = parseInt(parts[1], 10);

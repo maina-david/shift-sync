@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, HttpCode } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  HttpCode,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DropRequestsService } from './drop-requests.service';
 import { CreateDropRequestDto } from './dto/create-drop-request.dto';
@@ -18,7 +28,9 @@ export class DropRequestsController {
 
   @Get()
   @ApiOperation({ summary: 'List drop requests (role-filtered)' })
-  findAll(@CurrentUser() user: User) { return this.svc.findAll(user); }
+  findAll(@CurrentUser() user: User) {
+    return this.svc.findAll(user);
+  }
 
   @Post()
   @HttpCode(201)
@@ -38,14 +50,22 @@ export class DropRequestsController {
   @Patch(':id/approve')
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Approve a claimed drop request (manager)' })
-  approve(@Param('id') id: string, @Body() dto: ReviewDropDto, @CurrentUser() user: User) {
+  approve(
+    @Param('id') id: string,
+    @Body() dto: ReviewDropDto,
+    @CurrentUser() user: User,
+  ) {
     return this.svc.approve(id, user, dto);
   }
 
   @Patch(':id/reject')
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Reject a drop request (manager)' })
-  reject(@Param('id') id: string, @Body() dto: ReviewDropDto, @CurrentUser() user: User) {
+  reject(
+    @Param('id') id: string,
+    @Body() dto: ReviewDropDto,
+    @CurrentUser() user: User,
+  ) {
     return this.svc.reject(id, user, dto);
   }
 

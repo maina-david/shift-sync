@@ -1,30 +1,34 @@
-'use client';
+"use client";
 
-import { use, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import Link from 'next/link';
-import { ArrowLeft, MapPin, LayoutGrid } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { locationsApi, shiftsApi } from '@/lib/api';
-import { useAuth } from '@/contexts/auth-context';
-import type { Location, ShiftAssignment } from '@/lib/types';
-import { FloorPlanCanvas } from '@/components/floor-plan/floor-plan-canvas';
-import { FloorPlanEditor } from '@/components/floor-plan/floor-plan-editor';
+import { use, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import { ArrowLeft, MapPin, LayoutGrid } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { locationsApi, shiftsApi } from "@/lib/api";
+import { useAuth } from "@/contexts/auth-context";
+import type { Location, ShiftAssignment } from "@/lib/types";
+import { FloorPlanCanvas } from "@/components/floor-plan/floor-plan-canvas";
+import { FloorPlanEditor } from "@/components/floor-plan/floor-plan-editor";
 
-export default function LocationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function LocationDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const { user } = useAuth();
   const [editingLayout, setEditingLayout] = useState(false);
 
   const { data: location, isLoading: locLoading } = useQuery<Location>({
-    queryKey: ['location', id],
+    queryKey: ["location", id],
     queryFn: () => locationsApi.get(id),
   });
 
   const { data: onDuty = [] } = useQuery<ShiftAssignment[]>({
-    queryKey: ['on-duty-now'],
+    queryKey: ["on-duty-now"],
     queryFn: shiftsApi.onDutyNow,
     refetchInterval: 60_000,
   });
@@ -49,7 +53,10 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
         <MapPin className="h-10 w-10 text-muted-foreground/30" />
         <p className="font-medium text-muted-foreground">Location not found</p>
         <Button variant="outline" size="sm" asChild>
-          <Link href="/locations"><ArrowLeft className="h-4 w-4 mr-2" />Back to locations</Link>
+          <Link href="/locations">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to locations
+          </Link>
         </Button>
       </div>
     );
@@ -62,7 +69,9 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
           <h2 className="text-lg font-semibold tracking-tight">
             Edit floor plan — {location?.name}
           </h2>
-          <Badge variant="outline" className="font-mono text-xs">{location?.timezone}</Badge>
+          <Badge variant="outline" className="font-mono text-xs">
+            {location?.timezone}
+          </Badge>
         </div>
         <div className="flex-1 rounded-xl border border-border/40 overflow-hidden min-h-0 bg-background">
           <FloorPlanEditor
@@ -79,13 +88,20 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
     <div className="flex flex-col h-[calc(100vh-6rem)] space-y-4">
       <div className="flex items-start justify-between shrink-0">
         <div className="flex items-start gap-3">
-          <Button variant="ghost" size="icon" className="h-8 w-8 mt-0.5" asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 mt-0.5"
+            asChild
+          >
             <Link href="/locations">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{location?.name}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {location?.name}
+            </h1>
             <div className="flex items-center gap-2 mt-1">
               {location?.address && (
                 <div className="flex items-center gap-1 text-muted-foreground text-sm">
@@ -101,8 +117,12 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="flex items-center gap-2">
-          {user?.role === 'admin' && (
-            <Button size="sm" variant="outline" onClick={() => setEditingLayout(true)}>
+          {user?.role === "admin" && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setEditingLayout(true)}
+            >
               <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
               Edit layout
             </Button>
@@ -120,12 +140,16 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
       </div>
 
       <div className="flex-1 relative rounded-xl border border-border/40 overflow-hidden min-h-0 min-w-0">
-        <FloorPlanCanvas locationId={id} assignments={locationAssignments} zones={location?.zones} />
+        <FloorPlanCanvas
+          locationId={id}
+          assignments={locationAssignments}
+          zones={location?.zones}
+        />
       </div>
 
       <p className="text-xs text-muted-foreground shrink-0 text-center">
         Click a zone to see who&apos;s on duty · Scroll to zoom · Drag to pan
-        {user?.role === 'admin' && ' · Edit layout to customise zones'}
+        {user?.role === "admin" && " · Edit layout to customise zones"}
       </p>
     </div>
   );

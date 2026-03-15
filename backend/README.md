@@ -11,8 +11,9 @@ NestJS REST API for the ShiftSync multi-location restaurant scheduling platform.
 | ORM | TypeORM 0.3 |
 | Database | MySQL 8 |
 | Auth | Passport JWT (access + refresh tokens) |
-| Real-time | Socket.IO via NestJS Gateway |
-| Scheduling | `@nestjs/schedule` (10 cron jobs) |
+| Real-time | Socket.IO via NestJS WebSocket Gateway |
+| Scheduling | `@nestjs/schedule` cron jobs |
+| Events | `@nestjs/event-emitter` for decoupled module communication |
 | Validation | `class-validator` + `class-transformer` |
 | Email | Nodemailer (SMTP) |
 | Docs | Swagger (`@nestjs/swagger`) at `/api` |
@@ -22,7 +23,6 @@ NestJS REST API for the ShiftSync multi-location restaurant scheduling platform.
 ```bash
 cp .env.example .env
 npm install
-npm run migration:run
 npm run seed
 npm run start:dev
 ```
@@ -42,7 +42,25 @@ Swagger UI available at `http://localhost:3001/api`.
 
 ## Module Overview
 
-Key modules: `shifts`, `users`, `notifications`, `swap-requests`, `drop-requests`, `timesheets`, `scheduler`.
+| Module | Responsibility |
+| --- | --- |
+| `auth` | JWT login, refresh cookie, token rotation |
+| `users` | User CRUD, availability, weekly slots, exceptions |
+| `shifts` | Shifts, assignments, constraint checker, auto-schedule, copy-week |
+| `swap-requests` | Peer-to-peer shift swap workflow |
+| `drop-requests` | Staff drop + open-market pickup workflow |
+| `time-off-requests` | Time-off with overlap detection |
+| `timesheets` | Clock in/out, manager review, payroll CSV export |
+| `notifications` | In-app + email notifications + WebSocket gateway |
+| `messages` | Direct messages + announcements with real-time WS delivery |
+| `certifications` | Cert tracking with expiry alerts |
+| `checklists` | Opening/closing checklists per shift |
+| `scheduler` | All cron jobs and scheduled intervals |
+| `analytics` | Hours distribution, fairness score, overtime (SSE stream) |
+| `audit` | Append-only audit log with CSV export |
+| `locations` | Location CRUD with timezone + 2D floor plan |
+| `settings` | Key-value system settings (payroll, scheduling defaults) |
+| `fair-workweek` | Predictive scheduling compliance tracking |
 
 ## Auth Flow
 
@@ -50,6 +68,35 @@ Key modules: `shifts`, `users`, `notifications`, `swap-requests`, `drop-requests
 2. All protected routes require `Authorization: Bearer <access_token>`
 3. `POST /auth/refresh` — issues a new access token using the refresh cookie
 4. Access tokens expire in 15 min; refresh tokens in 7 days
+
+## WebSocket Gateway (`/ws`)
+
+The `NotificationsGateway` handles all real-time communication. Clients authenticate via `auth.token` on handshake; unauthenticated connections are disconnected immediately.
+
+**Rooms joined on connect:**
+
+- `user:<id>` — every authenticated user
+- `location:<id>` — managers for each of their assigned locations
+- `admin` — admin users only
+
+**Server → client events:**
+
+| Event | Payload | Description |
+| --- | --- | --- |
+| `notification:new` | `Notification` | New in-app notification |
+| `message:new` | `{ messageId, senderId, recipientId, type, locationId }` | New DM or announcement delivered to sender + recipient immediately |
+| `typing:start` | `{ userId }` | Forwarded to the recipient when sender starts typing |
+| `typing:stop` | `{ userId }` | Forwarded to the recipient when sender stops typing |
+| `schedule:updated` | `{ locationId, shiftId, weekStart }` | Schedule changed for a location |
+| `assignment:conflict` | `{ shiftId, staffId, message }` | Constraint violation on assignment |
+
+**Client → server events:**
+
+| Event | Payload | Description |
+| --- | --- | --- |
+| `typing:start` | `recipientId` | Notify recipient that sender is typing |
+| `typing:stop` | `recipientId` | Notify recipient that sender stopped typing |
+| `join_location` | `locationId` | Join a location room (validated against user's access) |
 
 ## Environment Variables
 

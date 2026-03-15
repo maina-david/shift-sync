@@ -1,19 +1,64 @@
 // ─── Domain Types ────────────────────────────────────────────────────────────
 
-export type UserRole = 'admin' | 'manager' | 'area_manager' | 'staff';
-export type ShiftStatus = 'draft' | 'published';
-export type AssignmentStatus = 'assigned' | 'pending_swap' | 'completed' | 'cancelled';
-export type SwapRequestStatus = 'pending' | 'accepted' | 'rejected' | 'approved' | 'denied' | 'cancelled';
-export type DropRequestStatus = 'open' | 'claimed' | 'approved' | 'rejected' | 'expired' | 'cancelled';
-export type TimeOffStatus = 'pending' | 'approved' | 'denied' | 'cancelled';
+export type UserRole = "admin" | "manager" | "area_manager" | "staff";
+export type ShiftStatus = "draft" | "published";
+export type AssignmentStatus =
+  | "assigned"
+  | "pending_swap"
+  | "completed"
+  | "cancelled";
+export type SwapRequestStatus =
+  | "pending"
+  | "accepted"
+  | "rejected"
+  | "approved"
+  | "denied"
+  | "cancelled";
+export type DropRequestStatus =
+  | "open"
+  | "claimed"
+  | "approved"
+  | "rejected"
+  | "expired"
+  | "cancelled";
+export type TimeOffStatus = "pending" | "approved" | "denied" | "cancelled";
 
 // Runtime-safe value sets (use for guards, validation, and switch exhaustiveness)
-export const USER_ROLES: UserRole[] = ['admin', 'manager', 'area_manager', 'staff'];
-export const SHIFT_STATUSES: ShiftStatus[] = ['draft', 'published'];
-export const ASSIGNMENT_STATUSES: AssignmentStatus[] = ['assigned', 'pending_swap', 'completed', 'cancelled'];
-export const SWAP_REQUEST_STATUSES: SwapRequestStatus[] = ['pending', 'accepted', 'rejected', 'approved', 'denied', 'cancelled'];
-export const DROP_REQUEST_STATUSES: DropRequestStatus[] = ['open', 'claimed', 'approved', 'rejected', 'expired', 'cancelled'];
-export const TIME_OFF_STATUSES: TimeOffStatus[] = ['pending', 'approved', 'denied', 'cancelled'];
+export const USER_ROLES: UserRole[] = [
+  "admin",
+  "manager",
+  "area_manager",
+  "staff",
+];
+export const SHIFT_STATUSES: ShiftStatus[] = ["draft", "published"];
+export const ASSIGNMENT_STATUSES: AssignmentStatus[] = [
+  "assigned",
+  "pending_swap",
+  "completed",
+  "cancelled",
+];
+export const SWAP_REQUEST_STATUSES: SwapRequestStatus[] = [
+  "pending",
+  "accepted",
+  "rejected",
+  "approved",
+  "denied",
+  "cancelled",
+];
+export const DROP_REQUEST_STATUSES: DropRequestStatus[] = [
+  "open",
+  "claimed",
+  "approved",
+  "rejected",
+  "expired",
+  "cancelled",
+];
+export const TIME_OFF_STATUSES: TimeOffStatus[] = [
+  "pending",
+  "approved",
+  "denied",
+  "cancelled",
+];
 
 export interface User {
   id: string;
@@ -67,9 +112,9 @@ export interface Shift {
   id: string;
   location: Location;
   locationId: string;
-  date: string;          // YYYY-MM-DD
-  startTime: string;     // HH:mm
-  endTime: string;       // HH:mm
+  date: string; // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
   requiredSkill: Skill | null;
   requiredSkillId: string | null;
   headcount: number;
@@ -101,7 +146,7 @@ export interface ShiftAssignment {
 export interface Availability {
   id: string;
   userId: string;
-  dayOfWeek: number;     // 0=Sun … 6=Sat
+  dayOfWeek: number; // 0=Sun … 6=Sat
   startTime: string;
   endTime: string;
 }
@@ -187,7 +232,11 @@ export interface AuditLog {
   timestamp: string;
 }
 
-export type ReservationStatus = 'pending' | 'confirmed' | 'cancelled' | 'no_show';
+export type ReservationStatus =
+  | "pending"
+  | "confirmed"
+  | "cancelled"
+  | "no_show";
 
 export interface MenuItem {
   id: string;
@@ -196,7 +245,7 @@ export interface MenuItem {
   price: number;
   category: string;
   tag: string | null;
-  tagColor: 'cyan' | 'violet' | 'pink' | null;
+  tagColor: "cyan" | "violet" | "pink" | null;
   isAvailable: boolean;
   isTodaysHighlight: boolean;
   sortOrder: number;
@@ -238,7 +287,7 @@ export interface LoginResponse {
 
 export interface ConstraintViolation {
   rule: string;
-  severity: 'error' | 'warning';
+  severity: "error" | "warning";
   message: string;
 }
 
@@ -312,7 +361,7 @@ export interface ScheduleTemplate {
 }
 
 // ─── Timesheets ───────────────────────────────────────────────────────────────
-export type TimesheetStatus = 'pending' | 'approved' | 'rejected';
+export type TimesheetStatus = "pending" | "approved" | "rejected";
 export interface Timesheet {
   id: string;
   staffId: string;
@@ -347,7 +396,7 @@ export interface Certification {
 }
 
 // ─── Messages ─────────────────────────────────────────────────────────────────
-export type MessageType = 'direct' | 'announcement';
+export type MessageType = "direct" | "announcement";
 export interface Message {
   id: string;
   type: MessageType;
@@ -362,7 +411,7 @@ export interface Message {
 }
 
 // ─── Checklists ───────────────────────────────────────────────────────────────
-export type ChecklistType = 'opening' | 'closing' | 'custom';
+export type ChecklistType = "opening" | "closing" | "custom";
 export interface ChecklistItem {
   id: string;
   label: string;
@@ -405,7 +454,7 @@ export interface FeedbackSummary {
 }
 
 // ─── Fair Workweek ────────────────────────────────────────────────────────────
-export type ScheduleChangeType = 'published' | 'modified' | 'cancelled';
+export type ScheduleChangeType = "published" | "modified" | "cancelled";
 export interface ScheduleChangeLog {
   id: string;
   shiftId: string;
@@ -432,7 +481,13 @@ export interface SystemSetting {
 export interface LaborCostReport {
   totalScheduledHours: number;
   totalLaborCost: number;
-  byLocation: { locationId: string; name: string; scheduledHours: number; laborCost: number; shiftCount: number }[];
+  byLocation: {
+    locationId: string;
+    name: string;
+    scheduledHours: number;
+    laborCost: number;
+    shiftCount: number;
+  }[];
   byDate: { date: string; laborCost: number; scheduledHours: number }[];
 }
 export interface KpiRollup {

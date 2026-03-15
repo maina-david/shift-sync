@@ -23,7 +23,10 @@ export class ShiftAssignment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Shift, (s) => s.assignments, { onDelete: 'CASCADE', eager: true })
+  @ManyToOne(() => Shift, (s) => s.assignments, {
+    onDelete: 'CASCADE',
+    eager: true,
+  })
   @JoinColumn({ name: 'shiftId' })
   shift: Shift;
 
@@ -39,7 +42,11 @@ export class ShiftAssignment {
   @Column()
   staffId: string;
 
-  @Column({ type: 'enum', enum: AssignmentStatus, default: AssignmentStatus.ASSIGNED })
+  @Column({
+    type: 'enum',
+    enum: AssignmentStatus,
+    default: AssignmentStatus.ASSIGNED,
+  })
   status: AssignmentStatus;
 
   @ManyToOne(() => User, { nullable: true, eager: false })

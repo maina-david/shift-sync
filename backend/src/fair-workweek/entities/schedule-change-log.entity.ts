@@ -10,9 +10,9 @@ import { Shift } from '../../shifts/entities/shift.entity';
 import { User } from '../../users/entities/user.entity';
 
 export enum ChangeType {
-  PUBLISHED  = 'published',
-  MODIFIED   = 'modified',
-  CANCELLED  = 'cancelled',
+  PUBLISHED = 'published',
+  MODIFIED = 'modified',
+  CANCELLED = 'cancelled',
 }
 
 @Entity('schedule_change_logs')

@@ -11,13 +11,27 @@ const makeTemplate = (overrides: any = {}): ScheduleTemplate =>
     name: 'Standard Week',
     locationId: 'loc-1',
     shifts: [
-      { dayOfWeek: 0, startTime: '09:00', endTime: '17:00', headcount: 2, requiredSkillId: null, notes: null },
-      { dayOfWeek: 3, startTime: '12:00', endTime: '20:00', headcount: 1, requiredSkillId: null, notes: null },
+      {
+        dayOfWeek: 0,
+        startTime: '09:00',
+        endTime: '17:00',
+        headcount: 2,
+        requiredSkillId: null,
+        notes: null,
+      },
+      {
+        dayOfWeek: 3,
+        startTime: '12:00',
+        endTime: '20:00',
+        headcount: 1,
+        requiredSkillId: null,
+        notes: null,
+      },
     ],
     createdById: 'manager-1',
     createdAt: new Date('2026-01-01'),
     ...overrides,
-  } as unknown as ScheduleTemplate);
+  }) as unknown as ScheduleTemplate;
 
 const makeShift = (overrides: any = {}): Shift =>
   ({
@@ -29,7 +43,7 @@ const makeShift = (overrides: any = {}): Shift =>
     status: ShiftStatus.DRAFT,
     headcount: 2,
     ...overrides,
-  } as unknown as Shift);
+  }) as unknown as Shift;
 
 describe('ScheduleTemplatesService', () => {
   let service: ScheduleTemplatesService;
@@ -52,7 +66,10 @@ describe('ScheduleTemplatesService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ScheduleTemplatesService,
-        { provide: getRepositoryToken(ScheduleTemplate), useValue: templatesRepo },
+        {
+          provide: getRepositoryToken(ScheduleTemplate),
+          useValue: templatesRepo,
+        },
         { provide: getRepositoryToken(Shift), useValue: shiftsRepo },
       ],
     }).compile();
@@ -79,7 +96,9 @@ describe('ScheduleTemplatesService', () => {
   describe('findOne', () => {
     it('throws NotFoundException when template does not exist', async () => {
       templatesRepo.findOne.mockResolvedValue(null);
-      await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('returns template when found', async () => {
@@ -99,7 +118,14 @@ describe('ScheduleTemplatesService', () => {
         {
           name: 'Standard Week',
           locationId: 'loc-1',
-          shifts: [{ dayOfWeek: 0, startTime: '09:00', endTime: '17:00', headcount: 2 }],
+          shifts: [
+            {
+              dayOfWeek: 0,
+              startTime: '09:00',
+              endTime: '17:00',
+              headcount: 2,
+            },
+          ],
         } as any,
         'manager-1',
       );
@@ -110,7 +136,9 @@ describe('ScheduleTemplatesService', () => {
   describe('remove', () => {
     it('throws NotFoundException when template does not exist', async () => {
       templatesRepo.findOne.mockResolvedValue(null);
-      await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('removes template when found', async () => {
@@ -125,7 +153,9 @@ describe('ScheduleTemplatesService', () => {
   describe('apply', () => {
     it('throws NotFoundException when template does not exist', async () => {
       templatesRepo.findOne.mockResolvedValue(null);
-      await expect(service.apply('missing', '2026-03-16', 'manager-1')).rejects.toThrow(NotFoundException);
+      await expect(
+        service.apply('missing', '2026-03-16', 'manager-1'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('creates a shift for each template slot with correct dates', async () => {
@@ -141,7 +171,15 @@ describe('ScheduleTemplatesService', () => {
 
     it('sets status to DRAFT on all applied shifts', async () => {
       const template = makeTemplate({
-        shifts: [{ dayOfWeek: 0, startTime: '09:00', endTime: '17:00', headcount: 1, requiredSkillId: null }],
+        shifts: [
+          {
+            dayOfWeek: 0,
+            startTime: '09:00',
+            endTime: '17:00',
+            headcount: 1,
+            requiredSkillId: null,
+          },
+        ],
       });
       templatesRepo.findOne.mockResolvedValue(template);
       const shift = makeShift({ id: 'shift-new-1', status: ShiftStatus.DRAFT });

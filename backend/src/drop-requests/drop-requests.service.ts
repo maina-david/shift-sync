@@ -10,7 +10,10 @@ import { DataSource, Repository } from 'typeorm';
 import { Cron } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DropRequest, DropRequestStatus } from './entities/drop-request.entity';
-import { ShiftAssignment, AssignmentStatus } from '../shifts/entities/shift-assignment.entity';
+import {
+  ShiftAssignment,
+  AssignmentStatus,
+} from '../shifts/entities/shift-assignment.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { NotificationType } from '../notifications/entities/notification.entity';
 import { ConstraintCheckerService } from '../shifts/constraint-checker.service';
@@ -26,7 +29,8 @@ export class DropRequestsService {
 
   constructor(
     @InjectRepository(DropRequest) private dropRepo: Repository<DropRequest>,
-    @InjectRepository(ShiftAssignment) private assignRepo: Repository<ShiftAssignment>,
+    @InjectRepository(ShiftAssignment)
+    private assignRepo: Repository<ShiftAssignment>,
     @InjectRepository(User) private userRepo: Repository<User>,
     private constraints: ConstraintCheckerService,
     private events: EventEmitter2,
@@ -37,7 +41,10 @@ export class DropRequestsService {
     try {
       this.events.emit(event, payload);
     } catch (err) {
-      this.logger.error(`Event emission failed for "${event}": ${(err as Error).message}`, (err as Error).stack);
+      this.logger.error(
+        `Event emission failed for "${event}": ${(err as Error).message}`,
+        (err as Error).stack,
+      );
     }
   }
 
@@ -53,13 +60,18 @@ export class DropRequestsService {
       .orderBy('dr.createdAt', 'DESC');
 
     if (user.role === UserRole.STAFF) {
-      qb.where('a.staffId = :uid OR (dr.status = :open AND shift.locationId IN (:...locIds))', {
-        uid: user.id,
-        open: DropRequestStatus.OPEN,
-        locIds: user.certifiedLocations?.map((l) => l.id) ?? ['__none__'],
-      });
+      qb.where(
+        'a.staffId = :uid OR (dr.status = :open AND shift.locationId IN (:...locIds))',
+        {
+          uid: user.id,
+          open: DropRequestStatus.OPEN,
+          locIds: user.certifiedLocations?.map((l) => l.id) ?? ['__none__'],
+        },
+      );
     } else if (user.role === UserRole.MANAGER) {
-      const managedIds = user.managedLocations?.map((l) => l.id) ?? ['__none__'];
+      const managedIds = user.managedLocations?.map((l) => l.id) ?? [
+        '__none__',
+      ];
       qb.where('shift.locationId IN (:...managedIds)', { managedIds });
     }
 
@@ -68,17 +80,27 @@ export class DropRequestsService {
 
   async create(dto: CreateDropRequestDto, requester: User) {
     const pendingCount = await this.dropRepo.count({
-      where: { assignment: { staffId: requester.id }, status: DropRequestStatus.OPEN },
+      where: {
+        assignment: { staffId: requester.id },
+        status: DropRequestStatus.OPEN,
+      },
     });
     if (pendingCount >= MAX_PENDING_REQUESTS) {
-      throw new BadRequestException(`Cannot have more than ${MAX_PENDING_REQUESTS} open drop requests.`);
+      throw new BadRequestException(
+        `Cannot have more than ${MAX_PENDING_REQUESTS} open drop requests.`,
+      );
     }
 
     const assignment = await this.assignRepo.findOne({
-      where: { id: dto.assignmentId, staffId: requester.id, status: AssignmentStatus.ASSIGNED },
+      where: {
+        id: dto.assignmentId,
+        staffId: requester.id,
+        status: AssignmentStatus.ASSIGNED,
+      },
       relations: ['shift', 'shift.location'],
     });
-    if (!assignment) throw new NotFoundException('Assignment not found or not yours');
+    if (!assignment)
+      throw new NotFoundException('Assignment not found or not yours');
     if (!assignment.shift?.location?.timezone) {
       throw new BadRequestException('Shift location data is unavailable');
     }
@@ -92,7 +114,9 @@ export class DropRequestsService {
     const expiresAt = new Date(startUTC.getTime() - 24 * 3600 * 1000);
 
     if (expiresAt <= new Date()) {
-      throw new BadRequestException('Cannot drop a shift less than 24 hours before it starts.');
+      throw new BadRequestException(
+        'Cannot drop a shift less than 24 hours before it starts.',
+      );
     }
 
     const drop = this.dropRepo.create({
@@ -135,7 +159,10 @@ export class DropRequestsService {
       where: { id: claimer.id },
       relations: ['skills', 'certifiedLocations'],
     });
-    const result = await this.constraints.check(drop.assignment.shift, fullClaimer!);
+    const result = await this.constraints.check(
+      drop.assignment.shift,
+      fullClaimer!,
+    );
     if (!result.valid) {
       throw new BadRequestException({
         message: 'You cannot take this shift',
@@ -150,7 +177,9 @@ export class DropRequestsService {
         lock: { mode: 'pessimistic_write' },
       });
       if (!locked || locked.status !== DropRequestStatus.OPEN) {
-        throw new BadRequestException('This shift is no longer available for pickup.');
+        throw new BadRequestException(
+          'This shift is no longer available for pickup.',
+        );
       }
       if (locked.expiresAt <= new Date()) {
         throw new BadRequestException('This drop request has expired.');
@@ -183,7 +212,9 @@ export class DropRequestsService {
   async approve(dropId: string, manager: User, dto: ReviewDropDto) {
     const drop = await this.findOneOr404(dropId);
     if (drop.status !== DropRequestStatus.CLAIMED) {
-      throw new BadRequestException('No one has claimed this drop request yet.');
+      throw new BadRequestException(
+        'No one has claimed this drop request yet.',
+      );
     }
     if (!drop.claimedById) {
       throw new BadRequestException('No user has claimed this drop request.');
@@ -196,7 +227,8 @@ export class DropRequestsService {
       });
       const locationId = drop.assignment?.shift?.locationId;
       const manages = mgr?.managedLocations?.some((l) => l.id === locationId);
-      if (!manages) throw new ForbiddenException('You do not manage this shift location');
+      if (!manages)
+        throw new ForbiddenException('You do not manage this shift location');
     }
 
     const saved = await this.dataSource.transaction(async (em) => {
@@ -205,10 +237,18 @@ export class DropRequestsService {
         lock: { mode: 'pessimistic_write' },
         relations: ['assignment', 'assignment.shift'],
       });
-      if (!locked || locked.status !== DropRequestStatus.CLAIMED || !locked.claimedById) {
-        throw new BadRequestException('This drop request is no longer in an approvable state');
+      if (
+        !locked ||
+        locked.status !== DropRequestStatus.CLAIMED ||
+        !locked.claimedById
+      ) {
+        throw new BadRequestException(
+          'This drop request is no longer in an approvable state',
+        );
       }
-      await em.update(ShiftAssignment, locked.assignmentId, { status: AssignmentStatus.CANCELLED });
+      await em.update(ShiftAssignment, locked.assignmentId, {
+        status: AssignmentStatus.CANCELLED,
+      });
       const newAssignment = em.create(ShiftAssignment, {
         shiftId: locked.assignment.shiftId,
         staffId: locked.claimedById,
@@ -222,7 +262,7 @@ export class DropRequestsService {
       return em.save(DropRequest, locked);
     });
 
-    for (const userId of [drop.assignment.staffId, drop.claimedById!]) {
+    for (const userId of [drop.assignment.staffId, drop.claimedById]) {
       this.safeEmit('notification.send', {
         userId,
         type: NotificationType.DROP_REQUEST_APPROVED,
@@ -233,7 +273,9 @@ export class DropRequestsService {
       });
     }
 
-    this.safeEmit('schedule.updated', { locationId: drop.assignment.shift.locationId });
+    this.safeEmit('schedule.updated', {
+      locationId: drop.assignment.shift.locationId,
+    });
     this.safeEmit('audit.log', {
       entity: 'drop_request',
       entityId: dropId,
@@ -248,7 +290,9 @@ export class DropRequestsService {
 
   async reject(dropId: string, manager: User, dto: ReviewDropDto) {
     const drop = await this.findOneOr404(dropId);
-    if (![DropRequestStatus.CLAIMED, DropRequestStatus.OPEN].includes(drop.status)) {
+    if (
+      ![DropRequestStatus.CLAIMED, DropRequestStatus.OPEN].includes(drop.status)
+    ) {
       throw new BadRequestException('Cannot reject this drop request.');
     }
 
@@ -259,7 +303,8 @@ export class DropRequestsService {
       });
       const locationId = drop.assignment?.shift?.locationId;
       const manages = mgr?.managedLocations?.some((l) => l.id === locationId);
-      if (!manages) throw new ForbiddenException('You do not manage this shift location');
+      if (!manages)
+        throw new ForbiddenException('You do not manage this shift location');
     }
 
     const saved = await this.dataSource.transaction(async (em) => {
@@ -268,7 +313,9 @@ export class DropRequestsService {
       drop.managerNote = dto.managerNote ?? null;
       drop.reviewedAt = new Date();
       const savedDrop = await em.save(DropRequest, drop);
-      await em.update(ShiftAssignment, drop.assignmentId, { status: AssignmentStatus.ASSIGNED });
+      await em.update(ShiftAssignment, drop.assignmentId, {
+        status: AssignmentStatus.ASSIGNED,
+      });
       return savedDrop;
     });
 
@@ -300,8 +347,12 @@ export class DropRequestsService {
   async cancel(dropId: string, user: User) {
     const drop = await this.findOneOr404(dropId);
     if (drop.assignment.staffId !== user.id) throw new ForbiddenException();
-    if (![DropRequestStatus.OPEN, DropRequestStatus.CLAIMED].includes(drop.status)) {
-      throw new BadRequestException('Can only cancel open or claimed drop requests.');
+    if (
+      ![DropRequestStatus.OPEN, DropRequestStatus.CLAIMED].includes(drop.status)
+    ) {
+      throw new BadRequestException(
+        'Can only cancel open or claimed drop requests.',
+      );
     }
 
     const claimedById = drop.claimedById;
@@ -309,7 +360,9 @@ export class DropRequestsService {
     await this.dataSource.transaction(async (em) => {
       drop.status = DropRequestStatus.CANCELLED;
       drop.claimedById = null;
-      await em.update(ShiftAssignment, drop.assignmentId, { status: AssignmentStatus.ASSIGNED });
+      await em.update(ShiftAssignment, drop.assignmentId, {
+        status: AssignmentStatus.ASSIGNED,
+      });
       await em.save(DropRequest, drop);
     });
 
@@ -341,7 +394,9 @@ export class DropRequestsService {
     for (const drop of expired) {
       drop.status = DropRequestStatus.EXPIRED;
       await this.dropRepo.save(drop);
-      await this.assignRepo.update(drop.assignmentId, { status: AssignmentStatus.ASSIGNED });
+      await this.assignRepo.update(drop.assignmentId, {
+        status: AssignmentStatus.ASSIGNED,
+      });
 
       this.safeEmit('notification.send', {
         userId: drop.assignment.staffId,
@@ -357,7 +412,13 @@ export class DropRequestsService {
   private async findOneOr404(id: string) {
     const drop = await this.dropRepo.findOne({
       where: { id },
-      relations: ['assignment', 'assignment.shift', 'assignment.shift.location', 'assignment.staff', 'claimedBy'],
+      relations: [
+        'assignment',
+        'assignment.shift',
+        'assignment.shift.location',
+        'assignment.staff',
+        'claimedBy',
+      ],
     });
     if (!drop) throw new NotFoundException('Drop request not found');
     return drop;

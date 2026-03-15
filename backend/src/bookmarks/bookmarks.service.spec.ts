@@ -12,7 +12,7 @@ const makeBookmark = (overrides: any = {}): Bookmark =>
     entityId: 'shift-1',
     createdAt: new Date('2026-01-01'),
     ...overrides,
-  } as unknown as Bookmark);
+  }) as unknown as Bookmark;
 
 describe('BookmarksService', () => {
   let service: BookmarksService;
@@ -60,7 +60,10 @@ describe('BookmarksService', () => {
       repo.create.mockReturnValue(bm);
       repo.save.mockResolvedValue(bm);
 
-      const result = await service.create({ entityType: 'shift', entityId: 'shift-1' } as any, 'user-1');
+      const result = await service.create(
+        { entityType: 'shift', entityId: 'shift-1' } as any,
+        'user-1',
+      );
       expect(repo.create).toHaveBeenCalledWith(
         expect.objectContaining({ userId: 'user-1' }),
       );
@@ -71,7 +74,9 @@ describe('BookmarksService', () => {
   describe('remove', () => {
     it('throws NotFoundException when bookmark does not exist or belong to user', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.remove('bm-missing', 'user-1')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('bm-missing', 'user-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('removes and returns snapshot of the bookmark', async () => {

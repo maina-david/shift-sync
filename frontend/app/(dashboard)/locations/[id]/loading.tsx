@@ -1,4 +1,4 @@
-import { Zap } from 'lucide-react';
+import { Zap } from "lucide-react";
 
 export default function LocationLoading() {
   return (

@@ -11,21 +11,42 @@ export class MenuService {
 
   findAll(locationId?: string) {
     const where: any = { isAvailable: true };
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     if (locationId) where.locationId = Or(IsNull(), Equal(locationId));
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     else where.locationId = IsNull();
-    return this.repo.find({ where, order: { sortOrder: 'ASC', name: 'ASC' }, relations: ['location'] });
+    return this.repo.find({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      where,
+      order: { sortOrder: 'ASC', name: 'ASC' },
+      relations: ['location'],
+    });
   }
 
   findHighlights(locationId?: string) {
     const where: any = { isAvailable: true, isTodaysHighlight: true };
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     if (locationId) where.locationId = Or(IsNull(), Equal(locationId));
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     else where.locationId = IsNull();
-    return this.repo.find({ where, order: { sortOrder: 'ASC' }, relations: ['location'] });
+    return this.repo.find({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      where,
+      order: { sortOrder: 'ASC' },
+      relations: ['location'],
+    });
   }
 
   findAllAdmin(locationId?: string) {
-    const where: any = locationId ? { locationId: Or(IsNull(), Equal(locationId)) } : {};
-    return this.repo.find({ where: Object.keys(where).length ? where : undefined, order: { sortOrder: 'ASC', name: 'ASC' }, relations: ['location'] });
+    const where: any = locationId
+      ? { locationId: Or(IsNull(), Equal(locationId)) }
+      : {};
+    return this.repo.find({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument
+      where: Object.keys(where).length ? where : undefined,
+      order: { sortOrder: 'ASC', name: 'ASC' },
+      relations: ['location'],
+    });
   }
 
   async findOne(id: string) {
@@ -45,7 +66,10 @@ export class MenuService {
 
   async toggleHighlight(id: string) {
     const item = await this.findOne(id);
-    return this.repo.save({ ...item, isTodaysHighlight: !item.isTodaysHighlight });
+    return this.repo.save({
+      ...item,
+      isTodaysHighlight: !item.isTodaysHighlight,
+    });
   }
 
   async remove(id: string) {

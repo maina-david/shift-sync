@@ -8,24 +8,24 @@ import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { Providers } from "./providers";
 
 const roboto = Roboto({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-sans',
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-sans",
 });
 
 const robotoMono = Roboto_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-mono',
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
   title: "ShiftSync — Coastal Eats Scheduling",
   description: "Multi-location staff scheduling platform",
   icons: {
-    icon: '/icon.svg',
-    shortcut: '/icon.svg',
-    apple: '/icon.svg',
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
   },
 };
 
@@ -35,12 +35,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("dark font-sans", roboto.variable, robotoMono.variable)} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={cn("dark font-sans", roboto.variable, robotoMono.variable)}
+      suppressHydrationWarning
+    >
       <body className="antialiased">
         <Providers>
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
+          <TooltipProvider>{children}</TooltipProvider>
         </Providers>
         <Toaster richColors position="top-right" />
         <ScrollToTop />

@@ -33,7 +33,10 @@ import {
   SwapRequestStatus,
 } from '../swap-requests/entities/swap-request.entity';
 import { User, UserRole } from '../users/entities/user.entity';
-import { Notification, NotificationType } from '../notifications/entities/notification.entity';
+import {
+  Notification,
+  NotificationType,
+} from '../notifications/entities/notification.entity';
 import { Certification } from '../certifications/entities/certification.entity';
 
 @Injectable()
@@ -65,12 +68,17 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     try {
       this.events.emit(event, payload);
     } catch (err) {
-      this.logger.error(`Event emission failed for "${event}": ${(err as Error).message}`, (err as Error).stack);
+      this.logger.error(
+        `Event emission failed for "${event}": ${(err as Error).message}`,
+        (err as Error).stack,
+      );
     }
   }
 
   onModuleInit() {
-    this.logger.log('SchedulerService online — cron jobs, intervals and timeout registered');
+    this.logger.log(
+      'SchedulerService online — cron jobs, intervals and timeout registered',
+    );
 
     const ms = 24 * 60 * 60 * 1000;
     const handle = setInterval(
@@ -78,7 +86,9 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       ms,
     );
     this.schedulerRegistry.addInterval('cleanup-old-notifications', handle);
-    this.logger.log('Dynamic interval registered: cleanup-old-notifications (every 24 h)');
+    this.logger.log(
+      'Dynamic interval registered: cleanup-old-notifications (every 24 h)',
+    );
   }
 
   onModuleDestroy() {
@@ -259,13 +269,19 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
 
     const managers = await this.userRepo
       .createQueryBuilder('u')
-      .where('u.role IN (:...roles)', { roles: [UserRole.ADMIN, UserRole.MANAGER] })
+      .where('u.role IN (:...roles)', {
+        roles: [UserRole.ADMIN, UserRole.MANAGER],
+      })
       .andWhere('u.isActive = :active', { active: true })
       .getMany();
 
     const count = expiring.length;
-    const names = [...new Set(expiring.map((c) => c.user?.name).filter(Boolean))];
-    const namesSummary = names.slice(0, 3).join(', ') + (names.length > 3 ? ` and ${names.length - 3} more` : '');
+    const names = [
+      ...new Set(expiring.map((c) => c.user?.name).filter(Boolean)),
+    ];
+    const namesSummary =
+      names.slice(0, 3).join(', ') +
+      (names.length > 3 ? ` and ${names.length - 3} more` : '');
 
     for (const manager of managers) {
       this.safeEmit('notification.send', {
@@ -323,7 +339,9 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     const windowEnd = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
     const todayDate = now.toISOString().split('T')[0];
-    const tomorrowDate = new Date(now.getTime() + 86400000).toISOString().split('T')[0];
+    const tomorrowDate = new Date(now.getTime() + 86400000)
+      .toISOString()
+      .split('T')[0];
 
     const candidates = await this.shiftRepo
       .createQueryBuilder('s')
@@ -332,10 +350,16 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       .innerJoinAndSelect('s.location', 'loc')
       .where('s.status = :status', { status: ShiftStatus.PUBLISHED })
       .andWhere('s.date IN (:...dates)', { dates: [todayDate, tomorrowDate] })
-      .andWhere('a.status = :assignedStatus', { assignedStatus: AssignmentStatus.ASSIGNED })
+      .andWhere('a.status = :assignedStatus', {
+        assignedStatus: AssignmentStatus.ASSIGNED,
+      })
       .getMany();
 
-    const upcomingAssignments: Array<{ assignmentId: string; staffId: string; shift: Shift }> = [];
+    const upcomingAssignments: Array<{
+      assignmentId: string;
+      staffId: string;
+      shift: Shift;
+    }> = [];
 
     for (const shift of candidates) {
       const shiftStart = new Date(`${shift.date}T${shift.startTime}:00Z`);
@@ -355,7 +379,9 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     const remindersSentToday = await this.notifRepo
       .createQueryBuilder('n')
       .where('n.type = :type', { type: NotificationType.SHIFT_REMINDER })
-      .andWhere('n.entityType = :entityType', { entityType: 'shift_assignment' })
+      .andWhere('n.entityType = :entityType', {
+        entityType: 'shift_assignment',
+      })
       .andWhere('n.entityId IN (:...ids)', {
         ids: upcomingAssignments.map((a) => a.assignmentId),
       })
@@ -370,11 +396,14 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       if (alreadyReminded.has(assignmentId)) continue;
 
       const minutesUntil = Math.round(
-        (new Date(`${shift.date}T${shift.startTime}:00Z`).getTime() - now.getTime()) / 60000,
+        (new Date(`${shift.date}T${shift.startTime}:00Z`).getTime() -
+          now.getTime()) /
+          60000,
       );
-      const timeLabel = minutesUntil <= 60
-        ? `in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`
-        : `in about ${Math.round(minutesUntil / 60)} hour${Math.round(minutesUntil / 60) !== 1 ? 's' : ''}`;
+      const timeLabel =
+        minutesUntil <= 60
+          ? `in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`
+          : `in about ${Math.round(minutesUntil / 60)} hour${Math.round(minutesUntil / 60) !== 1 ? 's' : ''}`;
 
       this.safeEmit('notification.send', {
         userId: staffId,
@@ -429,13 +458,17 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
 
   @Timeout('startup-check', 10_000)
   async startupCheck(): Promise<void> {
-    const [pendingTimeOff, swapsAwaitingResponse, swapsAwaitingManager, pendingReservations] =
-      await Promise.all([
-        this.timeOffRepo.count({ where: { status: TimeOffStatus.PENDING } }),
-        this.swapRepo.count({ where: { status: SwapRequestStatus.PENDING } }),
-        this.swapRepo.count({ where: { status: SwapRequestStatus.ACCEPTED } }),
-        this.reservRepo.count({ where: { status: ReservationStatus.PENDING } }),
-      ]);
+    const [
+      pendingTimeOff,
+      swapsAwaitingResponse,
+      swapsAwaitingManager,
+      pendingReservations,
+    ] = await Promise.all([
+      this.timeOffRepo.count({ where: { status: TimeOffStatus.PENDING } }),
+      this.swapRepo.count({ where: { status: SwapRequestStatus.PENDING } }),
+      this.swapRepo.count({ where: { status: SwapRequestStatus.ACCEPTED } }),
+      this.reservRepo.count({ where: { status: ReservationStatus.PENDING } }),
+    ]);
 
     this.logger.log(
       `[startup-check] Actionable items — ` +

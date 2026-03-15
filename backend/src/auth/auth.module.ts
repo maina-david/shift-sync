@@ -18,6 +18,7 @@ import { User } from '../users/entities/user.entity';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('jwt.secret'),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         signOptions: { expiresIn: config.get<string>('jwt.expiresIn') as any },
       }),
     }),

@@ -34,14 +34,18 @@ export class ShiftFeedbackController {
   @Post()
   @HttpCode(201)
   @Roles(UserRole.STAFF, UserRole.MANAGER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Submit post-shift feedback for a completed assignment' })
+  @ApiOperation({
+    summary: 'Submit post-shift feedback for a completed assignment',
+  })
   submit(@Body() dto: CreateFeedbackDto, @CurrentUser() user: User) {
     return this.svc.submit(user.id, dto);
   }
 
   @Get('mine')
   @Roles(UserRole.STAFF, UserRole.MANAGER, UserRole.ADMIN)
-  @ApiOperation({ summary: "List the current staff member's own feedback submissions" })
+  @ApiOperation({
+    summary: "List the current staff member's own feedback submissions",
+  })
   getMyFeedback(@CurrentUser() user: User) {
     return this.svc.getMyFeedback(user.id);
   }
@@ -50,26 +54,49 @@ export class ShiftFeedbackController {
 
   @Get('shift/:shiftId')
   @Roles(UserRole.MANAGER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get all feedback for a specific shift (manager/admin)' })
+  @ApiOperation({
+    summary: 'Get all feedback for a specific shift (manager/admin)',
+  })
   getForShift(@Param('shiftId') shiftId: string) {
     return this.svc.getForShift(shiftId);
   }
 
   @Get('summary')
   @Roles(UserRole.MANAGER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Aggregate feedback summary with optional location and date range filters (manager/admin)' })
-  @ApiQuery({ name: 'locationId', required: false, description: 'Filter by location UUID' })
-  @ApiQuery({ name: 'startDate',  required: false, description: 'Start date (YYYY-MM-DD)' })
-  @ApiQuery({ name: 'endDate',    required: false, description: 'End date (YYYY-MM-DD)' })
+  @ApiOperation({
+    summary:
+      'Aggregate feedback summary with optional location and date range filters (manager/admin)',
+  })
+  @ApiQuery({
+    name: 'locationId',
+    required: false,
+    description: 'Filter by location UUID',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    description: 'Start date (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    description: 'End date (YYYY-MM-DD)',
+  })
   getSummary(
     @CurrentUser() user: User,
     @Query('locationId') locationId?: string,
-    @Query('startDate')  startDate?: string,
-    @Query('endDate')    endDate?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
-    const managedLocationIds = user.role === UserRole.MANAGER
-      ? (user.managedLocations?.map((l) => l.id) ?? [])
-      : undefined;
-    return this.svc.getSummary(locationId, startDate, endDate, managedLocationIds);
+    const managedLocationIds =
+      user.role === UserRole.MANAGER
+        ? (user.managedLocations?.map((l) => l.id) ?? [])
+        : undefined;
+    return this.svc.getSummary(
+      locationId,
+      startDate,
+      endDate,
+      managedLocationIds,
+    );
   }
 }

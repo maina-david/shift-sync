@@ -1,11 +1,17 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Notification } from '@/lib/types';
-import { notificationsApi } from '@/lib/api';
-import { getSocket } from '@/lib/socket';
-import { useAuth } from './auth-context';
-import { toast } from 'sonner';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import { Notification } from "@/lib/types";
+import { notificationsApi } from "@/lib/api";
+import { getSocket } from "@/lib/socket";
+import { useAuth } from "./auth-context";
+import { toast } from "sonner";
 
 interface NotificationsContextValue {
   notifications: Notification[];
@@ -16,9 +22,15 @@ interface NotificationsContextValue {
   refresh: () => Promise<void>;
 }
 
-const NotificationsContext = createContext<NotificationsContextValue | null>(null);
+const NotificationsContext = createContext<NotificationsContextValue | null>(
+  null,
+);
 
-export function NotificationsProvider({ children }: { children: React.ReactNode }) {
+export function NotificationsProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -45,17 +57,23 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       setNotifications((prev) => [notif, ...prev]);
       setUnreadCount((c) => c + 1);
 
-      const type = notif.type?.toUpperCase() ?? '';
+      const type = notif.type?.toUpperCase() ?? "";
       const isCritical = [
-        'SHIFT_UNCOVERED', 'UNCOVERED_SHIFT', 'SHIFT_CANCELLED',
-        'SCHEDULE_UNPUBLISHED', 'CERT_EXPIRY_WARNING',
+        "SHIFT_UNCOVERED",
+        "UNCOVERED_SHIFT",
+        "SHIFT_CANCELLED",
+        "SCHEDULE_UNPUBLISHED",
+        "CERT_EXPIRY_WARNING",
       ].some((t) => type.includes(t));
-      const isInfo = [
-        'WEEKLY_SUMMARY', 'REPORT_READY',
-      ].some((t) => type.includes(t));
+      const isInfo = ["WEEKLY_SUMMARY", "REPORT_READY"].some((t) =>
+        type.includes(t),
+      );
 
       if (isCritical) {
-        toast.error(notif.title, { description: notif.message, duration: Infinity });
+        toast.error(notif.title, {
+          description: notif.message,
+          duration: Infinity,
+        });
       } else if (isInfo) {
         // info-only: badge only, no toast
       } else {
@@ -63,10 +81,10 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       }
     };
 
-    socket.on('notification', handler);
+    socket.on("notification", handler);
 
     return () => {
-      socket.off('notification', handler);
+      socket.off("notification", handler);
     };
   }, [user, refresh]);
 
@@ -92,12 +110,21 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
     } catch {
-      toast.error('Failed to mark notifications as read');
+      toast.error("Failed to mark notifications as read");
     }
   }, []);
 
   return (
-    <NotificationsContext.Provider value={{ notifications, unreadCount, isLoading, markRead, markAllRead, refresh }}>
+    <NotificationsContext.Provider
+      value={{
+        notifications,
+        unreadCount,
+        isLoading,
+        markRead,
+        markAllRead,
+        refresh,
+      }}
+    >
       {children}
     </NotificationsContext.Provider>
   );
@@ -105,6 +132,9 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
 export function useNotifications() {
   const ctx = useContext(NotificationsContext);
-  if (!ctx) throw new Error('useNotifications must be used within NotificationsProvider');
+  if (!ctx)
+    throw new Error(
+      "useNotifications must be used within NotificationsProvider",
+    );
   return ctx;
 }

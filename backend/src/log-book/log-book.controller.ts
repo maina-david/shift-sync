@@ -9,7 +9,12 @@ import {
   UseGuards,
   HttpCode,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { LogBookService } from './log-book.service';
 import { CreateLogEntryDto } from './dto/create-log-entry.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -27,7 +32,9 @@ export class LogBookController {
   constructor(private svc: LogBookService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List log entries for a date (optionally filter by location)' })
+  @ApiOperation({
+    summary: 'List log entries for a date (optionally filter by location)',
+  })
   @ApiQuery({ name: 'date', required: true })
   @ApiQuery({ name: 'locationId', required: false })
   list(

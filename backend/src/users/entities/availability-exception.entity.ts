@@ -13,7 +13,9 @@ export class AvailabilityException {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User, (u) => u.availabilityExceptions, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, (u) => u.availabilityExceptions, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'userId' })
   user: User;
 

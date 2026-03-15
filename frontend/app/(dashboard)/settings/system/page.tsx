@@ -1,9 +1,17 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { RotateCcw, Sliders, ShieldAlert, MoreHorizontal, Pencil, Power, PowerOff } from 'lucide-react';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  RotateCcw,
+  Sliders,
+  ShieldAlert,
+  MoreHorizontal,
+  Pencil,
+  Power,
+  PowerOff,
+} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -11,14 +19,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,14 +42,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetClose,
@@ -44,18 +58,20 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
-import { Skeleton } from '@/components/ui/skeleton';
-import { settingsApi, getErrorMessage } from '@/lib/api';
-import { SystemSetting } from '@/lib/types';
-import { useAuth } from '@/contexts/auth-context';
+} from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import { settingsApi, getErrorMessage } from "@/lib/api";
+import { SystemSetting } from "@/lib/types";
+import { useAuth } from "@/contexts/auth-context";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function groupSettings(settings: SystemSetting[]): Record<string, SystemSetting[]> {
+function groupSettings(
+  settings: SystemSetting[],
+): Record<string, SystemSetting[]> {
   const groups: Record<string, SystemSetting[]> = {};
   for (const s of settings) {
-    const prefix = s.key.includes('.') ? s.key.split('.')[0] : 'general';
+    const prefix = s.key.includes(".") ? s.key.split(".")[0] : "general";
     if (!groups[prefix]) groups[prefix] = [];
     groups[prefix].push(s);
   }
@@ -64,16 +80,17 @@ function groupSettings(settings: SystemSetting[]): Record<string, SystemSetting[
 
 const GROUP_META: Record<string, { label: string; description: string }> = {
   scheduling: {
-    label: 'Scheduling Rules',
-    description: 'Controls shift assignment, overtime detection, and schedule publishing.',
+    label: "Scheduling Rules",
+    description:
+      "Controls shift assignment, overtime detection, and schedule publishing.",
   },
   payroll: {
-    label: 'Payroll',
-    description: 'Overtime thresholds, predictability pay, and rate settings.',
+    label: "Payroll",
+    description: "Overtime thresholds, predictability pay, and rate settings.",
   },
   general: {
-    label: 'General',
-    description: 'Global system configuration.',
+    label: "General",
+    description: "Global system configuration.",
   },
 };
 
@@ -91,15 +108,19 @@ function SettingRow({
   const valueType = typeof setting.value;
 
   function renderValue() {
-    if (valueType === 'boolean') {
+    if (valueType === "boolean") {
       return (
-        <span className={`text-sm font-mono ${setting.isEnabled ? '' : 'opacity-40'}`}>
+        <span
+          className={`text-sm font-mono ${setting.isEnabled ? "" : "opacity-40"}`}
+        >
           {String(setting.value)}
         </span>
       );
     }
     return (
-      <span className={`text-sm font-mono ${setting.isEnabled ? '' : 'opacity-40'}`}>
+      <span
+        className={`text-sm font-mono ${setting.isEnabled ? "" : "opacity-40"}`}
+      >
         {String(setting.value)}
       </span>
     );
@@ -109,16 +130,28 @@ function SettingRow({
     <TableRow>
       <TableCell className="w-64 font-mono text-sm">{setting.key}</TableCell>
       <TableCell className="text-muted-foreground">
-        {setting.description ?? <span className="italic opacity-50">No description</span>}
+        {setting.description ?? (
+          <span className="italic opacity-50">No description</span>
+        )}
       </TableCell>
       <TableCell className="text-right font-mono text-sm">
         {renderValue()}
       </TableCell>
       <TableCell>
         {setting.isEnabled ? (
-          <Badge variant="outline" className="border-green-500/40 text-green-700 bg-green-500/10">Active</Badge>
+          <Badge
+            variant="outline"
+            className="border-green-500/40 text-green-700 bg-green-500/10"
+          >
+            Active
+          </Badge>
         ) : (
-          <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground bg-muted/40">Inactive</Badge>
+          <Badge
+            variant="outline"
+            className="border-muted-foreground/30 text-muted-foreground bg-muted/40"
+          >
+            Inactive
+          </Badge>
         )}
       </TableCell>
       <TableCell className="text-right">
@@ -136,7 +169,11 @@ function SettingRow({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => onToggleEnabled(setting)}
-              className={setting.isEnabled ? 'text-destructive focus:text-destructive' : ''}
+              className={
+                setting.isEnabled
+                  ? "text-destructive focus:text-destructive"
+                  : ""
+              }
             >
               {setting.isEnabled ? (
                 <>
@@ -170,13 +207,18 @@ function SettingsGroup({
   onEdit: (s: SystemSetting) => void;
   onToggleEnabled: (s: SystemSetting) => void;
 }) {
-  const meta = GROUP_META[prefix] ?? { label: prefix.charAt(0).toUpperCase() + prefix.slice(1), description: '' };
+  const meta = GROUP_META[prefix] ?? {
+    label: prefix.charAt(0).toUpperCase() + prefix.slice(1),
+    description: "",
+  };
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">{meta.label}</CardTitle>
-        {meta.description && <CardDescription>{meta.description}</CardDescription>}
+        {meta.description && (
+          <CardDescription>{meta.description}</CardDescription>
+        )}
       </CardHeader>
       <CardContent className="p-0">
         <Table>
@@ -191,7 +233,12 @@ function SettingsGroup({
           </TableHeader>
           <TableBody>
             {settings.map((s) => (
-              <SettingRow key={s.key} setting={s} onEdit={onEdit} onToggleEnabled={onToggleEnabled} />
+              <SettingRow
+                key={s.key}
+                setting={s}
+                onEdit={onEdit}
+                onToggleEnabled={onToggleEnabled}
+              />
             ))}
           </TableBody>
         </Table>
@@ -207,25 +254,33 @@ export default function SystemSettingsPage() {
   const queryClient = useQueryClient();
   const [resetOpen, setResetOpen] = useState(false);
   const [editSetting, setEditSetting] = useState<SystemSetting | null>(null);
-  const [editForm, setEditForm] = useState<{ value: string; description: string }>({
-    value: '',
-    description: '',
+  const [editForm, setEditForm] = useState<{
+    value: string;
+    description: string;
+  }>({
+    value: "",
+    description: "",
   });
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === "admin";
 
   const { data: settings = [], isLoading } = useQuery<SystemSetting[]>({
-    queryKey: ['settings'],
+    queryKey: ["settings"],
     queryFn: settingsApi.list,
     enabled: isAdmin,
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ key, patch }: { key: string; patch: Parameters<typeof settingsApi.update>[1] }) =>
-      settingsApi.update(key, patch),
+    mutationFn: ({
+      key,
+      patch,
+    }: {
+      key: string;
+      patch: Parameters<typeof settingsApi.update>[1];
+    }) => settingsApi.update(key, patch),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['settings'] });
-      toast.success('Setting updated');
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      toast.success("Setting updated");
       setEditSetting(null);
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -235,8 +290,8 @@ export default function SystemSettingsPage() {
     mutationFn: ({ key, isEnabled }: { key: string; isEnabled: boolean }) =>
       settingsApi.update(key, { isEnabled }),
     onSuccess: (_, { isEnabled }) => {
-      queryClient.invalidateQueries({ queryKey: ['settings'] });
-      toast.success(isEnabled ? 'Setting enabled' : 'Setting disabled');
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      toast.success(isEnabled ? "Setting enabled" : "Setting disabled");
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
@@ -244,8 +299,8 @@ export default function SystemSettingsPage() {
   const resetMutation = useMutation({
     mutationFn: settingsApi.reset,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['settings'] });
-      toast.success('All settings reset to defaults');
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      toast.success("All settings reset to defaults");
       setResetOpen(false);
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -255,7 +310,7 @@ export default function SystemSettingsPage() {
     setEditSetting(s);
     setEditForm({
       value: String(s.value),
-      description: s.description ?? '',
+      description: s.description ?? "",
     });
   }
 
@@ -267,8 +322,8 @@ export default function SystemSettingsPage() {
     if (!editSetting) return;
     const valueType = typeof editSetting.value;
     let parsed: unknown = editForm.value;
-    if (valueType === 'number') parsed = Number(editForm.value);
-    else if (valueType === 'boolean') parsed = editForm.value === 'true';
+    if (valueType === "number") parsed = Number(editForm.value);
+    else if (valueType === "boolean") parsed = editForm.value === "true";
     updateMutation.mutate({
       key: editSetting.key,
       patch: {
@@ -286,7 +341,9 @@ export default function SystemSettingsPage() {
         <ShieldAlert className="h-10 w-10 opacity-40" />
         <div className="text-center">
           <p className="font-semibold text-foreground">Access Restricted</p>
-          <p className="text-sm mt-1">Only administrators can view and edit system settings.</p>
+          <p className="text-sm mt-1">
+            Only administrators can view and edit system settings.
+          </p>
         </div>
       </div>
     );
@@ -294,11 +351,11 @@ export default function SystemSettingsPage() {
 
   const groups = groupSettings(settings);
   const orderedPrefixes = [
-    ...['scheduling', 'payroll'].filter((p) => groups[p]),
-    ...Object.keys(groups).filter((p) => p !== 'scheduling' && p !== 'payroll'),
+    ...["scheduling", "payroll"].filter((p) => groups[p]),
+    ...Object.keys(groups).filter((p) => p !== "scheduling" && p !== "payroll"),
   ];
 
-  const valueType = editSetting ? typeof editSetting.value : 'string';
+  const valueType = editSetting ? typeof editSetting.value : "string";
 
   return (
     <div className="space-y-6">
@@ -360,36 +417,44 @@ export default function SystemSettingsPage() {
       )}
 
       {/* Edit Sheet */}
-      <Sheet open={!!editSetting} onOpenChange={(open) => !open && setEditSetting(null)}>
+      <Sheet
+        open={!!editSetting}
+        onOpenChange={(open) => !open && setEditSetting(null)}
+      >
         <SheetContent>
           <SheetHeader>
             <SheetTitle>Edit Setting</SheetTitle>
             <SheetDescription>
-              Update the value and description for{' '}
-              <span className="font-mono text-foreground">{editSetting?.key}</span>.
+              Update the value and description for{" "}
+              <span className="font-mono text-foreground">
+                {editSetting?.key}
+              </span>
+              .
             </SheetDescription>
           </SheetHeader>
 
           <div className="grid flex-1 auto-rows-min gap-6 px-4">
             <div className="grid gap-3">
               <Label>Value</Label>
-              {valueType === 'boolean' ? (
+              {valueType === "boolean" ? (
                 <div className="flex items-center gap-3">
                   <Switch
-                    checked={editForm.value === 'true'}
+                    checked={editForm.value === "true"}
                     onCheckedChange={(checked) =>
                       setEditForm((f) => ({ ...f, value: String(checked) }))
                     }
                   />
                   <span className="text-sm text-muted-foreground">
-                    {editForm.value === 'true' ? 'Enabled' : 'Disabled'}
+                    {editForm.value === "true" ? "Enabled" : "Disabled"}
                   </span>
                 </div>
               ) : (
                 <Input
-                  type={valueType === 'number' ? 'number' : 'text'}
+                  type={valueType === "number" ? "number" : "text"}
                   value={editForm.value}
-                  onChange={(e) => setEditForm((f) => ({ ...f, value: e.target.value }))}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, value: e.target.value }))
+                  }
                   className="font-mono"
                 />
               )}
@@ -400,18 +465,17 @@ export default function SystemSettingsPage() {
               <Textarea
                 placeholder="Describe what this setting controls…"
                 value={editForm.description}
-                onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, description: e.target.value }))
+                }
                 rows={3}
               />
             </div>
           </div>
 
           <SheetFooter>
-            <Button
-              onClick={commitEdit}
-              disabled={updateMutation.isPending}
-            >
-              {updateMutation.isPending ? 'Saving…' : 'Save changes'}
+            <Button onClick={commitEdit} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? "Saving…" : "Save changes"}
             </Button>
             <SheetClose asChild>
               <Button variant="outline">Cancel</Button>
@@ -426,8 +490,8 @@ export default function SystemSettingsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Reset all settings to defaults?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will overwrite every system setting with its factory default value. This action
-              cannot be undone.
+              This will overwrite every system setting with its factory default
+              value. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -437,7 +501,7 @@ export default function SystemSettingsPage() {
               onClick={() => resetMutation.mutate()}
               disabled={resetMutation.isPending}
             >
-              {resetMutation.isPending ? 'Resetting…' : 'Yes, reset all'}
+              {resetMutation.isPending ? "Resetting…" : "Yes, reset all"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

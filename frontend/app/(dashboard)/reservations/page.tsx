@@ -1,136 +1,180 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, CalendarDays, ShieldAlert } from 'lucide-react';
-import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { DatePicker } from '@/components/ui/date-picker';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { ColumnDef } from "@tanstack/react-table";
+import { MoreHorizontal, CalendarDays, ShieldAlert } from "lucide-react";
+import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
-  DropdownMenu, DropdownMenuContent,
-  DropdownMenuItem, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
-  Sheet, SheetClose, SheetContent, SheetDescription,
-  SheetFooter, SheetHeader, SheetTitle,
-} from '@/components/ui/sheet';
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { DataTable } from '@/components/ui/data-table';
-import { reservationsApi, locationsApi, getErrorMessage } from '@/lib/api';
-import { useAuth } from '@/contexts/auth-context';
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import type { Reservation, Location, ReservationStatus } from '@/lib/types';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { DataTable } from "@/components/ui/data-table";
+import { reservationsApi, locationsApi, getErrorMessage } from "@/lib/api";
+import { useAuth } from "@/contexts/auth-context";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty";
+import type { Reservation, Location, ReservationStatus } from "@/lib/types";
 
-const STATUS_STYLES: Record<ReservationStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pending:   { label: 'Pending',   variant: 'outline'     },
-  confirmed: { label: 'Confirmed', variant: 'default'     },
-  cancelled: { label: 'Cancelled', variant: 'secondary'   },
-  no_show:   { label: 'No-show',   variant: 'destructive' },
+const STATUS_STYLES: Record<
+  ReservationStatus,
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
+> = {
+  pending: { label: "Pending", variant: "outline" },
+  confirmed: { label: "Confirmed", variant: "default" },
+  cancelled: { label: "Cancelled", variant: "secondary" },
+  no_show: { label: "No-show", variant: "destructive" },
 };
 
-const TODAY = new Date().toISOString().split('T')[0];
+const TODAY = new Date().toISOString().split("T")[0];
 
 export default function ReservationsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [dateFilter,     setDateFilter]     = useState(TODAY);
-  const [locationFilter, setLocationFilter] = useState('');
-  const [statusFilter,   setStatusFilter]   = useState('');
-  const [notesItem,      setNotesItem]      = useState<Reservation | null>(null);
-  const [notesValue,     setNotesValue]     = useState('');
-  const [deleteId,       setDeleteId]       = useState<string | null>(null);
+  const [dateFilter, setDateFilter] = useState(TODAY);
+  const [locationFilter, setLocationFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [notesItem, setNotesItem] = useState<Reservation | null>(null);
+  const [notesValue, setNotesValue] = useState("");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const filters = {
-    date:       dateFilter     || undefined,
+    date: dateFilter || undefined,
     locationId: locationFilter || undefined,
-    status:     statusFilter   || undefined,
+    status: statusFilter || undefined,
   };
 
   const { data: reservations = [], isLoading } = useQuery<Reservation[]>({
-    queryKey: ['reservations', filters],
-    queryFn:  () => reservationsApi.list(filters),
+    queryKey: ["reservations", filters],
+    queryFn: () => reservationsApi.list(filters),
   });
 
   const { data: locations = [] } = useQuery<Location[]>({
-    queryKey: ['locations'],
-    queryFn:  locationsApi.list,
+    queryKey: ["locations"],
+    queryFn: locationsApi.list,
   });
 
   function invalidate() {
-    queryClient.invalidateQueries({ queryKey: ['reservations'] });
+    queryClient.invalidateQueries({ queryKey: ["reservations"] });
   }
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { status?: string; notes?: string } }) =>
-      reservationsApi.update(id, data),
-    onSuccess: () => { invalidate(); toast.success('Reservation updated'); setNotesItem(null); },
-    onError:   (err) => toast.error(getErrorMessage(err)),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: { status?: string; notes?: string };
+    }) => reservationsApi.update(id, data),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Reservation updated");
+      setNotesItem(null);
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => reservationsApi.remove(id),
-    onSuccess:  () => { invalidate(); toast.success('Reservation deleted'); setDeleteId(null); },
-    onError:    (err) => toast.error(getErrorMessage(err)),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Reservation deleted");
+      setDeleteId(null);
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
   });
 
   const columns: ColumnDef<Reservation>[] = [
     {
-      accessorKey: 'customerName',
-      header: 'Guest',
+      accessorKey: "customerName",
+      header: "Guest",
       cell: ({ row }) => (
         <div>
           <p className="font-medium text-sm">{row.original.customerName}</p>
           <p className="text-xs text-muted-foreground">{row.original.email}</p>
           {row.original.phone && (
-            <p className="text-xs text-muted-foreground">{row.original.phone}</p>
+            <p className="text-xs text-muted-foreground">
+              {row.original.phone}
+            </p>
           )}
         </div>
       ),
     },
     {
-      id: 'datetime',
-      header: 'Date & Time',
+      id: "datetime",
+      header: "Date & Time",
       cell: ({ row }) => (
         <div className="text-sm">
           <p className="font-medium">
-            {format(new Date(row.original.date + 'T00:00:00'), 'EEE d MMM')}
+            {format(new Date(row.original.date + "T00:00:00"), "EEE d MMM")}
           </p>
           <p className="text-muted-foreground">{row.original.time}</p>
         </div>
       ),
     },
     {
-      accessorKey: 'partySize',
-      header: 'Guests',
-      cell: ({ row }) => <span className="font-medium">{row.original.partySize}</span>,
+      accessorKey: "partySize",
+      header: "Guests",
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.partySize}</span>
+      ),
     },
     {
-      id: 'location',
-      header: 'Location',
-      cell: ({ row }) => row.original.location?.name
-        ? <span className="text-sm">{row.original.location.name}</span>
-        : <span className="text-muted-foreground text-sm">Any</span>,
+      id: "location",
+      header: "Location",
+      cell: ({ row }) =>
+        row.original.location?.name ? (
+          <span className="text-sm">{row.original.location.name}</span>
+        ) : (
+          <span className="text-muted-foreground text-sm">Any</span>
+        ),
     },
     {
-      accessorKey: 'status',
-      header: 'Status',
+      accessorKey: "status",
+      header: "Status",
       cell: ({ row }) => {
         const s = STATUS_STYLES[row.original.status] ?? STATUS_STYLES.pending;
         return <Badge variant={s.variant}>{s.label}</Badge>;
       },
     },
     {
-      id: 'actions',
+      id: "actions",
       cell: ({ row }) => {
         const r = row.original;
         return (
@@ -141,25 +185,54 @@ export default function ReservationsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {r.status === 'pending' && (
-                <DropdownMenuItem onClick={() => updateMutation.mutate({ id: r.id, data: { status: 'confirmed' } })}>
+              {r.status === "pending" && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    updateMutation.mutate({
+                      id: r.id,
+                      data: { status: "confirmed" },
+                    })
+                  }
+                >
                   Confirm
                 </DropdownMenuItem>
               )}
-              {(r.status === 'pending' || r.status === 'confirmed') && (
-                <DropdownMenuItem onClick={() => updateMutation.mutate({ id: r.id, data: { status: 'cancelled' } })}>
+              {(r.status === "pending" || r.status === "confirmed") && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    updateMutation.mutate({
+                      id: r.id,
+                      data: { status: "cancelled" },
+                    })
+                  }
+                >
                   Cancel reservation
                 </DropdownMenuItem>
               )}
-              {r.status === 'confirmed' && (
-                <DropdownMenuItem onClick={() => updateMutation.mutate({ id: r.id, data: { status: 'no_show' } })}>
+              {r.status === "confirmed" && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    updateMutation.mutate({
+                      id: r.id,
+                      data: { status: "no_show" },
+                    })
+                  }
+                >
                   Mark no-show
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onClick={() => { setNotesItem(r); setNotesValue(r.notes ?? ''); }}>
-                {r.notes ? 'Edit notes' : 'Add notes'}
+              <DropdownMenuItem
+                onClick={() => {
+                  setNotesItem(r);
+                  setNotesValue(r.notes ?? "");
+                }}
+              >
+                {r.notes ? "Edit notes" : "Add notes"}
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(r.id)}>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => setDeleteId(r.id)}
+              >
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -169,19 +242,22 @@ export default function ReservationsPage() {
     },
   ];
 
-  const pending   = reservations.filter((r) => r.status === 'pending').length;
-  const confirmed = reservations.filter((r) => r.status === 'confirmed').length;
+  const pending = reservations.filter((r) => r.status === "pending").length;
+  const confirmed = reservations.filter((r) => r.status === "confirmed").length;
 
   if (user === null) return null;
-  if (user.role !== 'admin' && user.role !== 'manager') return (
-    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
-      <ShieldAlert className="h-10 w-10 opacity-40" />
-      <div className="text-center">
-        <p className="font-semibold text-foreground">Access Restricted</p>
-        <p className="text-sm mt-1">This page is only available to managers and administrators.</p>
+  if (user.role !== "admin" && user.role !== "manager")
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+        <ShieldAlert className="h-10 w-10 opacity-40" />
+        <div className="text-center">
+          <p className="font-semibold text-foreground">Access Restricted</p>
+          <p className="text-sm mt-1">
+            This page is only available to managers and administrators.
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   return (
     <div className="space-y-4">
@@ -195,7 +271,9 @@ export default function ReservationsPage() {
         <div className="flex items-center gap-1.5 rounded-md border border-border/50 bg-muted/30 px-2.5 py-1.5">
           <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">
-            {dateFilter ? format(new Date(dateFilter + 'T00:00:00'), 'EEE d MMM yyyy') : 'All dates'}
+            {dateFilter
+              ? format(new Date(dateFilter + "T00:00:00"), "EEE d MMM yyyy")
+              : "All dates"}
           </span>
         </div>
       </div>
@@ -213,17 +291,23 @@ export default function ReservationsPage() {
         </div>
         <div className="grid gap-1">
           <Label className="text-xs text-muted-foreground">Location</Label>
-          <select className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+          <select
+            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
             value={locationFilter}
             onChange={(e) => setLocationFilter(e.target.value)}
           >
             <option value="">All locations</option>
-            {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            {locations.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
           </select>
         </div>
         <div className="grid gap-1">
           <Label className="text-xs text-muted-foreground">Status</Label>
-          <select className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+          <select
+            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -235,8 +319,15 @@ export default function ReservationsPage() {
           </select>
         </div>
         {(dateFilter !== TODAY || locationFilter || statusFilter) && (
-          <Button variant="ghost" size="sm" className="h-8"
-            onClick={() => { setDateFilter(TODAY); setLocationFilter(''); setStatusFilter(''); }}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8"
+            onClick={() => {
+              setDateFilter(TODAY);
+              setLocationFilter("");
+              setStatusFilter("");
+            }}
           >
             Reset
           </Button>
@@ -252,21 +343,30 @@ export default function ReservationsPage() {
         emptyState={
           <Empty className="border">
             <EmptyHeader>
-              <EmptyMedia variant="icon"><CalendarDays /></EmptyMedia>
+              <EmptyMedia variant="icon">
+                <CalendarDays />
+              </EmptyMedia>
               <EmptyTitle>No reservations found</EmptyTitle>
-              <EmptyDescription>No reservations match the selected filters. Try adjusting the date, location, or status.</EmptyDescription>
+              <EmptyDescription>
+                No reservations match the selected filters. Try adjusting the
+                date, location, or status.
+              </EmptyDescription>
             </EmptyHeader>
           </Empty>
         }
       />
 
       {/* Notes sheet */}
-      <Sheet open={!!notesItem} onOpenChange={(open) => !open && setNotesItem(null)}>
+      <Sheet
+        open={!!notesItem}
+        onOpenChange={(open) => !open && setNotesItem(null)}
+      >
         <SheetContent>
           <SheetHeader>
             <SheetTitle>Notes — {notesItem?.customerName}</SheetTitle>
             <SheetDescription>
-              {notesItem?.date} at {notesItem?.time} · party of {notesItem?.partySize}
+              {notesItem?.date} at {notesItem?.time} · party of{" "}
+              {notesItem?.partySize}
             </SheetDescription>
           </SheetHeader>
           <div className="grid flex-1 auto-rows-min gap-6 px-4">
@@ -282,22 +382,34 @@ export default function ReservationsPage() {
           </div>
           <SheetFooter>
             <Button
-              onClick={() => updateMutation.mutate({ id: notesItem!.id, data: { notes: notesValue } })}
+              onClick={() =>
+                updateMutation.mutate({
+                  id: notesItem!.id,
+                  data: { notes: notesValue },
+                })
+              }
               disabled={updateMutation.isPending}
             >
-              {updateMutation.isPending ? 'Saving…' : 'Save notes'}
+              {updateMutation.isPending ? "Saving…" : "Save notes"}
             </Button>
-            <SheetClose asChild><Button variant="outline">Cancel</Button></SheetClose>
+            <SheetClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </SheetClose>
           </SheetFooter>
         </SheetContent>
       </Sheet>
 
       {/* Delete dialog */}
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+      <AlertDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete reservation?</AlertDialogTitle>
-            <AlertDialogDescription>This will permanently remove the reservation record.</AlertDialogDescription>
+            <AlertDialogDescription>
+              This will permanently remove the reservation record.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

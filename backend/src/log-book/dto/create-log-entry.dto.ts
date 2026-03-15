@@ -1,4 +1,10 @@
-import { IsDateString, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateLogEntryDto {

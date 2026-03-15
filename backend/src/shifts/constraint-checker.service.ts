@@ -1,12 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ShiftAssignment, AssignmentStatus } from './entities/shift-assignment.entity';
+import {
+  ShiftAssignment,
+  AssignmentStatus,
+} from './entities/shift-assignment.entity';
 import { User } from '../users/entities/user.entity';
 import { Shift } from './entities/shift.entity';
 import { Availability } from '../users/entities/availability.entity';
 import { AvailabilityException } from '../users/entities/availability-exception.entity';
-import { shiftToUTCRange, minutesBetween, addDays, weekStart } from '../common/timezone.util';
+import {
+  shiftToUTCRange,
+  minutesBetween,
+  addDays,
+  weekStart,
+} from '../common/timezone.util';
 import { SettingsService } from '../settings/settings.service';
 
 export interface ConstraintViolation {
@@ -24,9 +32,11 @@ export interface ConstraintResult {
 @Injectable()
 export class ConstraintCheckerService {
   constructor(
-    @InjectRepository(ShiftAssignment) private assignRepo: Repository<ShiftAssignment>,
+    @InjectRepository(ShiftAssignment)
+    private assignRepo: Repository<ShiftAssignment>,
     @InjectRepository(Availability) private availRepo: Repository<Availability>,
-    @InjectRepository(AvailabilityException) private exceptRepo: Repository<AvailabilityException>,
+    @InjectRepository(AvailabilityException)
+    private exceptRepo: Repository<AvailabilityException>,
     private readonly settingsService: SettingsService,
   ) {}
 
@@ -42,10 +52,17 @@ export class ConstraintCheckerService {
       v.severity === 'error' ? violations.push(v) : warnings.push(v);
 
     const timezone = shift.location.timezone;
-    const { startUTC, endUTC } = shiftToUTCRange(shift.date, shift.startTime, shift.endTime, timezone);
+    const { startUTC, endUTC } = shiftToUTCRange(
+      shift.date,
+      shift.startTime,
+      shift.endTime,
+      timezone,
+    );
     const shiftMinutes = minutesBetween(shift.startTime, shift.endTime);
 
-    const isCertified = staff.certifiedLocations?.some((l) => l.id === shift.locationId);
+    const isCertified = staff.certifiedLocations?.some(
+      (l) => l.id === shift.locationId,
+    );
     if (!isCertified) {
       push({
         rule: 'location_certification',
@@ -55,7 +72,9 @@ export class ConstraintCheckerService {
     }
 
     if (shift.requiredSkillId) {
-      const hasSkill = staff.skills?.some((s) => s.id === shift.requiredSkillId);
+      const hasSkill = staff.skills?.some(
+        (s) => s.id === shift.requiredSkillId,
+      );
       if (!hasSkill) {
         push({
           rule: 'skill_match',
@@ -117,7 +136,10 @@ export class ConstraintCheckerService {
       const exShift = existing.shift;
       const exTz = exShift.location.timezone;
       const { startUTC: exStart, endUTC: exEnd } = shiftToUTCRange(
-        exShift.date, exShift.startTime, exShift.endTime, exTz,
+        exShift.date,
+        exShift.startTime,
+        exShift.endTime,
+        exTz,
       );
 
       if (exEnd < windowStart || exStart > windowEnd) continue;
@@ -133,7 +155,8 @@ export class ConstraintCheckerService {
       }
 
       const gapAfterExisting = (startUTC.getTime() - exEnd.getTime()) / 3600000;
-      const gapBeforeExisting = (exStart.getTime() - endUTC.getTime()) / 3600000;
+      const gapBeforeExisting =
+        (exStart.getTime() - endUTC.getTime()) / 3600000;
 
       if (gapAfterExisting >= 0 && gapAfterExisting < s.minRestHours) {
         push({
@@ -151,7 +174,9 @@ export class ConstraintCheckerService {
       }
     }
 
-    const sameDay = existingAssignments.filter((a) => a.shift.date === shift.date);
+    const sameDay = existingAssignments.filter(
+      (a) => a.shift.date === shift.date,
+    );
     const dailyMinutes = sameDay.reduce(
       (sum, a) => sum + minutesBetween(a.shift.startTime, a.shift.endTime),
       shiftMinutes,
@@ -195,7 +220,10 @@ export class ConstraintCheckerService {
       });
     }
 
-    const consecutiveDays = await this.countConsecutiveDays(staff.id, shift.date);
+    const consecutiveDays = await this.countConsecutiveDays(
+      staff.id,
+      shift.date,
+    );
     if (consecutiveDays >= s.maxConsecutiveDaysHard) {
       if (!overrideReason) {
         push({
@@ -235,7 +263,9 @@ export class ConstraintCheckerService {
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const dayOfWeek = new Date(date + 'T00:00:00Z').getUTCDay();
 
-    const exception = await this.exceptRepo.findOne({ where: { userId: staff.id, date } });
+    const exception = await this.exceptRepo.findOne({
+      where: { userId: staff.id, date },
+    });
     if (exception) {
       if (exception.isUnavailable) {
         violations.push({
@@ -255,7 +285,9 @@ export class ConstraintCheckerService {
         }
       }
     } else {
-      const avail = await this.availRepo.findOne({ where: { userId: staff.id, dayOfWeek } });
+      const avail = await this.availRepo.findOne({
+        where: { userId: staff.id, dayOfWeek },
+      });
       if (!avail) {
         violations.push({
           rule: 'availability',
@@ -277,7 +309,10 @@ export class ConstraintCheckerService {
     return violations;
   }
 
-  private async countConsecutiveDays(staffId: string, targetDate: string): Promise<number> {
+  private async countConsecutiveDays(
+    staffId: string,
+    targetDate: string,
+  ): Promise<number> {
     // Query a ±13-day window to capture any consecutive run that includes targetDate.
     // This queries the DB directly so it accounts for shifts outside any in-memory dataset.
     const windowStart = addDays(targetDate, -13);
@@ -291,7 +326,10 @@ export class ConstraintCheckerService {
       .andWhere('a.status IN (:...statuses)', {
         statuses: [AssignmentStatus.ASSIGNED, AssignmentStatus.PENDING_SWAP],
       })
-      .andWhere('shift.date >= :windowStart AND shift.date <= :windowEnd', { windowStart, windowEnd })
+      .andWhere('shift.date >= :windowStart AND shift.date <= :windowEnd', {
+        windowStart,
+        windowEnd,
+      })
       .getRawMany<{ date: string }>();
 
     const workedDates = new Set(rows.map((r) => r.date));

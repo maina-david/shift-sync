@@ -1,11 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SwapRequestsService } from './swap-requests.service';
 import { SwapRequest, SwapRequestStatus } from './entities/swap-request.entity';
-import { ShiftAssignment, AssignmentStatus } from '../shifts/entities/shift-assignment.entity';
+import {
+  ShiftAssignment,
+  AssignmentStatus,
+} from '../shifts/entities/shift-assignment.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { ConstraintCheckerService } from '../shifts/constraint-checker.service';
 import { Location } from '../locations/entities/location.entity';
@@ -14,10 +21,12 @@ import { NotificationType } from '../notifications/entities/notification.entity'
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-function buildQb(opts: {
-  getMany?: any[];
-  getManyAndCount?: [any[], number];
-} = {}) {
+function buildQb(
+  opts: {
+    getMany?: any[];
+    getManyAndCount?: [any[], number];
+  } = {},
+) {
   return {
     leftJoinAndSelect: jest.fn().mockReturnThis(),
     innerJoinAndSelect: jest.fn().mockReturnThis(),
@@ -28,12 +37,14 @@ function buildQb(opts: {
     take: jest.fn().mockReturnThis(),
     skip: jest.fn().mockReturnThis(),
     getMany: jest.fn().mockResolvedValue(opts.getMany ?? []),
-    getManyAndCount: jest.fn().mockResolvedValue(opts.getManyAndCount ?? [[], 0]),
+    getManyAndCount: jest
+      .fn()
+      .mockResolvedValue(opts.getManyAndCount ?? [[], 0]),
   };
 }
 
 const makeLocation = (id = 'loc-1'): Location =>
-  ({ id, name: 'North Beach', timezone: 'America/Los_Angeles' } as Location);
+  ({ id, name: 'North Beach', timezone: 'America/Los_Angeles' }) as Location;
 
 const makeStaff = (id = 'staff-1'): User =>
   ({
@@ -42,7 +53,7 @@ const makeStaff = (id = 'staff-1'): User =>
     role: UserRole.STAFF,
     certifiedLocations: [makeLocation()],
     skills: [],
-  } as unknown as User);
+  }) as unknown as User;
 
 const makeManager = (managedLocationIds: string[] = ['loc-1']): User =>
   ({
@@ -50,7 +61,7 @@ const makeManager = (managedLocationIds: string[] = ['loc-1']): User =>
     name: 'Marcus Johnson',
     role: UserRole.MANAGER,
     managedLocations: managedLocationIds.map((id) => makeLocation(id)),
-  } as unknown as User);
+  }) as unknown as User;
 
 const makeAssignment = (staffId = 'staff-1'): ShiftAssignment =>
   ({
@@ -67,7 +78,7 @@ const makeAssignment = (staffId = 'staff-1'): ShiftAssignment =>
       location: makeLocation(),
     },
     staff: makeStaff(staffId),
-  } as unknown as ShiftAssignment);
+  }) as unknown as ShiftAssignment;
 
 const makeSwap = (overrides: any = {}): SwapRequest =>
   ({
@@ -81,7 +92,7 @@ const makeSwap = (overrides: any = {}): SwapRequest =>
     managerNote: null,
     reviewedAt: null,
     ...overrides,
-  } as unknown as SwapRequest);
+  }) as unknown as SwapRequest;
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -129,7 +140,10 @@ describe('SwapRequestsService', () => {
     it('throws BadRequestException when MAX_PENDING_REQUESTS is reached', async () => {
       swapRepo.count.mockResolvedValue(3);
       await expect(
-        service.create({ fromAssignmentId: 'assign-1', toUserId: 'staff-2' }, makeStaff()),
+        service.create(
+          { fromAssignmentId: 'assign-1', toUserId: 'staff-2' },
+          makeStaff(),
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -137,7 +151,10 @@ describe('SwapRequestsService', () => {
       swapRepo.count.mockResolvedValue(0);
       assignRepo.findOne.mockResolvedValue(null);
       await expect(
-        service.create({ fromAssignmentId: 'missing', toUserId: 'staff-2' }, makeStaff()),
+        service.create(
+          { fromAssignmentId: 'missing', toUserId: 'staff-2' },
+          makeStaff(),
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -147,11 +164,20 @@ describe('SwapRequestsService', () => {
       userRepo.findOne.mockResolvedValue(makeStaff('staff-2'));
       constraints.check.mockResolvedValue({
         valid: false,
-        violations: [{ rule: 'location_certification', severity: 'error', message: 'Not certified' }],
+        violations: [
+          {
+            rule: 'location_certification',
+            severity: 'error',
+            message: 'Not certified',
+          },
+        ],
       });
 
       await expect(
-        service.create({ fromAssignmentId: 'assign-1', toUserId: 'staff-2' }, makeStaff()),
+        service.create(
+          { fromAssignmentId: 'assign-1', toUserId: 'staff-2' },
+          makeStaff(),
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -177,9 +203,14 @@ describe('SwapRequestsService', () => {
       expect(result.id).toBe('swap-1');
       expect(events.emit).toHaveBeenCalledWith(
         'notification.send',
-        expect.objectContaining({ type: NotificationType.SWAP_REQUEST_RECEIVED }),
+        expect.objectContaining({
+          type: NotificationType.SWAP_REQUEST_RECEIVED,
+        }),
       );
-      expect(events.emit).toHaveBeenCalledWith('audit.log', expect.objectContaining({ action: 'created' }));
+      expect(events.emit).toHaveBeenCalledWith(
+        'audit.log',
+        expect.objectContaining({ action: 'created' }),
+      );
     });
   });
 
@@ -188,28 +219,41 @@ describe('SwapRequestsService', () => {
     it('throws ForbiddenException when the swap is not addressed to the user', async () => {
       swapRepo.findOne.mockResolvedValue(makeSwap({ toUserId: 'staff-2' }));
       const wrongUser = makeStaff('staff-99');
-      await expect(service.accept('swap-1', wrongUser)).rejects.toThrow(ForbiddenException);
+      await expect(service.accept('swap-1', wrongUser)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('throws BadRequestException when swap is no longer PENDING', async () => {
-      swapRepo.findOne.mockResolvedValue(makeSwap({ status: SwapRequestStatus.ACCEPTED }));
-      await expect(service.accept('swap-1', makeStaff('staff-2'))).rejects.toThrow(BadRequestException);
+      swapRepo.findOne.mockResolvedValue(
+        makeSwap({ status: SwapRequestStatus.ACCEPTED }),
+      );
+      await expect(
+        service.accept('swap-1', makeStaff('staff-2')),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('updates status to ACCEPTED, notifies both parties, and emits audit.log', async () => {
       const swap = makeSwap({ status: SwapRequestStatus.PENDING });
       swapRepo.findOne.mockResolvedValue(swap);
-      swapRepo.save.mockResolvedValue({ ...swap, status: SwapRequestStatus.ACCEPTED });
+      swapRepo.save.mockResolvedValue({
+        ...swap,
+        status: SwapRequestStatus.ACCEPTED,
+      });
 
       const result = await service.accept('swap-1', makeStaff('staff-2'));
       expect(result.status).toBe(SwapRequestStatus.ACCEPTED);
       expect(events.emit).toHaveBeenCalledWith(
         'notification.send',
-        expect.objectContaining({ type: NotificationType.SWAP_REQUEST_ACCEPTED }),
+        expect.objectContaining({
+          type: NotificationType.SWAP_REQUEST_ACCEPTED,
+        }),
       );
       expect(events.emit).toHaveBeenCalledWith(
         'notification.sendToManagers',
-        expect.objectContaining({ type: NotificationType.SWAP_REQUEST_RECEIVED }),
+        expect.objectContaining({
+          type: NotificationType.SWAP_REQUEST_RECEIVED,
+        }),
       );
       expect(events.emit).toHaveBeenCalledWith(
         'audit.log',
@@ -222,12 +266,18 @@ describe('SwapRequestsService', () => {
   describe('reject (by target staff)', () => {
     it('throws ForbiddenException when the swap is not addressed to the user', async () => {
       swapRepo.findOne.mockResolvedValue(makeSwap({ toUserId: 'staff-2' }));
-      await expect(service.reject('swap-1', makeStaff('staff-99'))).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.reject('swap-1', makeStaff('staff-99')),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('throws BadRequestException when swap is not PENDING', async () => {
-      swapRepo.findOne.mockResolvedValue(makeSwap({ status: SwapRequestStatus.CANCELLED }));
-      await expect(service.reject('swap-1', makeStaff('staff-2'))).rejects.toThrow(BadRequestException);
+      swapRepo.findOne.mockResolvedValue(
+        makeSwap({ status: SwapRequestStatus.CANCELLED }),
+      );
+      await expect(
+        service.reject('swap-1', makeStaff('staff-2')),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('updates status to REJECTED, restores assignment, and emits audit.log', async () => {
@@ -247,7 +297,9 @@ describe('SwapRequestsService', () => {
       expect(result.status).toBe(SwapRequestStatus.REJECTED);
       expect(events.emit).toHaveBeenCalledWith(
         'notification.send',
-        expect.objectContaining({ type: NotificationType.SWAP_REQUEST_REJECTED }),
+        expect.objectContaining({
+          type: NotificationType.SWAP_REQUEST_REJECTED,
+        }),
       );
       expect(events.emit).toHaveBeenCalledWith(
         'audit.log',
@@ -259,15 +311,21 @@ describe('SwapRequestsService', () => {
   // ---------------------------------------------------------------------------
   describe('approve (by manager)', () => {
     it('throws BadRequestException when swap has not been accepted by both parties', async () => {
-      swapRepo.findOne.mockResolvedValue(makeSwap({ status: SwapRequestStatus.PENDING }));
-      await expect(service.approve('swap-1', makeManager(), {})).rejects.toThrow(BadRequestException);
+      swapRepo.findOne.mockResolvedValue(
+        makeSwap({ status: SwapRequestStatus.PENDING }),
+      );
+      await expect(
+        service.approve('swap-1', makeManager(), {}),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('throws ForbiddenException when manager does not manage the shift location', async () => {
       const swap = makeSwap({ status: SwapRequestStatus.ACCEPTED });
       swapRepo.findOne.mockResolvedValue(swap);
       const manager = makeManager(['loc-other']); // manages loc-other, shift is at loc-1
-      await expect(service.approve('swap-1', manager, {})).rejects.toThrow(ForbiddenException);
+      await expect(service.approve('swap-1', manager, {})).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('reassigns shift, notifies both parties, and emits audit.log on success', async () => {
@@ -277,19 +335,29 @@ describe('SwapRequestsService', () => {
       const approvedSwap = { ...swap, status: SwapRequestStatus.APPROVED };
       dataSource.transaction.mockImplementation(async (fn: any) => {
         const em = {
-          findOne: jest.fn().mockResolvedValue({ ...swap, fromAssignment: makeAssignment() }),
+          findOne: jest
+            .fn()
+            .mockResolvedValue({ ...swap, fromAssignment: makeAssignment() }),
           update: jest.fn(),
           create: jest.fn().mockReturnValue({}),
-          save: jest.fn().mockImplementation((entity: any, obj?: any) => Promise.resolve(obj ?? approvedSwap)),
+          save: jest
+            .fn()
+            .mockImplementation((entity: any, obj?: any) =>
+              Promise.resolve(obj ?? approvedSwap),
+            ),
         };
         return fn(em);
       });
 
-      const result = await service.approve('swap-1', makeManager(['loc-1']), { managerNote: 'Approved' });
+      const result = await service.approve('swap-1', makeManager(['loc-1']), {
+        managerNote: 'Approved',
+      });
       expect(result.status).toBe(SwapRequestStatus.APPROVED);
       expect(events.emit).toHaveBeenCalledWith(
         'notification.send',
-        expect.objectContaining({ type: NotificationType.SWAP_REQUEST_APPROVED }),
+        expect.objectContaining({
+          type: NotificationType.SWAP_REQUEST_APPROVED,
+        }),
       );
       expect(events.emit).toHaveBeenCalledWith(
         'audit.log',
@@ -301,14 +369,20 @@ describe('SwapRequestsService', () => {
   // ---------------------------------------------------------------------------
   describe('deny (by manager)', () => {
     it('throws BadRequestException when swap has not been accepted', async () => {
-      swapRepo.findOne.mockResolvedValue(makeSwap({ status: SwapRequestStatus.PENDING }));
-      await expect(service.deny('swap-1', makeManager(), {})).rejects.toThrow(BadRequestException);
+      swapRepo.findOne.mockResolvedValue(
+        makeSwap({ status: SwapRequestStatus.PENDING }),
+      );
+      await expect(service.deny('swap-1', makeManager(), {})).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws ForbiddenException when manager does not manage the location', async () => {
       const swap = makeSwap({ status: SwapRequestStatus.ACCEPTED });
       swapRepo.findOne.mockResolvedValue(swap);
-      await expect(service.deny('swap-1', makeManager(['loc-other']), {})).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.deny('swap-1', makeManager(['loc-other']), {}),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('denies and notifies both parties', async () => {
@@ -324,7 +398,9 @@ describe('SwapRequestsService', () => {
         return fn(em);
       });
 
-      const result = await service.deny('swap-1', makeManager(['loc-1']), { managerNote: 'Coverage needed' });
+      const result = await service.deny('swap-1', makeManager(['loc-1']), {
+        managerNote: 'Coverage needed',
+      });
       expect(result.status).toBe(SwapRequestStatus.DENIED);
       expect(events.emit).toHaveBeenCalledWith(
         'notification.send',
@@ -336,13 +412,21 @@ describe('SwapRequestsService', () => {
   // ---------------------------------------------------------------------------
   describe('cancel (by requester)', () => {
     it('throws ForbiddenException when a different user tries to cancel', async () => {
-      swapRepo.findOne.mockResolvedValue(makeSwap({ fromAssignment: makeAssignment('staff-1') }));
-      await expect(service.cancel('swap-1', makeStaff('staff-99'))).rejects.toThrow(ForbiddenException);
+      swapRepo.findOne.mockResolvedValue(
+        makeSwap({ fromAssignment: makeAssignment('staff-1') }),
+      );
+      await expect(
+        service.cancel('swap-1', makeStaff('staff-99')),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('throws BadRequestException when swap is not PENDING or ACCEPTED', async () => {
-      swapRepo.findOne.mockResolvedValue(makeSwap({ status: SwapRequestStatus.APPROVED }));
-      await expect(service.cancel('swap-1', makeStaff('staff-1'))).rejects.toThrow(BadRequestException);
+      swapRepo.findOne.mockResolvedValue(
+        makeSwap({ status: SwapRequestStatus.APPROVED }),
+      );
+      await expect(
+        service.cancel('swap-1', makeStaff('staff-1')),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('cancels and restores assignment status', async () => {

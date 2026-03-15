@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { getSocket } from '@/lib/socket';
+import { useEffect, useState, useCallback, useRef } from "react";
+import { getSocket } from "@/lib/socket";
 
-export type ConnectionQuality = 'offline' | 'slow' | 'online';
+export type ConnectionQuality = "offline" | "slow" | "online";
 
 export interface NetworkStatus {
   /** Browser reports network connectivity */
@@ -18,24 +18,27 @@ export interface NetworkStatus {
   reconnectAttempts: number;
 }
 
-const SLOW_TYPES = new Set(['slow-2g', '2g']);
+const SLOW_TYPES = new Set(["slow-2g", "2g"]);
 
 function getQuality(isOnline: boolean): ConnectionQuality {
-  if (!isOnline) return 'offline';
-  const conn = (navigator as any).connection ?? (navigator as any).mozConnection ?? (navigator as any).webkitConnection;
-  if (conn && SLOW_TYPES.has(conn.effectiveType)) return 'slow';
-  return 'online';
+  if (!isOnline) return "offline";
+  const conn =
+    (navigator as any).connection ??
+    (navigator as any).mozConnection ??
+    (navigator as any).webkitConnection;
+  if (conn && SLOW_TYPES.has(conn.effectiveType)) return "slow";
+  return "online";
 }
 
 export function useNetworkStatus(): NetworkStatus {
   const [isOnline, setIsOnline] = useState(() =>
-    typeof navigator !== 'undefined' ? navigator.onLine : true,
+    typeof navigator !== "undefined" ? navigator.onLine : true,
   );
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [quality, setQuality] = useState<ConnectionQuality>(() =>
-    typeof navigator !== 'undefined' ? getQuality(navigator.onLine) : 'online',
+    typeof navigator !== "undefined" ? getQuality(navigator.onLine) : "online",
   );
 
   // Keep a ref so socket handlers don't close over stale state
@@ -46,7 +49,7 @@ export function useNetworkStatus(): NetworkStatus {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
     // ── Browser online/offline ────────────────────────────────────────────────
     const handleOnline = () => {
@@ -55,15 +58,18 @@ export function useNetworkStatus(): NetworkStatus {
     };
     const handleOffline = () => {
       setIsOnline(false);
-      setQuality('offline');
+      setQuality("offline");
     };
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
     // ── navigator.connection quality changes ──────────────────────────────────
-    const conn = (navigator as any).connection ?? (navigator as any).mozConnection ?? (navigator as any).webkitConnection;
-    conn?.addEventListener('change', refreshQuality);
+    const conn =
+      (navigator as any).connection ??
+      (navigator as any).mozConnection ??
+      (navigator as any).webkitConnection;
+    conn?.addEventListener("change", refreshQuality);
 
     // ── Socket.io events ──────────────────────────────────────────────────────
     const socket = getSocket();
@@ -89,21 +95,27 @@ export function useNetworkStatus(): NetworkStatus {
     // Seed initial socket state
     setIsSocketConnected(socket.connected);
 
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
-    socket.io.on('reconnect_attempt', onReconnectAttempt);
-    socket.io.on('reconnect_failed', onReconnectFailed);
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.io.on("reconnect_attempt", onReconnectAttempt);
+    socket.io.on("reconnect_failed", onReconnectFailed);
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      conn?.removeEventListener('change', refreshQuality);
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
-      socket.io.off('reconnect_attempt', onReconnectAttempt);
-      socket.io.off('reconnect_failed', onReconnectFailed);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      conn?.removeEventListener("change", refreshQuality);
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.io.off("reconnect_attempt", onReconnectAttempt);
+      socket.io.off("reconnect_failed", onReconnectFailed);
     };
   }, [refreshQuality]);
 
-  return { isOnline, isSocketConnected, quality, isReconnecting, reconnectAttempts };
+  return {
+    isOnline,
+    isSocketConnected,
+    quality,
+    isReconnecting,
+    reconnectAttempts,
+  };
 }

@@ -12,12 +12,12 @@ import { ShiftAssignment } from '../../shifts/entities/shift-assignment.entity';
 import { User } from '../../users/entities/user.entity';
 
 export enum SwapRequestStatus {
-  PENDING = 'pending',       // Waiting for target staff to accept
-  ACCEPTED = 'accepted',     // Target accepted; waiting for manager
-  REJECTED = 'rejected',     // Target rejected
-  APPROVED = 'approved',     // Manager approved — swap is live
-  DENIED = 'denied',         // Manager denied
-  CANCELLED = 'cancelled',   // Requester cancelled
+  PENDING = 'pending', // Waiting for target staff to accept
+  ACCEPTED = 'accepted', // Target accepted; waiting for manager
+  REJECTED = 'rejected', // Target rejected
+  APPROVED = 'approved', // Manager approved — swap is live
+  DENIED = 'denied', // Manager denied
+  CANCELLED = 'cancelled', // Requester cancelled
 }
 
 @Entity('swap_requests')
@@ -41,7 +41,11 @@ export class SwapRequest {
   @Column()
   toUserId: string;
 
-  @Column({ type: 'enum', enum: SwapRequestStatus, default: SwapRequestStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: SwapRequestStatus,
+    default: SwapRequestStatus.PENDING,
+  })
   status: SwapRequestStatus;
 
   @Column({ nullable: true, type: 'text', default: null })

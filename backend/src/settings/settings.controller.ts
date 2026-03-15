@@ -25,7 +25,9 @@ export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List all system settings with current values (admin only)' })
+  @ApiOperation({
+    summary: 'List all system settings with current values (admin only)',
+  })
   findAll() {
     return this.settingsService.findAll();
   }
@@ -34,14 +36,17 @@ export class SettingsController {
   @ApiOperation({ summary: 'Update a system setting by key (admin only)' })
   update(
     @Param('key') key: string,
-    @Body() body: { value?: unknown; description?: string; isEnabled?: boolean },
+    @Body()
+    body: { value?: unknown; description?: string; isEnabled?: boolean },
   ) {
     return this.settingsService.set(key, body);
   }
 
   @Post('reset')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Reset all settings to their default values (admin only)' })
+  @ApiOperation({
+    summary: 'Reset all settings to their default values (admin only)',
+  })
   async resetToDefaults(): Promise<void> {
     await this.settingsService.resetToDefaults();
   }

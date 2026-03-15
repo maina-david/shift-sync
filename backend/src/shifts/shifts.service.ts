@@ -9,17 +9,30 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, Between, In } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Shift, ShiftStatus } from './entities/shift.entity';
-import { ShiftAssignment, AssignmentStatus } from './entities/shift-assignment.entity';
+import {
+  ShiftAssignment,
+  AssignmentStatus,
+} from './entities/shift-assignment.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { Availability } from '../users/entities/availability.entity';
-import { SwapRequest, SwapRequestStatus } from '../swap-requests/entities/swap-request.entity';
-import { DropRequest, DropRequestStatus } from '../drop-requests/entities/drop-request.entity';
+import {
+  SwapRequest,
+  SwapRequestStatus,
+} from '../swap-requests/entities/swap-request.entity';
+import {
+  DropRequest,
+  DropRequestStatus,
+} from '../drop-requests/entities/drop-request.entity';
 import { ConstraintCheckerService } from './constraint-checker.service';
 import { CreateShiftDto } from './dto/create-shift.dto';
 import { UpdateShiftDto } from './dto/update-shift.dto';
 import { AssignStaffDto } from './dto/assign-staff.dto';
 import { PublishWeekDto } from './dto/publish-week.dto';
-import { addDays, weekStart, shiftToUTCRange, minutesBetween } from '../common/timezone.util';
+import {
+  addDays,
+  shiftToUTCRange,
+  minutesBetween,
+} from '../common/timezone.util';
 import { UsersService } from '../users/users.service';
 import { SettingsService } from '../settings/settings.service';
 import { AutoScheduleDto } from './dto/auto-schedule.dto';
@@ -30,7 +43,8 @@ export class ShiftsService {
 
   constructor(
     @InjectRepository(Shift) private shiftRepo: Repository<Shift>,
-    @InjectRepository(ShiftAssignment) private assignRepo: Repository<ShiftAssignment>,
+    @InjectRepository(ShiftAssignment)
+    private assignRepo: Repository<ShiftAssignment>,
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Availability) private availRepo: Repository<Availability>,
     @InjectRepository(DropRequest) private dropRepo: Repository<DropRequest>,
@@ -46,7 +60,10 @@ export class ShiftsService {
     try {
       this.events.emit(event, payload);
     } catch (err) {
-      this.logger.error(`Event emission failed for "${event}": ${(err as Error).message}`, (err as Error).stack);
+      this.logger.error(
+        `Event emission failed for "${event}": ${(err as Error).message}`,
+        (err as Error).stack,
+      );
     }
   }
 
@@ -74,25 +91,32 @@ export class ShiftsService {
       .take(limit);
 
     if (options.locationId) {
-      qb.andWhere('s.locationId = :locationId', { locationId: options.locationId });
+      qb.andWhere('s.locationId = :locationId', {
+        locationId: options.locationId,
+      });
     }
 
     if (options.requestingUser.role === UserRole.MANAGER) {
-      const managedIds = options.requestingUser.managedLocations?.map((l) => l.id) ?? [];
+      const managedIds =
+        options.requestingUser.managedLocations?.map((l) => l.id) ?? [];
       if (managedIds.length === 0) return { data: [], total: 0, page, limit };
       qb.andWhere('s.locationId IN (:...managedIds)', { managedIds });
     }
 
     if (options.requestingUser.role === UserRole.STAFF) {
-      const certifiedIds = options.requestingUser.certifiedLocations?.map((l) => l.id) ?? [];
+      const certifiedIds =
+        options.requestingUser.certifiedLocations?.map((l) => l.id) ?? [];
       if (certifiedIds.length === 0) return { data: [], total: 0, page, limit };
       qb.andWhere('s.locationId IN (:...certifiedIds)', { certifiedIds });
       qb.andWhere('s.status = :pub', { pub: ShiftStatus.PUBLISHED });
     }
 
-    if (options.startDate) qb.andWhere('s.date >= :startDate', { startDate: options.startDate });
-    if (options.endDate) qb.andWhere('s.date <= :endDate', { endDate: options.endDate });
-    if (options.status) qb.andWhere('s.status = :status', { status: options.status });
+    if (options.startDate)
+      qb.andWhere('s.date >= :startDate', { startDate: options.startDate });
+    if (options.endDate)
+      qb.andWhere('s.date <= :endDate', { endDate: options.endDate });
+    if (options.status)
+      qb.andWhere('s.status = :status', { status: options.status });
 
     const [data, total] = await qb.getManyAndCount();
     return { data, total, page, limit };
@@ -101,7 +125,14 @@ export class ShiftsService {
   async findOne(id: string) {
     const shift = await this.shiftRepo.findOne({
       where: { id },
-      relations: ['assignments', 'assignments.staff', 'assignments.assignedBy', 'location', 'requiredSkill', 'publishedBy'],
+      relations: [
+        'assignments',
+        'assignments.staff',
+        'assignments.assignedBy',
+        'location',
+        'requiredSkill',
+        'publishedBy',
+      ],
     });
     if (!shift) throw new NotFoundException('Shift not found');
     return shift;
@@ -109,8 +140,11 @@ export class ShiftsService {
 
   async create(dto: CreateShiftDto, manager: User) {
     if (manager.role === UserRole.MANAGER) {
-      const manages = manager.managedLocations?.some((l) => l.id === dto.locationId);
-      if (!manages) throw new ForbiddenException('You do not manage this location');
+      const manages = manager.managedLocations?.some(
+        (l) => l.id === dto.locationId,
+      );
+      if (!manages)
+        throw new ForbiddenException('You do not manage this location');
     }
 
     const isOvernight = dto.endTime < dto.startTime;
@@ -121,7 +155,10 @@ export class ShiftsService {
       isOvernight,
     });
     const saved = await this.shiftRepo.save(shift);
-    this.safeEmit('schedule.updated', { shiftId: saved.id, locationId: saved.locationId });
+    this.safeEmit('schedule.updated', {
+      shiftId: saved.id,
+      locationId: saved.locationId,
+    });
     return this.findOne(saved.id);
   }
 
@@ -150,7 +187,8 @@ export class ShiftsService {
     }
 
     if (dto.startTime || dto.endTime) {
-      shift.isOvernight = (dto.endTime ?? shift.endTime) < (dto.startTime ?? shift.startTime);
+      shift.isOvernight =
+        (dto.endTime ?? shift.endTime) < (dto.startTime ?? shift.startTime);
     }
 
     const assignmentIds = shift.assignments.map((a) => a.id);
@@ -161,7 +199,10 @@ export class ShiftsService {
 
       if (assignmentIds.length > 0) {
         const pendingSwaps = await em.find(SwapRequest, {
-          where: { fromAssignmentId: In(assignmentIds), status: SwapRequestStatus.PENDING },
+          where: {
+            fromAssignmentId: In(assignmentIds),
+            status: SwapRequestStatus.PENDING,
+          },
           relations: ['fromAssignment', 'toUser'],
         });
         for (const swap of pendingSwaps) {
@@ -193,7 +234,10 @@ export class ShiftsService {
       });
     }
 
-    this.safeEmit('schedule.updated', { shiftId: saved.id, locationId: saved.locationId });
+    this.safeEmit('schedule.updated', {
+      shiftId: saved.id,
+      locationId: saved.locationId,
+    });
     return this.findOne(saved.id);
   }
 
@@ -204,14 +248,19 @@ export class ShiftsService {
 
     // Cancel all active assignments and their related drop/swap requests
     const activeAssignments = shift.assignments.filter(
-      (a) => a.status === AssignmentStatus.ASSIGNED || a.status === AssignmentStatus.PENDING_SWAP,
+      (a) =>
+        a.status === AssignmentStatus.ASSIGNED ||
+        a.status === AssignmentStatus.PENDING_SWAP,
     );
     for (const assignment of activeAssignments) {
       assignment.status = AssignmentStatus.CANCELLED;
       await this.assignRepo.save(assignment);
 
       const openDrops = await this.dropRepo.find({
-        where: { assignmentId: assignment.id, status: In([DropRequestStatus.OPEN, DropRequestStatus.CLAIMED]) },
+        where: {
+          assignmentId: assignment.id,
+          status: In([DropRequestStatus.OPEN, DropRequestStatus.CLAIMED]),
+        },
       });
       for (const drop of openDrops) {
         drop.status = DropRequestStatus.CANCELLED;
@@ -219,7 +268,10 @@ export class ShiftsService {
       }
 
       const pendingSwaps = await this.swapRepo.find({
-        where: { fromAssignmentId: assignment.id, status: SwapRequestStatus.PENDING },
+        where: {
+          fromAssignmentId: assignment.id,
+          status: SwapRequestStatus.PENDING,
+        },
       });
       for (const swap of pendingSwaps) {
         swap.status = SwapRequestStatus.CANCELLED;
@@ -270,14 +322,20 @@ export class ShiftsService {
       });
     }
 
-    this.safeEmit('schedule.updated', { shiftId: saved.id, locationId: saved.locationId });
+    this.safeEmit('schedule.updated', {
+      shiftId: saved.id,
+      locationId: saved.locationId,
+    });
     return this.findOne(saved.id);
   }
 
   async publishWeek(dto: PublishWeekDto, manager: User) {
     if (manager.role === UserRole.MANAGER) {
-      const manages = manager.managedLocations?.some((l) => l.id === dto.locationId);
-      if (!manages) throw new ForbiddenException('You do not manage this location');
+      const manages = manager.managedLocations?.some(
+        (l) => l.id === dto.locationId,
+      );
+      if (!manages)
+        throw new ForbiddenException('You do not manage this location');
     }
 
     const weekEnd = addDays(dto.weekStart, 6); // Mon + 6 = Sun (inclusive both ends via Between)
@@ -297,7 +355,9 @@ export class ShiftsService {
     }
     await this.shiftRepo.save(shifts);
 
-    const staffIds = new Set(shifts.flatMap((s) => s.assignments.map((a) => a.staffId)));
+    const staffIds = new Set(
+      shifts.flatMap((s) => s.assignments.map((a) => a.staffId)),
+    );
     for (const staffId of staffIds) {
       this.safeEmit('notification.send', {
         userId: staffId,
@@ -309,7 +369,10 @@ export class ShiftsService {
       });
     }
 
-    this.safeEmit('schedule.updated', { locationId: dto.locationId, weekStart: dto.weekStart });
+    this.safeEmit('schedule.updated', {
+      locationId: dto.locationId,
+      weekStart: dto.weekStart,
+    });
     return { published: shifts.length };
   }
 
@@ -323,8 +386,11 @@ export class ShiftsService {
       throw new ForbiddenException();
     }
     if (manager.role === UserRole.MANAGER) {
-      const manages = manager.managedLocations?.some((l) => l.id === locationId);
-      if (!manages) throw new ForbiddenException('You do not manage this location');
+      const manages = manager.managedLocations?.some(
+        (l) => l.id === locationId,
+      );
+      if (!manages)
+        throw new ForbiddenException('You do not manage this location');
     }
 
     const sourceEnd = addDays(sourceWeekStart, 6); // Mon + 6 = Sun (inclusive both ends via Between)
@@ -344,11 +410,14 @@ export class ShiftsService {
     }
 
     if (existingCount > 0) {
-      throw new BadRequestException('Target week already has shifts. Delete them first or choose a different target week.');
+      throw new BadRequestException(
+        'Target week already has shifts. Delete them first or choose a different target week.',
+      );
     }
 
     const dayOffset = Math.round(
-      (new Date(targetWeekStart).getTime() - new Date(sourceWeekStart).getTime()) /
+      (new Date(targetWeekStart).getTime() -
+        new Date(sourceWeekStart).getTime()) /
         86400000,
     );
 
@@ -383,17 +452,26 @@ export class ShiftsService {
     const shiftStart = new Date(`${shift.date}T${shift.startTime}:00`);
     const hoursUntil = (shiftStart.getTime() - Date.now()) / 3600000;
     if (hoursUntil < CUTOFF_HOURS) {
-      throw new BadRequestException(`Cannot unpublish within ${CUTOFF_HOURS}h of shift start.`);
+      throw new BadRequestException(
+        `Cannot unpublish within ${CUTOFF_HOURS}h of shift start.`,
+      );
     }
 
     shift.status = ShiftStatus.DRAFT;
     shift.publishedAt = null;
     const saved = await this.shiftRepo.save(shift);
-    this.safeEmit('schedule.updated', { shiftId: saved.id, locationId: saved.locationId });
+    this.safeEmit('schedule.updated', {
+      shiftId: saved.id,
+      locationId: saved.locationId,
+    });
     return saved;
   }
 
-  async validateAssignment(shiftId: string, dto: AssignStaffDto, requestingUser: User) {
+  async validateAssignment(
+    shiftId: string,
+    dto: AssignStaffDto,
+    requestingUser: User,
+  ) {
     const shift = await this.findOne(shiftId);
     this.assertCanManage(shift, requestingUser);
     const staff = await this.userRepo.findOne({
@@ -402,7 +480,11 @@ export class ShiftsService {
     });
     if (!staff) throw new NotFoundException('Staff member not found');
 
-    const result = await this.constraints.check(shift, staff, dto.overrideReason);
+    const result = await this.constraints.check(
+      shift,
+      staff,
+      dto.overrideReason,
+    );
 
     let alternatives: { id: string; name: string }[] = [];
     if (!result.valid) {
@@ -411,7 +493,9 @@ export class ShiftsService {
         shift.locationId,
         [dto.staffId],
       );
-      alternatives = qualified.slice(0, 5).map((u) => ({ id: u.id, name: u.name }));
+      alternatives = qualified
+        .slice(0, 5)
+        .map((u) => ({ id: u.id, name: u.name }));
     }
 
     return { ...result, alternatives };
@@ -422,16 +506,24 @@ export class ShiftsService {
     this.assertCanManage(shift, manager);
 
     const currentCount = shift.assignments.filter(
-      (a) => a.status === AssignmentStatus.ASSIGNED || a.status === AssignmentStatus.PENDING_SWAP,
+      (a) =>
+        a.status === AssignmentStatus.ASSIGNED ||
+        a.status === AssignmentStatus.PENDING_SWAP,
     ).length;
     if (currentCount >= shift.headcount) {
-      throw new BadRequestException(`Shift is already fully staffed (${shift.headcount} needed).`);
+      throw new BadRequestException(
+        `Shift is already fully staffed (${shift.headcount} needed).`,
+      );
     }
 
     const already = shift.assignments.find(
-      (a) => a.staffId === dto.staffId && a.status !== AssignmentStatus.CANCELLED,
+      (a) =>
+        a.staffId === dto.staffId && a.status !== AssignmentStatus.CANCELLED,
     );
-    if (already) throw new BadRequestException('Staff member is already assigned to this shift.');
+    if (already)
+      throw new BadRequestException(
+        'Staff member is already assigned to this shift.',
+      );
 
     const staff = await this.userRepo.findOne({
       where: { id: dto.staffId },
@@ -439,7 +531,11 @@ export class ShiftsService {
     });
     if (!staff) throw new NotFoundException('Staff member not found');
 
-    const constraintResult = await this.constraints.check(shift, staff, dto.overrideReason);
+    const constraintResult = await this.constraints.check(
+      shift,
+      staff,
+      dto.overrideReason,
+    );
     if (!constraintResult.valid) {
       throw new BadRequestException({
         message: 'Assignment violates scheduling constraints',
@@ -460,7 +556,9 @@ export class ShiftsService {
       if (!locked) throw new NotFoundException('Shift not found');
 
       const lockedCount = locked.assignments.filter(
-        (a) => a.status === AssignmentStatus.ASSIGNED || a.status === AssignmentStatus.PENDING_SWAP,
+        (a) =>
+          a.status === AssignmentStatus.ASSIGNED ||
+          a.status === AssignmentStatus.PENDING_SWAP,
       ).length;
       if (lockedCount >= locked.headcount) {
         this.safeEmit('assignment.conflict', {
@@ -469,11 +567,14 @@ export class ShiftsService {
           staffId: dto.staffId,
           message: `${staff.name} could not be assigned — the shift was just filled by another manager.`,
         });
-        throw new BadRequestException(`Shift is already fully staffed (${locked.headcount} needed).`);
+        throw new BadRequestException(
+          `Shift is already fully staffed (${locked.headcount} needed).`,
+        );
       }
 
       const dup = locked.assignments.find(
-        (a) => a.staffId === dto.staffId && a.status !== AssignmentStatus.CANCELLED,
+        (a) =>
+          a.staffId === dto.staffId && a.status !== AssignmentStatus.CANCELLED,
       );
       if (dup) {
         this.safeEmit('assignment.conflict', {
@@ -482,7 +583,9 @@ export class ShiftsService {
           staffId: dto.staffId,
           message: `${staff.name} was simultaneously assigned to this shift by another manager.`,
         });
-        throw new BadRequestException('Staff member is already assigned to this shift.');
+        throw new BadRequestException(
+          'Staff member is already assigned to this shift.',
+        );
       }
 
       const assignment = em.create(ShiftAssignment, {
@@ -512,7 +615,9 @@ export class ShiftsService {
       entityId: shiftId,
     });
 
-    const overtimeWarning = constraintResult.warnings.find((w) => w.rule === 'weekly_hours');
+    const overtimeWarning = constraintResult.warnings.find(
+      (w) => w.rule === 'weekly_hours',
+    );
     if (overtimeWarning) {
       this.safeEmit('notification.send', {
         userId: manager.id,
@@ -524,7 +629,10 @@ export class ShiftsService {
       });
     }
 
-    this.safeEmit('schedule.updated', { shiftId, locationId: shift.locationId });
+    this.safeEmit('schedule.updated', {
+      shiftId,
+      locationId: shift.locationId,
+    });
     return saved;
   }
 
@@ -532,7 +640,9 @@ export class ShiftsService {
     const shift = await this.findOne(shiftId);
     this.assertCanManage(shift, manager);
 
-    const assignment = await this.assignRepo.findOne({ where: { id: assignmentId, shiftId } });
+    const assignment = await this.assignRepo.findOne({
+      where: { id: assignmentId, shiftId },
+    });
     if (!assignment) throw new NotFoundException('Assignment not found');
 
     assignment.status = AssignmentStatus.CANCELLED;
@@ -552,7 +662,10 @@ export class ShiftsService {
 
     // Cancel any pending swap requests originating from this assignment
     const pendingSwaps = await this.swapRepo.find({
-      where: { fromAssignmentId: assignmentId, status: SwapRequestStatus.PENDING },
+      where: {
+        fromAssignmentId: assignmentId,
+        status: SwapRequestStatus.PENDING,
+      },
     });
     for (const swap of pendingSwaps) {
       swap.status = SwapRequestStatus.CANCELLED;
@@ -585,14 +698,20 @@ export class ShiftsService {
       entityId: shiftId,
     });
 
-    this.safeEmit('schedule.updated', { shiftId, locationId: shift.locationId });
+    this.safeEmit('schedule.updated', {
+      shiftId,
+      locationId: shift.locationId,
+    });
     return saved;
   }
 
   async confirmAssignment(shiftId: string, assignmentId: string, staff: User) {
-    const assignment = await this.assignRepo.findOne({ where: { id: assignmentId, shiftId } });
+    const assignment = await this.assignRepo.findOne({
+      where: { id: assignmentId, shiftId },
+    });
     if (!assignment) throw new NotFoundException('Assignment not found');
-    if (assignment.staffId !== staff.id) throw new ForbiddenException('Not your assignment');
+    if (assignment.staffId !== staff.id)
+      throw new ForbiddenException('Not your assignment');
     if (assignment.confirmedAt) return assignment; // Already confirmed — idempotent
     assignment.confirmedAt = new Date();
     return this.assignRepo.save(assignment);
@@ -612,7 +731,9 @@ export class ShiftsService {
         .leftJoinAndSelect('s.requiredSkill', 'skill')
         .where('s.locationId IN (:...certifiedIds)', { certifiedIds })
         .andWhere('s.status = :pub', { pub: ShiftStatus.PUBLISHED })
-        .andWhere('s.date >= :today', { today: new Date().toISOString().slice(0, 10) })
+        .andWhere('s.date >= :today', {
+          today: new Date().toISOString().slice(0, 10),
+        })
         .getMany(),
       this.assignRepo
         .createQueryBuilder('a')
@@ -626,20 +747,42 @@ export class ShiftsService {
     ]);
 
     const existingRanges = existingAssignments.map((a) =>
-      shiftToUTCRange(a.shift.date, a.shift.startTime, a.shift.endTime, a.shift.location.timezone),
+      shiftToUTCRange(
+        a.shift.date,
+        a.shift.startTime,
+        a.shift.endTime,
+        a.shift.location.timezone,
+      ),
     );
     const MIN_REST_MS = 10 * 60 * 60 * 1000;
 
     return shifts.filter((s) => {
       if (s.assignments.length >= s.headcount) return false;
       if (s.assignments.some((a) => a.staffId === staff.id)) return false;
-      if (s.requiredSkillId && !staff.skills?.some((sk) => sk.id === s.requiredSkillId)) return false;
+      if (
+        s.requiredSkillId &&
+        !staff.skills?.some((sk) => sk.id === s.requiredSkillId)
+      )
+        return false;
 
-      const { startUTC, endUTC } = shiftToUTCRange(s.date, s.startTime, s.endTime, s.location.timezone);
+      const { startUTC, endUTC } = shiftToUTCRange(
+        s.date,
+        s.startTime,
+        s.endTime,
+        s.location.timezone,
+      );
       for (const { startUTC: exStart, endUTC: exEnd } of existingRanges) {
         if (startUTC < exEnd && endUTC > exStart) return false;
-        if (startUTC >= exEnd && startUTC.getTime() - exEnd.getTime() < MIN_REST_MS) return false;
-        if (exStart >= endUTC && exStart.getTime() - endUTC.getTime() < MIN_REST_MS) return false;
+        if (
+          startUTC >= exEnd &&
+          startUTC.getTime() - exEnd.getTime() < MIN_REST_MS
+        )
+          return false;
+        if (
+          exStart >= endUTC &&
+          exStart.getTime() - endUTC.getTime() < MIN_REST_MS
+        )
+          return false;
       }
       return true;
     });
@@ -661,7 +804,9 @@ export class ShiftsService {
       .andWhere('a.status = :status', { status: AssignmentStatus.ASSIGNED });
 
     if (requestingUser.role === UserRole.MANAGER) {
-      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
+      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? [
+        '__none__',
+      ];
       qb.andWhere('s.locationId IN (:...ids)', { ids });
     }
 
@@ -675,7 +820,9 @@ export class ShiftsService {
         s.endTime,
         s.location.timezone,
       );
-      return now.getTime() >= startUTC.getTime() && now.getTime() < endUTC.getTime();
+      return (
+        now.getTime() >= startUTC.getTime() && now.getTime() < endUTC.getTime()
+      );
     });
   }
 
@@ -684,11 +831,16 @@ export class ShiftsService {
    * who are available on the given date (dayOfWeek match) and are NOT
    * already assigned to any shift that day at any location.
    */
-  async getCrossLocationAvailable(locationId: string, date: string): Promise<User[]> {
+  async getCrossLocationAvailable(
+    locationId: string,
+    date: string,
+  ): Promise<User[]> {
     // 1. Find all users certified at the target location
     const certifiedStaff = await this.userRepo
       .createQueryBuilder('u')
-      .innerJoin('u.certifiedLocations', 'loc', 'loc.id = :locationId', { locationId })
+      .innerJoin('u.certifiedLocations', 'loc', 'loc.id = :locationId', {
+        locationId,
+      })
       .leftJoinAndSelect('u.availabilities', 'avail')
       .where('u.isActive = :active', { active: true })
       .andWhere('u.role = :role', { role: UserRole.STAFF })
@@ -726,8 +878,11 @@ export class ShiftsService {
 
     // Authorization: managers may only auto-schedule for their own locations
     if (requester.role === UserRole.MANAGER) {
-      const manages = requester.managedLocations?.some((l) => l.id === locationId);
-      if (!manages) throw new ForbiddenException('You do not manage this location');
+      const manages = requester.managedLocations?.some(
+        (l) => l.id === locationId,
+      );
+      if (!manages)
+        throw new ForbiddenException('You do not manage this location');
     }
     const slotsPerDay = dto.shiftsPerDay ?? 3;
     const minStaff = dto.minStaffPerShift ?? 1;
@@ -746,7 +901,9 @@ export class ShiftsService {
     // 1. Fetch all active STAFF certified at locationId with their availabilities
     const certifiedStaff = await this.userRepo
       .createQueryBuilder('u')
-      .innerJoin('u.certifiedLocations', 'loc', 'loc.id = :locationId', { locationId })
+      .innerJoin('u.certifiedLocations', 'loc', 'loc.id = :locationId', {
+        locationId,
+      })
       .leftJoinAndSelect('u.availabilities', 'avail')
       .where('u.isActive = :active', { active: true })
       .andWhere('u.role = :role', { role: UserRole.STAFF })
@@ -757,7 +914,12 @@ export class ShiftsService {
     const weekEnd = addDays(wkStart, 7);
     const staffIds = certifiedStaff.map((u) => u.id);
 
-    type RawAssignment = { staffId: string; date: string; startTime: string; endTime: string };
+    type RawAssignment = {
+      staffId: string;
+      date: string;
+      startTime: string;
+      endTime: string;
+    };
     let weekAssignments: RawAssignment[] = [];
     if (staffIds.length > 0) {
       weekAssignments = await this.assignRepo
@@ -783,22 +945,35 @@ export class ShiftsService {
     for (const u of certifiedStaff) weeklyMinutesMap.set(u.id, 0);
     for (const row of weekAssignments) {
       const mins = minutesBetween(row.startTime, row.endTime);
-      weeklyMinutesMap.set(row.staffId, (weeklyMinutesMap.get(row.staffId) ?? 0) + mins);
+      weeklyMinutesMap.set(
+        row.staffId,
+        (weeklyMinutesMap.get(row.staffId) ?? 0) + mins,
+      );
     }
 
     // Build per-staff per-date assignment set (to detect same-day conflicts)
     const assignedDates = new Map<string, Set<string>>(); // staffId → Set<date>
     for (const row of weekAssignments) {
-      if (!assignedDates.has(row.staffId)) assignedDates.set(row.staffId, new Set());
+      if (!assignedDates.has(row.staffId))
+        assignedDates.set(row.staffId, new Set());
       assignedDates.get(row.staffId)!.add(row.date);
     }
 
-    const unfilledSlots: { date: string; startTime: string; endTime: string; reason: string }[] = [];
+    const unfilledSlots: {
+      date: string;
+      startTime: string;
+      endTime: string;
+      reason: string;
+    }[] = [];
 
     // 2. Plan all slots before writing — collect what would be created
     type PlannedSlot = {
-      date: string; startTime: string; endTime: string; headcount: number;
-      isOvernight: boolean; staffIds: string[];
+      date: string;
+      startTime: string;
+      endTime: string;
+      headcount: number;
+      isOvernight: boolean;
+      staffIds: string[];
     };
     const plannedSlots: PlannedSlot[] = [];
 
@@ -825,12 +1000,18 @@ export class ShiftsService {
           }
           if (assignedDates.get(u.id)?.has(date)) return false;
           const currentMinutes = weeklyMinutesMap.get(u.id) ?? 0;
-          if (currentMinutes + slotMinutes > s.weeklyOvertimeHours * 60) return false;
+          if (currentMinutes + slotMinutes > s.weeklyOvertimeHours * 60)
+            return false;
           return true;
         });
 
         if (candidates.length === 0) {
-          unfilledSlots.push({ date, startTime: slot.startTime, endTime: slot.endTime, reason: 'No eligible staff available for this slot' });
+          unfilledSlots.push({
+            date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            reason: 'No eligible staff available for this slot',
+          });
           continue;
         }
 
@@ -841,50 +1022,75 @@ export class ShiftsService {
           return a.name.localeCompare(b.name);
         });
 
-        const picks = candidates.slice(0, Math.min(minStaff, candidates.length));
+        const picks = candidates.slice(
+          0,
+          Math.min(minStaff, candidates.length),
+        );
 
         if (picks.length < minStaff) {
-          unfilledSlots.push({ date, startTime: slot.startTime, endTime: slot.endTime, reason: `Only ${picks.length} of ${minStaff} required staff available` });
+          unfilledSlots.push({
+            date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            reason: `Only ${picks.length} of ${minStaff} required staff available`,
+          });
         }
 
         plannedSlots.push({
-          date, startTime: slot.startTime, endTime: slot.endTime,
-          headcount: picks.length, isOvernight: slot.endTime < slot.startTime,
+          date,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          headcount: picks.length,
+          isOvernight: slot.endTime < slot.startTime,
           staffIds: picks.map((p) => p.id),
         });
 
         // Update in-memory tracking so subsequent slots reflect the new load
         for (const staff of picks) {
-          weeklyMinutesMap.set(staff.id, (weeklyMinutesMap.get(staff.id) ?? 0) + slotMinutes);
-          if (!assignedDates.has(staff.id)) assignedDates.set(staff.id, new Set());
+          weeklyMinutesMap.set(
+            staff.id,
+            (weeklyMinutesMap.get(staff.id) ?? 0) + slotMinutes,
+          );
+          if (!assignedDates.has(staff.id))
+            assignedDates.set(staff.id, new Set());
           assignedDates.get(staff.id)!.add(date);
         }
       }
     }
 
     // 3. Persist all planned shifts and assignments in a single transaction
-    const { createdShifts, createdAssignments } = await this.dataSource.transaction(async (em) => {
-      const shifts: Shift[] = [];
-      const assignments: ShiftAssignment[] = [];
+    const { createdShifts, createdAssignments } =
+      await this.dataSource.transaction(async (em) => {
+        const shifts: Shift[] = [];
+        const assignments: ShiftAssignment[] = [];
 
-      for (const plan of plannedSlots) {
-        const shift = em.create(Shift, {
-          locationId, date: plan.date, startTime: plan.startTime, endTime: plan.endTime,
-          headcount: plan.headcount, isOvernight: plan.isOvernight,
-          status: ShiftStatus.DRAFT, notes: 'Auto-generated draft',
-        });
-        const savedShift = await em.save(Shift, shift);
-        shifts.push(savedShift);
+        for (const plan of plannedSlots) {
+          const shift = em.create(Shift, {
+            locationId,
+            date: plan.date,
+            startTime: plan.startTime,
+            endTime: plan.endTime,
+            headcount: plan.headcount,
+            isOvernight: plan.isOvernight,
+            status: ShiftStatus.DRAFT,
+            notes: 'Auto-generated draft',
+          });
+          const savedShift = await em.save(Shift, shift);
+          shifts.push(savedShift);
 
-        for (const staffId of plan.staffIds) {
-          const assignment = em.create(ShiftAssignment, { shiftId: savedShift.id, staffId, assignedById: requester.id });
-          const savedAssignment = await em.save(ShiftAssignment, assignment);
-          assignments.push(savedAssignment);
+          for (const staffId of plan.staffIds) {
+            const assignment = em.create(ShiftAssignment, {
+              shiftId: savedShift.id,
+              staffId,
+              assignedById: requester.id,
+            });
+            const savedAssignment = await em.save(ShiftAssignment, assignment);
+            assignments.push(savedAssignment);
+          }
         }
-      }
 
-      return { createdShifts: shifts, createdAssignments: assignments };
-    });
+        return { createdShifts: shifts, createdAssignments: assignments };
+      });
 
     this.safeEmit('schedule.updated', { locationId, weekStart: wkStart });
 
@@ -899,8 +1105,11 @@ export class ShiftsService {
   private assertCanManage(shift: Shift, user: User) {
     if (user.role === UserRole.ADMIN) return;
     if (user.role === UserRole.MANAGER) {
-      const manages = user.managedLocations?.some((l) => l.id === shift.locationId);
-      if (!manages) throw new ForbiddenException('You do not manage this location');
+      const manages = user.managedLocations?.some(
+        (l) => l.id === shift.locationId,
+      );
+      if (!manages)
+        throw new ForbiddenException('You do not manage this location');
     } else {
       throw new ForbiddenException('Insufficient permissions');
     }

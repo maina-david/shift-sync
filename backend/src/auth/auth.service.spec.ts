@@ -22,7 +22,7 @@ const makeUser = (overrides: Partial<User & { password: string }> = {}): User =>
     refreshTokenHash: null,
     notificationPreferences: { inApp: true, email: false },
     ...overrides,
-  } as unknown as User);
+  }) as unknown as User;
 
 const makeMockRes = () => ({
   cookie: jest.fn(),
@@ -67,7 +67,12 @@ describe('AuthService', () => {
     it('throws ConflictException when email is already registered', async () => {
       userRepo.findOne.mockResolvedValue(makeUser());
       await expect(
-        service.register({ name: 'Alice', email: 'alice@example.com', password: 'pass', role: UserRole.STAFF }),
+        service.register({
+          name: 'Alice',
+          email: 'alice@example.com',
+          password: 'pass',
+          role: UserRole.STAFF,
+        }),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -122,7 +127,9 @@ describe('AuthService', () => {
       const qb = {
         addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue({ ...makeUser(), password: hashed }),
+        getOne: jest
+          .fn()
+          .mockResolvedValue({ ...makeUser(), password: hashed }),
       };
       userRepo.createQueryBuilder.mockReturnValue(qb);
 
@@ -135,7 +142,9 @@ describe('AuthService', () => {
       const qb = {
         addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue({ ...makeUser(), password: hashed }),
+        getOne: jest
+          .fn()
+          .mockResolvedValue({ ...makeUser(), password: hashed }),
       };
       userRepo.createQueryBuilder.mockReturnValue(qb);
 
@@ -165,9 +174,13 @@ describe('AuthService', () => {
 
   describe('refresh', () => {
     it('throws UnauthorizedException when JWT verification fails', async () => {
-      jwtService.verify.mockImplementation(() => { throw new Error('expired'); });
+      jwtService.verify.mockImplementation(() => {
+        throw new Error('expired');
+      });
       const res = makeMockRes();
-      await expect(service.refresh('bad-token', res as any)).rejects.toThrow(UnauthorizedException);
+      await expect(service.refresh('bad-token', res as any)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('throws UnauthorizedException when user is not found', async () => {
@@ -180,7 +193,9 @@ describe('AuthService', () => {
       };
       userRepo.createQueryBuilder.mockReturnValue(qb);
       const res = makeMockRes();
-      await expect(service.refresh('token', res as any)).rejects.toThrow(UnauthorizedException);
+      await expect(service.refresh('token', res as any)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('throws UnauthorizedException when stored hash does not match', async () => {
@@ -190,11 +205,15 @@ describe('AuthService', () => {
         addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         leftJoinAndSelect: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue({ ...makeUser(), refreshTokenHash: storedHash }),
+        getOne: jest
+          .fn()
+          .mockResolvedValue({ ...makeUser(), refreshTokenHash: storedHash }),
       };
       userRepo.createQueryBuilder.mockReturnValue(qb);
       const res = makeMockRes();
-      await expect(service.refresh('wrong-token', res as any)).rejects.toThrow(UnauthorizedException);
+      await expect(service.refresh('wrong-token', res as any)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('rotates token and returns new access token on success', async () => {
@@ -205,7 +224,10 @@ describe('AuthService', () => {
         addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         leftJoinAndSelect: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue({ ...makeUser(), refreshTokenHash: sha256(refreshToken) }),
+        getOne: jest.fn().mockResolvedValue({
+          ...makeUser(),
+          refreshTokenHash: sha256(refreshToken),
+        }),
       };
       userRepo.createQueryBuilder.mockReturnValue(qb);
       const res = makeMockRes();
@@ -221,7 +243,9 @@ describe('AuthService', () => {
     it('clears refreshTokenHash and cookie when userId is provided', async () => {
       const res = makeMockRes();
       await service.logout(res as any, 'user-1');
-      expect(userRepo.update).toHaveBeenCalledWith('user-1', { refreshTokenHash: null });
+      expect(userRepo.update).toHaveBeenCalledWith('user-1', {
+        refreshTokenHash: null,
+      });
       expect(res.clearCookie).toHaveBeenCalled();
     });
 

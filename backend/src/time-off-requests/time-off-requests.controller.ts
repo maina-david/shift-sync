@@ -12,7 +12,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { TimeOffRequestsService } from './time-off-requests.service';
 import { CreateTimeOffRequestDto } from './dto/create-time-off-request.dto';
 import { ReviewTimeOffDto } from './dto/review-time-off.dto';
@@ -30,7 +35,10 @@ export class TimeOffRequestsController {
   constructor(private svc: TimeOffRequestsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List time-off requests (paginated; staff sees own, managers see all)' })
+  @ApiOperation({
+    summary:
+      'List time-off requests (paginated; staff sees own, managers see all)',
+  })
   @ApiQuery({ name: 'limit', required: false, example: 50 })
   @ApiQuery({ name: 'offset', required: false, example: 0 })
   list(

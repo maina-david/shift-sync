@@ -1,4 +1,14 @@
-import { IsString, IsNumber, IsOptional, IsBoolean, IsInt, IsIn, IsUUID, MaxLength, Min } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  IsInt,
+  IsIn,
+  IsUUID,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class CreateMenuItemDto {
   @IsString() @MaxLength(100) name: string;

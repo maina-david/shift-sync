@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { Plus, Trash2, Wrench, ShieldAlert } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Plus, Trash2, Wrench, ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetClose,
@@ -18,7 +18,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@/components/ui/sheet';
+} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,30 +28,37 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { skillsApi, getErrorMessage } from '@/lib/api';
-import { useAuth } from '@/contexts/auth-context';
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '@/components/ui/empty';
-import { Skill } from '@/lib/types';
+} from "@/components/ui/alert-dialog";
+import { skillsApi, getErrorMessage } from "@/lib/api";
+import { useAuth } from "@/contexts/auth-context";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from "@/components/ui/empty";
+import { Skill } from "@/lib/types";
 
 export default function SkillsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '' });
+  const [form, setForm] = useState({ name: "", description: "" });
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: skills = [] } = useQuery<Skill[]>({
-    queryKey: ['skills'],
+    queryKey: ["skills"],
     queryFn: skillsApi.list,
   });
 
   const createMutation = useMutation({
     mutationFn: () => skillsApi.create(form),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['skills'] });
-      toast.success('Skill created');
-      setForm({ name: '', description: '' });
+      queryClient.invalidateQueries({ queryKey: ["skills"] });
+      toast.success("Skill created");
+      setForm({ name: "", description: "" });
       setSheetOpen(false);
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -60,35 +67,38 @@ export default function SkillsPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => skillsApi.remove(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['skills'] });
-      toast.success('Skill removed');
+      queryClient.invalidateQueries({ queryKey: ["skills"] });
+      toast.success("Skill removed");
       setDeleteId(null);
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 
   if (user === null) return null;
-  if (user.role !== 'admin') return (
-    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
-      <ShieldAlert className="h-10 w-10 opacity-40" />
-      <div className="text-center">
-        <p className="font-semibold text-foreground">Access Restricted</p>
-        <p className="text-sm mt-1">Only administrators can manage skills.</p>
+  if (user.role !== "admin")
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+        <ShieldAlert className="h-10 w-10 opacity-40" />
+        <div className="text-center">
+          <p className="font-semibold text-foreground">Access Restricted</p>
+          <p className="text-sm mt-1">Only administrators can manage skills.</p>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Skills</h1>
-          <p className="text-muted-foreground text-sm">Manage staff skills and certifications</p>
+          <p className="text-muted-foreground text-sm">
+            Manage staff skills and certifications
+          </p>
         </div>
 
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
-            <Button onClick={() => setForm({ name: '', description: '' })}>
+            <Button onClick={() => setForm({ name: "", description: "" })}>
               <Plus className="h-4 w-4 mr-2" /> Add skill
             </Button>
           </SheetTrigger>
@@ -113,7 +123,9 @@ export default function SkillsPage() {
                 <Textarea
                   placeholder="Brief description of this skill…"
                   value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
                   rows={3}
                 />
               </div>
@@ -123,7 +135,7 @@ export default function SkillsPage() {
                 onClick={() => createMutation.mutate()}
                 disabled={!form.name.trim() || createMutation.isPending}
               >
-                {createMutation.isPending ? 'Adding…' : 'Add skill'}
+                {createMutation.isPending ? "Adding…" : "Add skill"}
               </Button>
               <SheetClose asChild>
                 <Button variant="outline">Cancel</Button>
@@ -137,12 +149,21 @@ export default function SkillsPage() {
         {skills.length === 0 ? (
           <Empty className="border">
             <EmptyHeader>
-              <EmptyMedia variant="icon"><Wrench /></EmptyMedia>
+              <EmptyMedia variant="icon">
+                <Wrench />
+              </EmptyMedia>
               <EmptyTitle>No skills defined yet</EmptyTitle>
-              <EmptyDescription>Create skills and certifications to assign to your team members.</EmptyDescription>
+              <EmptyDescription>
+                Create skills and certifications to assign to your team members.
+              </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <Button onClick={() => { setForm({ name: '', description: '' }); setSheetOpen(true); }}>
+              <Button
+                onClick={() => {
+                  setForm({ name: "", description: "" });
+                  setSheetOpen(true);
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" /> Add skill
               </Button>
             </EmptyContent>
@@ -156,7 +177,9 @@ export default function SkillsPage() {
               <div>
                 <p className="font-medium text-sm">{skill.name}</p>
                 {skill.description && (
-                  <p className="text-xs text-muted-foreground">{skill.description}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {skill.description}
+                  </p>
                 )}
               </div>
               <Button
@@ -177,7 +200,8 @@ export default function SkillsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete skill?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the skill from all staff members who have it. This action cannot be undone.
+              This will remove the skill from all staff members who have it.
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

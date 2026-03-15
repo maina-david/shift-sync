@@ -7,7 +7,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, IsNull, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { DataSource, Repository, IsNull } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Timesheet, TimesheetStatus } from './entities/timesheet.entity';
 import { ShiftAssignment } from '../shifts/entities/shift-assignment.entity';
@@ -68,13 +68,17 @@ export class TimesheetsService {
     try {
       this.events.emit(event, payload);
     } catch (err) {
-      this.logger.error(`Event emission failed for "${event}": ${(err as Error).message}`);
+      this.logger.error(
+        `Event emission failed for "${event}": ${(err as Error).message}`,
+      );
     }
   }
 
   async clockIn(staffId: string, dto: ClockInDto): Promise<Timesheet> {
     if (!dto.assignmentId && !dto.shiftId) {
-      throw new BadRequestException('No shift selected. Please clock in from your schedule or select today\'s shift.');
+      throw new BadRequestException(
+        "No shift selected. Please clock in from your schedule or select today's shift.",
+      );
     }
 
     let locationId: string | null = null;
@@ -86,7 +90,9 @@ export class TimesheetsService {
         relations: ['shift', 'shift.location'],
       });
       if (!assignment) {
-        throw new NotFoundException('Assignment not found or does not belong to you');
+        throw new NotFoundException(
+          'Assignment not found or does not belong to you',
+        );
       }
       resolvedShiftId = assignment.shiftId;
       locationId = assignment.shift?.locationId ?? null;
@@ -130,16 +136,22 @@ export class TimesheetsService {
       where: { staffId, clockOut: IsNull() },
     });
     if (!timesheet) {
-      throw new NotFoundException('No active clock-in session found. Please clock in first.');
+      throw new NotFoundException(
+        'No active clock-in session found. Please clock in first.',
+      );
     }
 
     const now = new Date();
     const breakMinutes = dto.breakMinutes ?? 0;
 
     // actualHours = elapsed time minus break, floored to zero
-    const elapsedHours = (now.getTime() - timesheet.clockIn.getTime()) / 3_600_000;
+    const elapsedHours =
+      (now.getTime() - timesheet.clockIn.getTime()) / 3_600_000;
     const breakHours = breakMinutes / 60;
-    const actualHours = Math.max(0, parseFloat((elapsedHours - breakHours).toFixed(2)));
+    const actualHours = Math.max(
+      0,
+      parseFloat((elapsedHours - breakHours).toFixed(2)),
+    );
 
     timesheet.clockOut = now;
     timesheet.breakMinutes = breakMinutes;
@@ -160,16 +172,25 @@ export class TimesheetsService {
       qb.andWhere('ts.staffId = :staffId', { staffId: query.staffId });
     }
     if (query.locationId) {
-      qb.andWhere('ts.locationId = :locationId', { locationId: query.locationId });
+      qb.andWhere('ts.locationId = :locationId', {
+        locationId: query.locationId,
+      });
     } else if (query.allowedLocationIds) {
-      const ids = query.allowedLocationIds.length > 0 ? query.allowedLocationIds : ['__none__'];
-      qb.andWhere('ts.locationId IN (:...allowedLocationIds)', { allowedLocationIds: ids });
+      const ids =
+        query.allowedLocationIds.length > 0
+          ? query.allowedLocationIds
+          : ['__none__'];
+      qb.andWhere('ts.locationId IN (:...allowedLocationIds)', {
+        allowedLocationIds: ids,
+      });
     }
     if (query.status) {
       qb.andWhere('ts.status = :status', { status: query.status });
     }
     if (query.startDate) {
-      qb.andWhere('ts.clockIn >= :startDate', { startDate: new Date(query.startDate) });
+      qb.andWhere('ts.clockIn >= :startDate', {
+        startDate: new Date(query.startDate),
+      });
     }
     if (query.endDate) {
       // Include everything up to the end of the given day
@@ -194,13 +215,19 @@ export class TimesheetsService {
     });
   }
 
-  async review(id: string, dto: ReviewTimesheetDto, reviewer: User): Promise<Timesheet> {
+  async review(
+    id: string,
+    dto: ReviewTimesheetDto,
+    reviewer: User,
+  ): Promise<Timesheet> {
     const timesheet = await this.repo.findOne({ where: { id } });
     if (!timesheet) {
       throw new NotFoundException('Timesheet not found');
     }
     if (timesheet.clockOut === null) {
-      throw new BadRequestException('Cannot review a timesheet while the staff member is still clocked in');
+      throw new BadRequestException(
+        'Cannot review a timesheet while the staff member is still clocked in',
+      );
     }
     if (timesheet.status !== TimesheetStatus.PENDING) {
       throw new BadRequestException(
@@ -211,7 +238,9 @@ export class TimesheetsService {
     if (reviewer.role === UserRole.MANAGER) {
       const managedIds = reviewer.managedLocations?.map((l) => l.id) ?? [];
       if (timesheet.locationId && !managedIds.includes(timesheet.locationId)) {
-        throw new ForbiddenException('You do not manage this timesheet\'s location');
+        throw new ForbiddenException(
+          "You do not manage this timesheet's location",
+        );
       }
     }
 
@@ -255,7 +284,9 @@ export class TimesheetsService {
       .leftJoinAndSelect('ts.shift', 'shift')
       .leftJoinAndSelect('shift.location', 'location')
       .where('ts.status = :status', { status })
-      .andWhere('ts.clockIn >= :startDate', { startDate: new Date(query.startDate) })
+      .andWhere('ts.clockIn >= :startDate', {
+        startDate: new Date(query.startDate),
+      })
       .orderBy('ts.clockIn', 'ASC');
 
     const endDate = new Date(query.endDate);
@@ -263,10 +294,17 @@ export class TimesheetsService {
     qb.andWhere('ts.clockIn <= :endDate', { endDate });
 
     if (query.locationId) {
-      qb.andWhere('ts.locationId = :locationId', { locationId: query.locationId });
+      qb.andWhere('ts.locationId = :locationId', {
+        locationId: query.locationId,
+      });
     } else if (query.allowedLocationIds) {
-      const ids = query.allowedLocationIds.length > 0 ? query.allowedLocationIds : ['__none__'];
-      qb.andWhere('ts.locationId IN (:...allowedLocationIds)', { allowedLocationIds: ids });
+      const ids =
+        query.allowedLocationIds.length > 0
+          ? query.allowedLocationIds
+          : ['__none__'];
+      qb.andWhere('ts.locationId IN (:...allowedLocationIds)', {
+        allowedLocationIds: ids,
+      });
     }
 
     const timesheets = await qb.getMany();

@@ -9,7 +9,12 @@ import {
   UseGuards,
   HttpCode,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ScheduleTemplatesService } from './schedule-templates.service';
 import { CreateScheduleTemplateDto } from './dto/create-schedule-template.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -26,7 +31,9 @@ export class ScheduleTemplatesController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiOperation({ summary: 'List schedule templates, optionally filtered by location' })
+  @ApiOperation({
+    summary: 'List schedule templates, optionally filtered by location',
+  })
   @ApiQuery({ name: 'locationId', required: false })
   findAll(@Query('locationId') locationId?: string) {
     return this.svc.findAll(locationId);
@@ -61,7 +68,9 @@ export class ScheduleTemplatesController {
   @HttpCode(201)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Apply a template to a week, creating DRAFT shifts' })
+  @ApiOperation({
+    summary: 'Apply a template to a week, creating DRAFT shifts',
+  })
   apply(
     @Param('id') id: string,
     @Body() body: { weekStart: string },

@@ -1,11 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DropRequestsService } from './drop-requests.service';
 import { DropRequest, DropRequestStatus } from './entities/drop-request.entity';
-import { ShiftAssignment, AssignmentStatus } from '../shifts/entities/shift-assignment.entity';
+import {
+  ShiftAssignment,
+  AssignmentStatus,
+} from '../shifts/entities/shift-assignment.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { ConstraintCheckerService } from '../shifts/constraint-checker.service';
 import { Location } from '../locations/entities/location.entity';
@@ -30,10 +37,14 @@ const makeFutureAssignment = (overrides: any = {}): ShiftAssignment =>
       startTime: '09:00',
       endTime: '17:00',
       locationId: 'loc-1',
-      location: { id: 'loc-1', name: 'North Beach', timezone: LOC_TZ } as Location,
+      location: {
+        id: 'loc-1',
+        name: 'North Beach',
+        timezone: LOC_TZ,
+      } as Location,
     },
     ...overrides,
-  } as unknown as ShiftAssignment);
+  }) as unknown as ShiftAssignment;
 
 const makeDropRequest = (overrides: any = {}): DropRequest =>
   ({
@@ -44,7 +55,7 @@ const makeDropRequest = (overrides: any = {}): DropRequest =>
     expiresAt: new Date('2099-12-19T09:00:00Z'), // well in the future
     assignment: makeFutureAssignment(),
     ...overrides,
-  } as unknown as DropRequest);
+  }) as unknown as DropRequest;
 
 const makeStaff = (overrides: Partial<User> = {}): User =>
   ({
@@ -54,15 +65,15 @@ const makeStaff = (overrides: Partial<User> = {}): User =>
     certifiedLocations: [{ id: 'loc-1' } as Location],
     skills: [],
     ...overrides,
-  } as unknown as User);
+  }) as unknown as User;
 
 const makeManager = (managedLocationIds: string[] = ['loc-1']): User =>
   ({
     id: 'manager-1',
     name: 'Marcus Johnson',
     role: UserRole.MANAGER,
-    managedLocations: managedLocationIds.map((id) => ({ id } as Location)),
-  } as unknown as User);
+    managedLocations: managedLocationIds.map((id) => ({ id }) as Location),
+  }) as unknown as User;
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -77,7 +88,12 @@ describe('DropRequestsService', () => {
   let dataSource: jest.Mocked<any>;
 
   beforeEach(async () => {
-    dropRepo = { findOne: jest.fn(), save: jest.fn(), count: jest.fn(), create: jest.fn() };
+    dropRepo = {
+      findOne: jest.fn(),
+      save: jest.fn(),
+      count: jest.fn(),
+      create: jest.fn(),
+    };
     assignRepo = { findOne: jest.fn(), update: jest.fn() };
     userRepo = { findOne: jest.fn() };
     constraints = { check: jest.fn() };
@@ -150,13 +166,21 @@ describe('DropRequestsService', () => {
       dropRepo.create.mockReturnValue(saved);
       dropRepo.save.mockResolvedValue(saved);
 
-      const result = await service.create({ assignmentId: 'assign-1' }, makeStaff());
+      const result = await service.create(
+        { assignmentId: 'assign-1' },
+        makeStaff(),
+      );
       expect(result.id).toBe('drop-1');
       expect(events.emit).toHaveBeenCalledWith(
         'notification.sendToManagers',
-        expect.objectContaining({ type: NotificationType.DROP_REQUEST_CREATED }),
+        expect.objectContaining({
+          type: NotificationType.DROP_REQUEST_CREATED,
+        }),
       );
-      expect(events.emit).toHaveBeenCalledWith('audit.log', expect.objectContaining({ action: 'created' }));
+      expect(events.emit).toHaveBeenCalledWith(
+        'audit.log',
+        expect.objectContaining({ action: 'created' }),
+      );
     });
   });
 
@@ -168,7 +192,9 @@ describe('DropRequestsService', () => {
       dropRepo.findOne.mockResolvedValue(drop);
 
       const claimer = makeStaff({ id: 'staff-1' }); // same as assignment.staffId
-      await expect(service.claim('drop-1', claimer)).rejects.toThrow(BadRequestException);
+      await expect(service.claim('drop-1', claimer)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws BadRequestException when drop request is not OPEN (race condition)', async () => {
@@ -180,13 +206,20 @@ describe('DropRequestsService', () => {
       constraints.check.mockResolvedValue({ valid: true, violations: [] });
 
       // Pessimistic lock reveals the request was already claimed
-      const alreadyClaimed = makeDropRequest({ status: DropRequestStatus.CLAIMED });
+      const alreadyClaimed = makeDropRequest({
+        status: DropRequestStatus.CLAIMED,
+      });
       dataSource.transaction.mockImplementation(async (fn: any) => {
-        const em = { findOne: jest.fn().mockResolvedValue(alreadyClaimed), save: jest.fn() };
+        const em = {
+          findOne: jest.fn().mockResolvedValue(alreadyClaimed),
+          save: jest.fn(),
+        };
         return fn(em);
       });
 
-      await expect(service.claim('drop-1', claimer)).rejects.toThrow(BadRequestException);
+      await expect(service.claim('drop-1', claimer)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws BadRequestException when constraint check fails', async () => {
@@ -197,10 +230,18 @@ describe('DropRequestsService', () => {
       userRepo.findOne.mockResolvedValue(claimer);
       constraints.check.mockResolvedValue({
         valid: false,
-        violations: [{ rule: 'location_certification', severity: 'error', message: 'Not certified' }],
+        violations: [
+          {
+            rule: 'location_certification',
+            severity: 'error',
+            message: 'Not certified',
+          },
+        ],
       });
 
-      await expect(service.claim('drop-1', claimer)).rejects.toThrow(BadRequestException);
+      await expect(service.claim('drop-1', claimer)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('marks request as CLAIMED and emits notifications on success', async () => {
@@ -211,7 +252,10 @@ describe('DropRequestsService', () => {
       userRepo.findOne.mockResolvedValue(claimer);
       constraints.check.mockResolvedValue({ valid: true, violations: [] });
 
-      const claimedDrop = makeDropRequest({ status: DropRequestStatus.CLAIMED, claimedById: 'claimer-2' });
+      const claimedDrop = makeDropRequest({
+        status: DropRequestStatus.CLAIMED,
+        claimedById: 'claimer-2',
+      });
       dataSource.transaction.mockImplementation(async (fn: any) => {
         const em = {
           findOne: jest.fn().mockResolvedValue(makeDropRequest()), // still OPEN in lock
@@ -224,57 +268,96 @@ describe('DropRequestsService', () => {
       expect(result.status).toBe(DropRequestStatus.CLAIMED);
       expect(events.emit).toHaveBeenCalledWith(
         'notification.sendToManagers',
-        expect.objectContaining({ type: NotificationType.DROP_REQUEST_CLAIMED }),
+        expect.objectContaining({
+          type: NotificationType.DROP_REQUEST_CLAIMED,
+        }),
       );
-      expect(events.emit).toHaveBeenCalledWith('audit.log', expect.objectContaining({ action: 'claimed' }));
+      expect(events.emit).toHaveBeenCalledWith(
+        'audit.log',
+        expect.objectContaining({ action: 'claimed' }),
+      );
     });
   });
 
   // ---------------------------------------------------------------------------
   describe('approve', () => {
     it('throws BadRequestException when drop is not in CLAIMED state', async () => {
-      const drop = makeDropRequest({ status: DropRequestStatus.OPEN, claimedById: null });
+      const drop = makeDropRequest({
+        status: DropRequestStatus.OPEN,
+        claimedById: null,
+      });
       dropRepo.findOne.mockResolvedValue(drop);
-      await expect(service.approve('drop-1', makeManager(), {})).rejects.toThrow(BadRequestException);
+      await expect(
+        service.approve('drop-1', makeManager(), {}),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('throws ForbiddenException when manager does not manage the shift location', async () => {
-      const drop = makeDropRequest({ status: DropRequestStatus.CLAIMED, claimedById: 'claimer-2' });
+      const drop = makeDropRequest({
+        status: DropRequestStatus.CLAIMED,
+        claimedById: 'claimer-2',
+      });
       dropRepo.findOne.mockResolvedValue(drop);
       userRepo.findOne.mockResolvedValue({
         id: 'manager-1',
         managedLocations: [{ id: 'loc-other' }], // Manages loc-other, not loc-1
       });
 
-      await expect(service.approve('drop-1', makeManager(['loc-1']), {})).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.approve('drop-1', makeManager(['loc-1']), {}),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('reassigns shift and emits notifications on successful approval', async () => {
-      const drop = makeDropRequest({ status: DropRequestStatus.CLAIMED, claimedById: 'claimer-2' });
+      const drop = makeDropRequest({
+        status: DropRequestStatus.CLAIMED,
+        claimedById: 'claimer-2',
+      });
       dropRepo.findOne.mockResolvedValue(drop);
       userRepo.findOne.mockResolvedValue({
         id: 'manager-1',
         managedLocations: [{ id: 'loc-1' }],
       });
 
-      const approvedDrop = makeDropRequest({ status: DropRequestStatus.APPROVED });
+      const approvedDrop = makeDropRequest({
+        status: DropRequestStatus.APPROVED,
+      });
       dataSource.transaction.mockImplementation(async (fn: any) => {
         const em = {
-          findOne: jest.fn().mockResolvedValue(makeDropRequest({ status: DropRequestStatus.CLAIMED, claimedById: 'claimer-2', assignment: makeFutureAssignment() })),
+          findOne: jest.fn().mockResolvedValue(
+            makeDropRequest({
+              status: DropRequestStatus.CLAIMED,
+              claimedById: 'claimer-2',
+              assignment: makeFutureAssignment(),
+            }),
+          ),
           update: jest.fn(),
           create: jest.fn().mockReturnValue({}),
-          save: jest.fn().mockImplementation((entity: any, obj?: any) => Promise.resolve(obj ?? approvedDrop)),
+          save: jest
+            .fn()
+            .mockImplementation((entity: any, obj?: any) =>
+              Promise.resolve(obj ?? approvedDrop),
+            ),
         };
         return fn(em);
       });
 
-      const result = await service.approve('drop-1', makeManager(['loc-1']), {});
+      const result = await service.approve(
+        'drop-1',
+        makeManager(['loc-1']),
+        {},
+      );
       expect(result.status).toBe(DropRequestStatus.APPROVED);
       expect(events.emit).toHaveBeenCalledWith(
         'notification.send',
-        expect.objectContaining({ type: NotificationType.DROP_REQUEST_APPROVED }),
+        expect.objectContaining({
+          type: NotificationType.DROP_REQUEST_APPROVED,
+        }),
       );
-      expect(events.emit).toHaveBeenCalledWith('audit.log', expect.objectContaining({ action: 'approved' }));
+      expect(events.emit).toHaveBeenCalledWith(
+        'audit.log',
+        expect.objectContaining({ action: 'approved' }),
+      );
     });
   });
 
@@ -283,26 +366,38 @@ describe('DropRequestsService', () => {
     it('throws BadRequestException when drop is already approved or expired', async () => {
       const drop = makeDropRequest({ status: DropRequestStatus.APPROVED });
       dropRepo.findOne.mockResolvedValue(drop);
-      await expect(service.reject('drop-1', makeManager(), {})).rejects.toThrow(BadRequestException);
+      await expect(service.reject('drop-1', makeManager(), {})).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws ForbiddenException when manager does not manage the location', async () => {
-      const drop = makeDropRequest({ status: DropRequestStatus.CLAIMED, claimedById: 'claimer-2' });
+      const drop = makeDropRequest({
+        status: DropRequestStatus.CLAIMED,
+        claimedById: 'claimer-2',
+      });
       dropRepo.findOne.mockResolvedValue(drop);
       userRepo.findOne.mockResolvedValue({
         id: 'manager-1',
         managedLocations: [{ id: 'loc-other' }],
       });
 
-      await expect(service.reject('drop-1', makeManager(['loc-other']), {})).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.reject('drop-1', makeManager(['loc-other']), {}),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('rejects an OPEN drop request and emits audit.log', async () => {
       const drop = makeDropRequest({ status: DropRequestStatus.OPEN });
       dropRepo.findOne.mockResolvedValue(drop);
-      userRepo.findOne.mockResolvedValue({ id: 'manager-1', managedLocations: [{ id: 'loc-1' }] });
+      userRepo.findOne.mockResolvedValue({
+        id: 'manager-1',
+        managedLocations: [{ id: 'loc-1' }],
+      });
 
-      const rejectedDrop = makeDropRequest({ status: DropRequestStatus.REJECTED });
+      const rejectedDrop = makeDropRequest({
+        status: DropRequestStatus.REJECTED,
+      });
       dataSource.transaction.mockImplementation(async (fn: any) => {
         const em = {
           save: jest.fn().mockResolvedValue(rejectedDrop),
@@ -311,13 +406,20 @@ describe('DropRequestsService', () => {
         return fn(em);
       });
 
-      const result = await service.reject('drop-1', makeManager(['loc-1']), { managerNote: 'Denied' });
+      const result = await service.reject('drop-1', makeManager(['loc-1']), {
+        managerNote: 'Denied',
+      });
       expect(result.status).toBe(DropRequestStatus.REJECTED);
       expect(events.emit).toHaveBeenCalledWith(
         'notification.send',
-        expect.objectContaining({ type: NotificationType.DROP_REQUEST_REJECTED }),
+        expect.objectContaining({
+          type: NotificationType.DROP_REQUEST_REJECTED,
+        }),
       );
-      expect(events.emit).toHaveBeenCalledWith('audit.log', expect.objectContaining({ action: 'rejected' }));
+      expect(events.emit).toHaveBeenCalledWith(
+        'audit.log',
+        expect.objectContaining({ action: 'rejected' }),
+      );
     });
   });
 
@@ -328,20 +430,26 @@ describe('DropRequestsService', () => {
       dropRepo.findOne.mockResolvedValue(drop);
 
       const otherUser = makeStaff({ id: 'staff-99' });
-      await expect(service.cancel('drop-1', otherUser)).rejects.toThrow(ForbiddenException);
+      await expect(service.cancel('drop-1', otherUser)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('throws BadRequestException when drop is not OPEN or CLAIMED', async () => {
       const drop = makeDropRequest({ status: DropRequestStatus.APPROVED });
       dropRepo.findOne.mockResolvedValue(drop);
-      await expect(service.cancel('drop-1', makeStaff())).rejects.toThrow(BadRequestException);
+      await expect(service.cancel('drop-1', makeStaff())).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('cancels and restores the assignment', async () => {
       const drop = makeDropRequest({ status: DropRequestStatus.OPEN });
       dropRepo.findOne.mockResolvedValue(drop);
 
-      const cancelledDrop = makeDropRequest({ status: DropRequestStatus.CANCELLED });
+      const cancelledDrop = makeDropRequest({
+        status: DropRequestStatus.CANCELLED,
+      });
       dataSource.transaction.mockImplementation(async (fn: any) => {
         const em = {
           save: jest.fn().mockResolvedValue(cancelledDrop),

@@ -1,4 +1,16 @@
-import { IsArray, IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '../entities/user.entity';
 
@@ -38,13 +50,18 @@ export class UpdateUserDto {
   @IsUUID('4', { each: true })
   skillIds?: string[];
 
-  @ApiPropertyOptional({ description: 'Array of location IDs to certify staff for' })
+  @ApiPropertyOptional({
+    description: 'Array of location IDs to certify staff for',
+  })
   @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })
   certifiedLocationIds?: string[];
 
-  @ApiPropertyOptional({ description: 'Array of location IDs to assign manager to (manager role only)' })
+  @ApiPropertyOptional({
+    description:
+      'Array of location IDs to assign manager to (manager role only)',
+  })
   @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })

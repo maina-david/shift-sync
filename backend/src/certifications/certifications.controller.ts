@@ -33,14 +33,16 @@ export class CertificationsController {
   constructor(private svc: CertificationsService) {}
 
   @Get('mine')
-  @ApiOperation({ summary: "Get my certifications" })
+  @ApiOperation({ summary: 'Get my certifications' })
   findMine(@CurrentUser() user: User) {
     return this.svc.findForUser(user.id);
   }
 
   @Get('expiring')
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'List certifications expiring soon (admin/manager)' })
+  @ApiOperation({
+    summary: 'List certifications expiring soon (admin/manager)',
+  })
   @ApiQuery({ name: 'days', required: false, type: Number })
   findExpiring(
     @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
@@ -50,11 +52,14 @@ export class CertificationsController {
 
   @Get('user/:userId')
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: "Get certifications for a specific user (admin/manager)" })
+  @ApiOperation({
+    summary: 'Get certifications for a specific user (admin/manager)',
+  })
   findForUser(@Param('userId') userId: string, @CurrentUser() user: User) {
-    const managedLocationIds = user.role === UserRole.MANAGER
-      ? (user.managedLocations?.map((l) => l.id) ?? [])
-      : undefined;
+    const managedLocationIds =
+      user.role === UserRole.MANAGER
+        ? (user.managedLocations?.map((l) => l.id) ?? [])
+        : undefined;
     return this.svc.findForUser(userId, managedLocationIds);
   }
 
@@ -71,8 +76,15 @@ export class CertificationsController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a certification (owner, manager, or admin)' })
+  @ApiOperation({
+    summary: 'Delete a certification (owner, manager, or admin)',
+  })
   remove(@Param('id') id: string, @CurrentUser() user: User) {
-    return this.svc.remove(id, user.id, user.role, user.managedLocations?.map((l) => l.id));
+    return this.svc.remove(
+      id,
+      user.id,
+      user.role,
+      user.managedLocations?.map((l) => l.id),
+    );
   }
 }

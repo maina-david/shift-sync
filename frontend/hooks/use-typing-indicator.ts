@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { getSocket } from '@/lib/socket';
+import { useEffect, useRef, useState, useCallback } from "react";
+import { getSocket } from "@/lib/socket";
 
 /**
  * Manages typing indicators for a 1:1 DM thread.
@@ -39,12 +39,12 @@ export function useTypingIndicator(partnerId: string | null | undefined) {
       if (autoStopRef.current) clearTimeout(autoStopRef.current);
     };
 
-    socket.on('typing:start', onStart);
-    socket.on('typing:stop', onStop);
+    socket.on("typing:start", onStart);
+    socket.on("typing:stop", onStop);
 
     return () => {
-      socket.off('typing:start', onStart);
-      socket.off('typing:stop', onStop);
+      socket.off("typing:start", onStart);
+      socket.off("typing:stop", onStop);
       if (autoStopRef.current) clearTimeout(autoStopRef.current);
     };
   }, [partnerId]);
@@ -55,13 +55,13 @@ export function useTypingIndicator(partnerId: string | null | undefined) {
 
     if (!isEmittingRef.current) {
       isEmittingRef.current = true;
-      socket.emit('typing:start', recipientId);
+      socket.emit("typing:start", recipientId);
     }
 
     if (keystrokeRef.current) clearTimeout(keystrokeRef.current);
     keystrokeRef.current = setTimeout(() => {
       isEmittingRef.current = false;
-      socket.emit('typing:stop', recipientId);
+      socket.emit("typing:stop", recipientId);
     }, 2000);
   }, []);
 
@@ -69,7 +69,7 @@ export function useTypingIndicator(partnerId: string | null | undefined) {
     if (!isEmittingRef.current) return;
     isEmittingRef.current = false;
     if (keystrokeRef.current) clearTimeout(keystrokeRef.current);
-    getSocket().emit('typing:stop', recipientId);
+    getSocket().emit("typing:stop", recipientId);
   }, []);
 
   return { isPartnerTyping, onKeyStroke, onStopTyping };

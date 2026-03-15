@@ -36,7 +36,9 @@ export class MessagesController {
   }
 
   @Get('inbox')
-  @ApiOperation({ summary: 'Get my inbox (latest thread messages + announcements)' })
+  @ApiOperation({
+    summary: 'Get my inbox (latest thread messages + announcements)',
+  })
   getInbox(@CurrentUser() user: User) {
     // Pass the first certified location id if present, for announcement scoping
     const locationId =
@@ -47,7 +49,9 @@ export class MessagesController {
   }
 
   @Get('announcements')
-  @ApiOperation({ summary: 'Get announcements, optionally scoped to a location' })
+  @ApiOperation({
+    summary: 'Get announcements, optionally scoped to a location',
+  })
   @ApiQuery({ name: 'locationId', required: false })
   getAnnouncements(@Query('locationId') locationId?: string) {
     return this.svc.getAnnouncements(locationId);

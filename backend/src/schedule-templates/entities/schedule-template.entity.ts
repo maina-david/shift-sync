@@ -11,9 +11,9 @@ import { Location } from '../../locations/entities/location.entity';
 import { User } from '../../users/entities/user.entity';
 
 export interface TemplateShift {
-  dayOfWeek: number;          // 0=Mon … 6=Sun (week-relative)
-  startTime: string;          // HH:mm
-  endTime: string;            // HH:mm
+  dayOfWeek: number; // 0=Mon … 6=Sun (week-relative)
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
   requiredSkillId: string | null;
   headcount: number;
   notes: string | null;

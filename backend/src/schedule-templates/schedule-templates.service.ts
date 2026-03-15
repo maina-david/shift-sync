@@ -34,7 +34,10 @@ export class ScheduleTemplatesService {
     return template;
   }
 
-  async create(dto: CreateScheduleTemplateDto, userId: string): Promise<ScheduleTemplate> {
+  async create(
+    dto: CreateScheduleTemplateDto,
+    userId: string,
+  ): Promise<ScheduleTemplate> {
     const template = this.templatesRepository.create({
       name: dto.name,
       locationId: dto.locationId,
@@ -59,7 +62,7 @@ export class ScheduleTemplatesService {
   async apply(
     templateId: string,
     weekStart: string,
-    userId: string,
+    _userId: string,
   ): Promise<{ shiftIds: string[] }> {
     const template = await this.findOne(templateId);
 

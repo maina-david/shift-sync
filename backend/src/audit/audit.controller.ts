@@ -1,5 +1,20 @@
-import { Controller, ForbiddenException, Get, Param, ParseIntPipe, DefaultValuePipe, Query, Res, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  ParseIntPipe,
+  DefaultValuePipe,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
 import { AuditService } from './audit.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -41,7 +56,9 @@ export class AuditController {
       const managedIds = user.managedLocations?.map((l) => l.id) ?? [];
       if (locationId) {
         if (!managedIds.includes(locationId)) {
-          throw new ForbiddenException('You do not manage the requested location');
+          throw new ForbiddenException(
+            'You do not manage the requested location',
+          );
         }
       } else {
         // No locationId provided — restrict to manager's own locations via filter
@@ -51,10 +68,17 @@ export class AuditController {
     }
 
     return this.svc.findAll({
-      entity, entityId, locationId: scopedLocationId, startDate, endDate, page, limit,
-      managedLocationIds: user.role === UserRole.MANAGER
-        ? (user.managedLocations?.map((l) => l.id) ?? [])
-        : undefined,
+      entity,
+      entityId,
+      locationId: scopedLocationId,
+      startDate,
+      endDate,
+      page,
+      limit,
+      managedLocationIds:
+        user.role === UserRole.MANAGER
+          ? (user.managedLocations?.map((l) => l.id) ?? [])
+          : undefined,
     });
   }
 
@@ -72,7 +96,12 @@ export class AuditController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    const csv = await this.svc.exportCsv({ entity, locationId, startDate, endDate });
+    const csv = await this.svc.exportCsv({
+      entity,
+      locationId,
+      startDate,
+      endDate,
+    });
     const filename = `audit-${startDate ?? 'all'}-to-${endDate ?? 'all'}.csv`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

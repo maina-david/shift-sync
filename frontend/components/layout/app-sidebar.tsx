@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   CalendarDays,
   LayoutDashboard,
@@ -37,15 +37,20 @@ import {
   Sliders,
   Scale,
   Star,
-} from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useAuth } from '@/contexts/auth-context';
-import { toast } from 'sonner';
-import { bookmarksApi, getErrorMessage } from '@/lib/api';
-import { Bookmark as BookmarkType } from '@/lib/types';
-import { cn } from '@/lib/utils';
+} from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useAuth } from "@/contexts/auth-context";
+import { toast } from "sonner";
+import { bookmarksApi, getErrorMessage } from "@/lib/api";
+import { Bookmark as BookmarkType } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export type NavItem = {
   href: string;
@@ -65,84 +70,198 @@ export type NavGroup = {
 
 export const NAV_GROUPS: NavGroup[] = [
   {
-    id: 'main',
+    id: "main",
     railIcon: Home,
-    railLabel: 'Home',
-    roles: ['admin', 'manager', 'staff'],
+    railLabel: "Home",
+    roles: ["admin", "manager", "staff"],
     items: [
-      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'staff'] },
-      { href: '/schedule', label: 'Schedule', icon: CalendarDays, roles: ['admin', 'manager', 'staff'] },
-      { href: '/my-schedule', label: 'My Schedule', icon: CalendarRange, roles: ['staff'] },
-      { href: '/timesheets', label: 'Timesheets', icon: Clock, roles: ['admin', 'manager', 'staff'] },
-      { href: '/messages', label: 'Messages', icon: MessageSquare, roles: ['admin', 'manager', 'staff'] },
-      { href: '/checklists', label: 'Checklists', icon: CheckSquare, roles: ['admin', 'manager', 'staff'] },
-      { href: '/certifications', label: 'Certifications', icon: BadgeCheck, roles: ['admin', 'manager', 'staff'] },
+      {
+        href: "/dashboard",
+        label: "Dashboard",
+        icon: LayoutDashboard,
+        roles: ["admin", "manager", "staff"],
+      },
+      {
+        href: "/schedule",
+        label: "Schedule",
+        icon: CalendarDays,
+        roles: ["admin", "manager", "staff"],
+      },
+      {
+        href: "/my-schedule",
+        label: "My Schedule",
+        icon: CalendarRange,
+        roles: ["staff"],
+      },
+      {
+        href: "/timesheets",
+        label: "Timesheets",
+        icon: Clock,
+        roles: ["admin", "manager", "staff"],
+      },
+      {
+        href: "/messages",
+        label: "Messages",
+        icon: MessageSquare,
+        roles: ["admin", "manager", "staff"],
+      },
+      {
+        href: "/checklists",
+        label: "Checklists",
+        icon: CheckSquare,
+        roles: ["admin", "manager", "staff"],
+      },
+      {
+        href: "/certifications",
+        label: "Certifications",
+        icon: BadgeCheck,
+        roles: ["admin", "manager", "staff"],
+      },
     ],
   },
   {
-    id: 'requests',
-    label: 'Requests',
+    id: "requests",
+    label: "Requests",
     railIcon: Inbox,
-    railLabel: 'Requests',
-    roles: ['admin', 'manager', 'staff'],
+    railLabel: "Requests",
+    roles: ["admin", "manager", "staff"],
     items: [
-      { href: '/swap-requests', label: 'Swap & Drop', icon: ArrowLeftRight, roles: ['admin', 'manager', 'staff'] },
-      { href: '/pickup', label: 'Open Shifts', icon: HandHelping, roles: ['staff'] },
-      { href: '/time-off', label: 'Time Off', icon: Umbrella, roles: ['admin', 'manager', 'staff'] },
+      {
+        href: "/swap-requests",
+        label: "Swap & Drop",
+        icon: ArrowLeftRight,
+        roles: ["admin", "manager", "staff"],
+      },
+      {
+        href: "/pickup",
+        label: "Open Shifts",
+        icon: HandHelping,
+        roles: ["staff"],
+      },
+      {
+        href: "/time-off",
+        label: "Time Off",
+        icon: Umbrella,
+        roles: ["admin", "manager", "staff"],
+      },
     ],
   },
   {
-    id: 'management',
-    label: 'Management',
+    id: "management",
+    label: "Management",
     railIcon: Building2,
-    railLabel: 'Management',
-    roles: ['admin', 'manager'],
+    railLabel: "Management",
+    roles: ["admin", "manager"],
     items: [
-      { href: '/staff', label: 'Staff', icon: Users, roles: ['admin', 'manager'] },
-      { href: '/locations', label: 'Locations', icon: MapPin, roles: ['admin'] },
-      { href: '/skills', label: 'Skills', icon: Wrench, roles: ['admin'] },
-      { href: '/schedule-templates', label: 'Templates', icon: LayoutTemplate, roles: ['admin', 'manager'] },
-      { href: '/log-book', label: 'Log Book', icon: BookText, roles: ['admin', 'manager'] },
+      {
+        href: "/staff",
+        label: "Staff",
+        icon: Users,
+        roles: ["admin", "manager"],
+      },
+      {
+        href: "/locations",
+        label: "Locations",
+        icon: MapPin,
+        roles: ["admin"],
+      },
+      { href: "/skills", label: "Skills", icon: Wrench, roles: ["admin"] },
+      {
+        href: "/schedule-templates",
+        label: "Templates",
+        icon: LayoutTemplate,
+        roles: ["admin", "manager"],
+      },
+      {
+        href: "/log-book",
+        label: "Log Book",
+        icon: BookText,
+        roles: ["admin", "manager"],
+      },
     ],
   },
   {
-    id: 'venue',
-    label: 'Venue',
+    id: "venue",
+    label: "Venue",
     railIcon: Store,
-    railLabel: 'Venue',
-    roles: ['admin', 'manager'],
+    railLabel: "Venue",
+    roles: ["admin", "manager"],
     items: [
-      { href: '/menu', label: 'Menu', icon: UtensilsCrossed, roles: ['admin', 'manager'] },
-      { href: '/reservations', label: 'Reservations', icon: CalendarClock, roles: ['admin', 'manager'] },
-      { href: '/shift-feedback', label: 'Shift Feedback', icon: Star, roles: ['admin', 'manager', 'staff'] },
+      {
+        href: "/menu",
+        label: "Menu",
+        icon: UtensilsCrossed,
+        roles: ["admin", "manager"],
+      },
+      {
+        href: "/reservations",
+        label: "Reservations",
+        icon: CalendarClock,
+        roles: ["admin", "manager"],
+      },
+      {
+        href: "/shift-feedback",
+        label: "Shift Feedback",
+        icon: Star,
+        roles: ["admin", "manager", "staff"],
+      },
     ],
   },
   {
-    id: 'insights',
-    label: 'Insights',
+    id: "insights",
+    label: "Insights",
     railIcon: TrendingUp,
-    railLabel: 'Insights',
-    roles: ['admin', 'manager'],
+    railLabel: "Insights",
+    roles: ["admin", "manager"],
     items: [
-      { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin', 'manager'] },
-      { href: '/audit', label: 'Audit Log', icon: ClipboardList, roles: ['admin', 'manager'] },
-      { href: '/fair-workweek', label: 'Fair Workweek', icon: Scale, roles: ['admin', 'manager'] },
+      {
+        href: "/analytics",
+        label: "Analytics",
+        icon: BarChart3,
+        roles: ["admin", "manager"],
+      },
+      {
+        href: "/audit",
+        label: "Audit Log",
+        icon: ClipboardList,
+        roles: ["admin", "manager"],
+      },
+      {
+        href: "/fair-workweek",
+        label: "Fair Workweek",
+        icon: Scale,
+        roles: ["admin", "manager"],
+      },
     ],
   },
   {
-    id: 'account',
-    label: 'Account',
+    id: "account",
+    label: "Account",
     railIcon: CircleUser,
-    railLabel: 'Account',
-    roles: ['admin', 'manager', 'staff'],
+    railLabel: "Account",
+    roles: ["admin", "manager", "staff"],
     items: [
-      { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin', 'manager', 'staff'] },
-      { href: '/settings/availability', label: 'Availability', icon: CalendarCheck, roles: ['staff'] },
-      { href: '/settings/system', label: 'System Settings', icon: Sliders, roles: ['admin'] },
+      {
+        href: "/settings",
+        label: "Settings",
+        icon: Settings,
+        roles: ["admin", "manager", "staff"],
+      },
+      {
+        href: "/settings/availability",
+        label: "Availability",
+        icon: CalendarCheck,
+        roles: ["staff"],
+      },
+      {
+        href: "/settings/system",
+        label: "System Settings",
+        icon: Sliders,
+        roles: ["admin"],
+      },
     ],
   },
 ];
-
 
 function detectActiveGroupId(pathname: string, groups: NavGroup[]): string {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -151,13 +270,13 @@ function detectActiveGroupId(pathname: string, groups: NavGroup[]): string {
       group.items.some(
         (item) =>
           pathname === item.href ||
-          (item.href !== '/settings' && pathname.startsWith(item.href + '/')),
+          (item.href !== "/settings" && pathname.startsWith(item.href + "/")),
       )
     ) {
       return group.id;
     }
   }
-  return groups[0]?.id ?? 'main';
+  return groups[0]?.id ?? "main";
 }
 
 type AppSidebarProps = {
@@ -166,13 +285,17 @@ type AppSidebarProps = {
   secondaryOpen: boolean;
 };
 
-export function AppSidebar({ selectedGroupId, onSelectGroup, secondaryOpen }: AppSidebarProps) {
+export function AppSidebar({
+  selectedGroupId,
+  onSelectGroup,
+  secondaryOpen,
+}: AppSidebarProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const queryClient = useQueryClient();
 
   const { data: bookmarks = [] } = useQuery<BookmarkType[]>({
-    queryKey: ['bookmarks'],
+    queryKey: ["bookmarks"],
     queryFn: bookmarksApi.list,
     enabled: !!user,
   });
@@ -180,28 +303,32 @@ export function AppSidebar({ selectedGroupId, onSelectGroup, secondaryOpen }: Ap
   const toggleBookmarkMutation = useMutation({
     mutationFn: ({ href, label }: { href: string; label: string }) => {
       const existing = bookmarks.find((b) => b.href === href);
-      return existing ? bookmarksApi.remove(existing.id) : bookmarksApi.create({ href, label });
+      return existing
+        ? bookmarksApi.remove(existing.id)
+        : bookmarksApi.create({ href, label });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['bookmarks'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bookmarks"] }),
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 
-  const userRole = user?.role ?? 'staff';
+  const userRole = user?.role ?? "staff";
   const initials =
     user?.name
-      ?.split(' ')
+      ?.split(" ")
       .map((n) => n[0])
-      .join('')
+      .join("")
       .slice(0, 2)
-      .toUpperCase() ?? 'U';
+      .toUpperCase() ?? "U";
 
   const visibleGroups = NAV_GROUPS.filter(
     (g) =>
-      g.roles.includes(userRole) && g.items.some((item) => item.roles.includes(userRole)),
+      g.roles.includes(userRole) &&
+      g.items.some((item) => item.roles.includes(userRole)),
   );
 
   const activeGroupId = detectActiveGroupId(pathname, visibleGroups);
-  const displayGroup = visibleGroups.find((g) => g.id === selectedGroupId) ?? visibleGroups[0];
+  const displayGroup =
+    visibleGroups.find((g) => g.id === selectedGroupId) ?? visibleGroups[0];
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -229,12 +356,12 @@ export function AppSidebar({ selectedGroupId, onSelectGroup, secondaryOpen }: Ap
                     <button
                       onClick={() => onSelectGroup(group.id)}
                       className={cn(
-                        'flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-150',
+                        "flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-150",
                         isActive
-                          ? 'bg-white/20 text-white'
+                          ? "bg-white/20 text-white"
                           : isSelected && secondaryOpen
-                          ? 'bg-white/12 text-white'
-                          : 'text-white/55 hover:bg-white/12 hover:text-white',
+                            ? "bg-white/12 text-white"
+                            : "text-white/55 hover:bg-white/12 hover:text-white",
                       )}
                     >
                       <group.railIcon className="h-4 w-4" />
@@ -274,8 +401,8 @@ export function AppSidebar({ selectedGroupId, onSelectGroup, secondaryOpen }: Ap
         {/* Secondary panel */}
         <div
           className={cn(
-            'overflow-hidden border-r border-sidebar-border/60 bg-sidebar transition-all duration-200 ease-in-out',
-            secondaryOpen ? 'w-49' : 'w-0',
+            "overflow-hidden border-r border-sidebar-border/60 bg-sidebar transition-all duration-200 ease-in-out",
+            secondaryOpen ? "w-49" : "w-0",
           )}
         >
           <div className="flex h-full w-49 flex-col">
@@ -285,8 +412,12 @@ export function AppSidebar({ selectedGroupId, onSelectGroup, secondaryOpen }: Ap
                 <Zap className="h-3.5 w-3.5 text-white" />
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="font-semibold text-sm tracking-tight leading-tight text-white">ShiftSync</span>
-                <span className="text-xs text-white/60 truncate leading-tight">Coastal Eats</span>
+                <span className="font-semibold text-sm tracking-tight leading-tight text-white">
+                  ShiftSync
+                </span>
+                <span className="text-xs text-white/60 truncate leading-tight">
+                  Coastal Eats
+                </span>
               </div>
             </div>
 
@@ -303,34 +434,44 @@ export function AppSidebar({ selectedGroupId, onSelectGroup, secondaryOpen }: Ap
                   .map((item) => {
                     const isActive =
                       pathname === item.href ||
-                      (item.href !== '/settings' && pathname.startsWith(item.href + '/'));
-                    const isBookmarked = bookmarks.some((b) => b.href === item.href);
+                      (item.href !== "/settings" &&
+                        pathname.startsWith(item.href + "/"));
+                    const isBookmarked = bookmarks.some(
+                      (b) => b.href === item.href,
+                    );
                     return (
                       <div key={item.href} className="group/item relative">
                         <Link
                           href={item.href}
                           className={cn(
-                            'flex items-center gap-2.5 rounded-md pl-3 pr-8 h-8 text-sm font-medium transition-all duration-150 border-l-2',
+                            "flex items-center gap-2.5 rounded-md pl-3 pr-8 h-8 text-sm font-medium transition-all duration-150 border-l-2",
                             isActive
-                              ? 'border-white/60 bg-white/15 text-white'
-                              : 'border-transparent text-white/60 hover:text-white hover:bg-white/10',
+                              ? "border-white/60 bg-white/15 text-white"
+                              : "border-transparent text-white/60 hover:text-white hover:bg-white/10",
                           )}
                         >
                           <item.icon className="h-3.5 w-3.5 shrink-0" />
                           <span className="truncate">{item.label}</span>
                         </Link>
                         <button
-                          onClick={() => toggleBookmarkMutation.mutate({ href: item.href, label: item.label })}
+                          onClick={() =>
+                            toggleBookmarkMutation.mutate({
+                              href: item.href,
+                              label: item.label,
+                            })
+                          }
                           className={cn(
-                            'absolute right-1.5 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded transition-all duration-150',
+                            "absolute right-1.5 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded transition-all duration-150",
                             isBookmarked
-                              ? 'text-white/70 hover:text-white'
-                              : 'opacity-0 group-hover/item:opacity-100 text-white/40 hover:text-white/80',
+                              ? "text-white/70 hover:text-white"
+                              : "opacity-0 group-hover/item:opacity-100 text-white/40 hover:text-white/80",
                           )}
                         >
-                          {isBookmarked
-                            ? <BookmarkCheck className="h-3 w-3" />
-                            : <Bookmark className="h-3 w-3" />}
+                          {isBookmarked ? (
+                            <BookmarkCheck className="h-3 w-3" />
+                          ) : (
+                            <Bookmark className="h-3 w-3" />
+                          )}
                         </button>
                       </div>
                     );
@@ -340,7 +481,9 @@ export function AppSidebar({ selectedGroupId, onSelectGroup, secondaryOpen }: Ap
 
             <div className="flex h-14 shrink-0 items-center border-t border-sidebar-border/60 px-4">
               <div className="min-w-0">
-                <p className="text-xs font-medium leading-tight truncate text-white">{user?.name}</p>
+                <p className="text-xs font-medium leading-tight truncate text-white">
+                  {user?.name}
+                </p>
                 <p className="text-[0.625rem] capitalize leading-tight text-white/60">
                   {userRole}
                 </p>

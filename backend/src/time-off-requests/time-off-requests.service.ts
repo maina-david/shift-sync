@@ -8,7 +8,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { TimeOffRequest, TimeOffStatus } from './entities/time-off-request.entity';
+import {
+  TimeOffRequest,
+  TimeOffStatus,
+} from './entities/time-off-request.entity';
 import { CreateTimeOffRequestDto } from './dto/create-time-off-request.dto';
 import { User, UserRole } from '../users/entities/user.entity';
 
@@ -29,7 +32,10 @@ export class TimeOffRequestsService {
     try {
       this.events.emit(event, payload);
     } catch (err) {
-      this.logger.error(`Event emission failed for "${event}": ${(err as Error).message}`, (err as Error).stack);
+      this.logger.error(
+        `Event emission failed for "${event}": ${(err as Error).message}`,
+        (err as Error).stack,
+      );
     }
   }
 
@@ -47,8 +53,10 @@ export class TimeOffRequestsService {
     }
 
     if (requestingUser.role === UserRole.MANAGER) {
-      const managedIds = requestingUser.managedLocations?.map((l) => l.id) ?? [];
-      if (managedIds.length === 0) return { items: [], total: 0, limit: take, offset };
+      const managedIds =
+        requestingUser.managedLocations?.map((l) => l.id) ?? [];
+      if (managedIds.length === 0)
+        return { items: [], total: 0, limit: take, offset };
 
       const staffAtLocations = await this.userRepo
         .createQueryBuilder('u')
@@ -58,7 +66,8 @@ export class TimeOffRequestsService {
         .getMany();
 
       const staffIds = staffAtLocations.map((u) => u.id);
-      if (staffIds.length === 0) return { items: [], total: 0, limit: take, offset };
+      if (staffIds.length === 0)
+        return { items: [], total: 0, limit: take, offset };
 
       const [items, total] = await this.repo.findAndCount({
         where: { staffId: In(staffIds) },
@@ -77,21 +86,28 @@ export class TimeOffRequestsService {
     return { items, total, limit: take, offset };
   }
 
-  async create(dto: CreateTimeOffRequestDto, staff: User): Promise<TimeOffRequest> {
+  async create(
+    dto: CreateTimeOffRequestDto,
+    staff: User,
+  ): Promise<TimeOffRequest> {
     if (dto.endDate < dto.startDate) {
       throw new BadRequestException('End date must be on or after start date');
     }
 
     const today = new Date().toISOString().slice(0, 10);
     if (dto.startDate < today) {
-      throw new BadRequestException('Time-off requests must start on today or a future date');
+      throw new BadRequestException(
+        'Time-off requests must start on today or a future date',
+      );
     }
 
     const startMs = new Date(dto.startDate).getTime();
     const endMs = new Date(dto.endDate).getTime();
     const MAX_DAYS = 365;
     if ((endMs - startMs) / 86_400_000 > MAX_DAYS) {
-      throw new BadRequestException(`Time-off request cannot exceed ${MAX_DAYS} days`);
+      throw new BadRequestException(
+        `Time-off request cannot exceed ${MAX_DAYS} days`,
+      );
     }
 
     const saved = await this.dataSource.transaction(async (em) => {
@@ -122,11 +138,18 @@ export class TimeOffRequestsService {
       return em.save(TimeOffRequest, request);
     });
 
-    this.safeEmit('time-off.requested', { requestId: saved.id, staffId: staff.id });
+    this.safeEmit('time-off.requested', {
+      requestId: saved.id,
+      staffId: staff.id,
+    });
     return saved;
   }
 
-  async approve(id: string, manager: User, managerNote?: string): Promise<TimeOffRequest> {
+  async approve(
+    id: string,
+    manager: User,
+    managerNote?: string,
+  ): Promise<TimeOffRequest> {
     const request = await this.findOneOrFail(id);
     await this.assertManagerCan(manager, request);
     if (request.status !== TimeOffStatus.PENDING) {
@@ -137,7 +160,10 @@ export class TimeOffRequestsService {
     request.managerNote = managerNote ?? null;
     request.reviewedAt = new Date();
     const saved = await this.repo.save(request);
-    this.safeEmit('time-off.approved', { requestId: saved.id, staffId: saved.staffId });
+    this.safeEmit('time-off.approved', {
+      requestId: saved.id,
+      staffId: saved.staffId,
+    });
     this.safeEmit('audit.log', {
       entity: 'time_off_request',
       entityId: id,
@@ -148,7 +174,11 @@ export class TimeOffRequestsService {
     return saved;
   }
 
-  async deny(id: string, manager: User, managerNote?: string): Promise<TimeOffRequest> {
+  async deny(
+    id: string,
+    manager: User,
+    managerNote?: string,
+  ): Promise<TimeOffRequest> {
     const request = await this.findOneOrFail(id);
     await this.assertManagerCan(manager, request);
     if (request.status !== TimeOffStatus.PENDING) {
@@ -159,7 +189,10 @@ export class TimeOffRequestsService {
     request.managerNote = managerNote ?? null;
     request.reviewedAt = new Date();
     const saved = await this.repo.save(request);
-    this.safeEmit('time-off.denied', { requestId: saved.id, staffId: saved.staffId });
+    this.safeEmit('time-off.denied', {
+      requestId: saved.id,
+      staffId: saved.staffId,
+    });
     this.safeEmit('audit.log', {
       entity: 'time_off_request',
       entityId: id,
@@ -188,19 +221,35 @@ export class TimeOffRequestsService {
     return r;
   }
 
-  private async assertManagerCan(manager: User, request: TimeOffRequest): Promise<void> {
+  private async assertManagerCan(
+    manager: User,
+    request: TimeOffRequest,
+  ): Promise<void> {
     if (manager.role !== UserRole.ADMIN && manager.role !== UserRole.MANAGER) {
       throw new ForbiddenException();
     }
     if (manager.role === UserRole.MANAGER) {
       const [mgr, staff] = await Promise.all([
-        this.userRepo.findOne({ where: { id: manager.id }, relations: ['managedLocations'] }),
-        this.userRepo.findOne({ where: { id: request.staffId }, relations: ['certifiedLocations'] }),
+        this.userRepo.findOne({
+          where: { id: manager.id },
+          relations: ['managedLocations'],
+        }),
+        this.userRepo.findOne({
+          where: { id: request.staffId },
+          relations: ['certifiedLocations'],
+        }),
       ]);
-      const managedIds = new Set((mgr?.managedLocations ?? []).map((l) => l.id));
-      const staffLocationIds = (staff?.certifiedLocations ?? []).map((l) => l.id);
+      const managedIds = new Set(
+        (mgr?.managedLocations ?? []).map((l) => l.id),
+      );
+      const staffLocationIds = (staff?.certifiedLocations ?? []).map(
+        (l) => l.id,
+      );
       const hasOverlap = staffLocationIds.some((id) => managedIds.has(id));
-      if (!hasOverlap) throw new ForbiddenException('You do not manage any of this staff member\'s locations');
+      if (!hasOverlap)
+        throw new ForbiddenException(
+          "You do not manage any of this staff member's locations",
+        );
     }
   }
 }

@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { MessagesService } from './messages.service';
 import { Message, MessageType } from './entities/message.entity';
 import { UserRole } from '../users/entities/user.entity';
@@ -30,7 +34,7 @@ const makeMessage = (overrides: any = {}): Message =>
     locationId: null,
     createdAt: new Date('2026-03-15T09:00:00Z'),
     ...overrides,
-  } as unknown as Message);
+  }) as unknown as Message;
 
 describe('MessagesService', () => {
   let service: MessagesService;
@@ -57,14 +61,19 @@ describe('MessagesService', () => {
   describe('send', () => {
     it('throws BadRequestException when direct message has no recipientId', async () => {
       await expect(
-        service.send('user-1', UserRole.STAFF, { type: MessageType.DIRECT, body: 'Hi' } as any),
+        service.send('user-1', UserRole.STAFF, {
+          type: MessageType.DIRECT,
+          body: 'Hi',
+        } as any),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('throws ForbiddenException when staff tries to send an announcement', async () => {
       await expect(
         service.send('staff-1', UserRole.STAFF, {
-          type: MessageType.ANNOUNCEMENT, body: 'Attention!', locationId: 'loc-1',
+          type: MessageType.ANNOUNCEMENT,
+          body: 'Attention!',
+          locationId: 'loc-1',
         } as any),
       ).rejects.toThrow(ForbiddenException);
     });
@@ -75,7 +84,9 @@ describe('MessagesService', () => {
       repo.save.mockResolvedValue(msg);
 
       const result = await service.send('manager-1', UserRole.MANAGER, {
-        type: MessageType.ANNOUNCEMENT, body: 'Heads up', locationId: 'loc-1',
+        type: MessageType.ANNOUNCEMENT,
+        body: 'Heads up',
+        locationId: 'loc-1',
       } as any);
       expect(result.type).toBe(MessageType.ANNOUNCEMENT);
     });
@@ -86,7 +97,9 @@ describe('MessagesService', () => {
       repo.save.mockResolvedValue(msg);
 
       const result = await service.send('user-1', UserRole.STAFF, {
-        type: MessageType.DIRECT, recipientId: 'user-2', body: 'Hello',
+        type: MessageType.DIRECT,
+        recipientId: 'user-2',
+        body: 'Hello',
       } as any);
       expect(result.id).toBe('msg-1');
     });
@@ -104,7 +117,9 @@ describe('MessagesService', () => {
 
   describe('getAnnouncements', () => {
     it('returns announcements filtered by locationId', async () => {
-      const qb = buildQb({ getMany: [makeMessage({ type: MessageType.ANNOUNCEMENT })] });
+      const qb = buildQb({
+        getMany: [makeMessage({ type: MessageType.ANNOUNCEMENT })],
+      });
       repo.createQueryBuilder.mockReturnValue(qb);
 
       const result = await service.getAnnouncements('loc-1');
@@ -118,13 +133,24 @@ describe('MessagesService', () => {
   describe('getInbox', () => {
     it('deduplicates threads by conversation partner', async () => {
       const messages = [
-        makeMessage({ senderId: 'user-1', recipientId: 'user-2', createdAt: new Date('2026-03-15T10:00:00Z') }),
-        makeMessage({ id: 'msg-2', senderId: 'user-2', recipientId: 'user-1', createdAt: new Date('2026-03-15T09:00:00Z') }),
+        makeMessage({
+          senderId: 'user-1',
+          recipientId: 'user-2',
+          createdAt: new Date('2026-03-15T10:00:00Z'),
+        }),
+        makeMessage({
+          id: 'msg-2',
+          senderId: 'user-2',
+          recipientId: 'user-1',
+          createdAt: new Date('2026-03-15T09:00:00Z'),
+        }),
       ];
       const qb1 = buildQb({ getMany: messages });
       const qb2 = buildQb({ getMany: [] });
       let calls = 0;
-      repo.createQueryBuilder.mockImplementation(() => (++calls <= 1 ? qb1 : qb2));
+      repo.createQueryBuilder.mockImplementation(() =>
+        ++calls <= 1 ? qb1 : qb2,
+      );
 
       const result = await service.getInbox('user-1');
       expect(result.threads).toHaveLength(1);
@@ -134,12 +160,16 @@ describe('MessagesService', () => {
   describe('markRead', () => {
     it('throws NotFoundException when message does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.markRead('missing', 'user-1')).rejects.toThrow(NotFoundException);
+      await expect(service.markRead('missing', 'user-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws ForbiddenException when user is not the recipient', async () => {
       repo.findOne.mockResolvedValue(makeMessage({ recipientId: 'user-2' }));
-      await expect(service.markRead('msg-1', 'user-1')).rejects.toThrow(ForbiddenException);
+      await expect(service.markRead('msg-1', 'user-1')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('marks message as read when called by recipient', async () => {

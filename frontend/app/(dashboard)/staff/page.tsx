@@ -1,21 +1,34 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, UserPlus, ArrowUpDown, Eye, EyeOff, ShieldAlert } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { ColumnDef } from "@tanstack/react-table";
+import {
+  MoreHorizontal,
+  UserPlus,
+  ArrowUpDown,
+  Eye,
+  EyeOff,
+  ShieldAlert,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetClose,
@@ -24,7 +37,7 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
+} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -32,27 +45,49 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { DataTable } from '@/components/ui/data-table';
-import { usersApi, locationsApi, skillsApi, getErrorMessage } from '@/lib/api';
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '@/components/ui/empty';
-import { User, Location, Skill } from '@/lib/types';
-import { useAuth } from '@/contexts/auth-context';
+} from "@/components/ui/dialog";
+import { DataTable } from "@/components/ui/data-table";
+import { usersApi, locationsApi, skillsApi, getErrorMessage } from "@/lib/api";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from "@/components/ui/empty";
+import { User, Location, Skill } from "@/lib/types";
+import { useAuth } from "@/contexts/auth-context";
 
-function passwordStrength(pw: string): { score: number; label: string; color: string } {
-  if (!pw) return { score: 0, label: '', color: '' };
+function passwordStrength(pw: string): {
+  score: number;
+  label: string;
+  color: string;
+} {
+  if (!pw) return { score: 0, label: "", color: "" };
   let score = 0;
   if (pw.length >= 8) score++;
   if (pw.length >= 12) score++;
   if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
   if (/\d/.test(pw)) score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
-  const labels = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Very strong'];
-  const colors = ['', 'bg-destructive', 'bg-chart-warning', 'bg-yellow-400', 'bg-chart-success', 'bg-chart-success'];
-  return { score, label: labels[score] ?? 'Strong', color: colors[score] ?? 'bg-chart-success' };
+  const labels = ["", "Weak", "Fair", "Good", "Strong", "Very strong"];
+  const colors = [
+    "",
+    "bg-destructive",
+    "bg-chart-warning",
+    "bg-yellow-400",
+    "bg-chart-success",
+    "bg-chart-success",
+  ];
+  return {
+    score,
+    label: labels[score] ?? "Strong",
+    color: colors[score] ?? "bg-chart-success",
+  };
 }
 
-const EMPTY_CREATE = { name: '', email: '', password: '', role: 'staff' };
+const EMPTY_CREATE = { name: "", email: "", password: "", role: "staff" };
 
 export default function StaffPage() {
   const { user } = useAuth();
@@ -60,9 +95,9 @@ export default function StaffPage() {
 
   const [editUser, setEditUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({
-    name: '',
-    desiredHoursPerWeek: '40',
-    hourlyRate: '',
+    name: "",
+    desiredHoursPerWeek: "40",
+    hourlyRate: "",
     skillIds: [] as string[],
     certifiedLocationIds: [] as string[],
   });
@@ -72,23 +107,23 @@ export default function StaffPage() {
   const [showCreatePassword, setShowCreatePassword] = useState(false);
 
   const [resetUser, setResetUser] = useState<User | null>(null);
-  const [newPassword, setNewPassword] = useState('');
+  const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
 
   const { data: staff = [], isLoading: staffLoading } = useQuery<User[]>({
-    queryKey: ['users'],
+    queryKey: ["users"],
     queryFn: () => usersApi.list(),
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: locations = [] } = useQuery<Location[]>({
-    queryKey: ['locations'],
+    queryKey: ["locations"],
     queryFn: locationsApi.list,
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: skills = [] } = useQuery<Skill[]>({
-    queryKey: ['skills'],
+    queryKey: ["skills"],
     queryFn: skillsApi.list,
     staleTime: 5 * 60 * 1000,
   });
@@ -96,8 +131,8 @@ export default function StaffPage() {
   const createMutation = useMutation({
     mutationFn: () => usersApi.create(createForm),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Staff member created');
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("Staff member created");
       setCreateOpen(false);
       setCreateForm(EMPTY_CREATE);
     },
@@ -108,8 +143,8 @@ export default function StaffPage() {
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       usersApi.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Staff member updated');
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("Staff member updated");
       setEditUser(null);
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -119,9 +154,9 @@ export default function StaffPage() {
     mutationFn: ({ id, password }: { id: string; password: string }) =>
       usersApi.resetPassword(id, password),
     onSuccess: () => {
-      toast.success('Password reset successfully');
+      toast.success("Password reset successfully");
       setResetUser(null);
-      setNewPassword('');
+      setNewPassword("");
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
@@ -130,7 +165,7 @@ export default function StaffPage() {
     setEditForm({
       name: u.name,
       desiredHoursPerWeek: String(u.desiredHoursPerWeek ?? 40),
-      hourlyRate: u.hourlyRate != null ? String(u.hourlyRate) : '',
+      hourlyRate: u.hourlyRate != null ? String(u.hourlyRate) : "",
       skillIds: u.skills?.map((s) => s.id) ?? [],
       certifiedLocationIds: u.certifiedLocations?.map((l) => l.id) ?? [],
     });
@@ -140,7 +175,9 @@ export default function StaffPage() {
   const toggleSkill = (id: string) =>
     setEditForm((f) => ({
       ...f,
-      skillIds: f.skillIds.includes(id) ? f.skillIds.filter((s) => s !== id) : [...f.skillIds, id],
+      skillIds: f.skillIds.includes(id)
+        ? f.skillIds.filter((s) => s !== id)
+        : [...f.skillIds, id],
     }));
 
   const toggleLocation = (id: string) =>
@@ -153,42 +190,50 @@ export default function StaffPage() {
 
   const columns: ColumnDef<User>[] = [
     {
-      accessorKey: 'name',
+      accessorKey: "name",
       header: ({ column }) => (
         <Button variant="ghost" onClick={() => column.toggleSorting()}>
           Name <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
     },
-    { accessorKey: 'email', header: 'Email' },
+    { accessorKey: "email", header: "Email" },
     {
-      accessorKey: 'role',
-      header: 'Role',
+      accessorKey: "role",
+      header: "Role",
       cell: ({ row }) => (
-        <Badge variant="outline" className="capitalize">{row.original.role}</Badge>
+        <Badge variant="outline" className="capitalize">
+          {row.original.role}
+        </Badge>
       ),
     },
     {
-      id: 'skills',
-      header: 'Skills',
+      id: "skills",
+      header: "Skills",
       cell: ({ row }) => (
         <div className="flex flex-wrap gap-1">
           {row.original.skills?.slice(0, 3).map((s) => (
-            <Badge key={s.id} variant="secondary" className="text-xs">{s.name}</Badge>
+            <Badge key={s.id} variant="secondary" className="text-xs">
+              {s.name}
+            </Badge>
           ))}
           {(row.original.skills?.length ?? 0) > 3 && (
-            <Badge variant="secondary" className="text-xs">+{(row.original.skills?.length ?? 0) - 3}</Badge>
+            <Badge variant="secondary" className="text-xs">
+              +{(row.original.skills?.length ?? 0) - 3}
+            </Badge>
           )}
         </div>
       ),
     },
     {
-      id: 'locations',
-      header: 'Locations',
+      id: "locations",
+      header: "Locations",
       cell: ({ row }) => (
         <div className="flex flex-wrap gap-1">
           {row.original.certifiedLocations?.slice(0, 2).map((l) => (
-            <Badge key={l.id} variant="outline" className="text-xs">{l.name}</Badge>
+            <Badge key={l.id} variant="outline" className="text-xs">
+              {l.name}
+            </Badge>
           ))}
           {(row.original.certifiedLocations?.length ?? 0) > 2 && (
             <Badge variant="outline" className="text-xs">
@@ -199,21 +244,21 @@ export default function StaffPage() {
       ),
     },
     {
-      accessorKey: 'desiredHoursPerWeek',
-      header: 'Hrs/wk',
-      cell: ({ row }) => row.original.desiredHoursPerWeek || '—',
+      accessorKey: "desiredHoursPerWeek",
+      header: "Hrs/wk",
+      cell: ({ row }) => row.original.desiredHoursPerWeek || "—",
     },
     {
-      id: 'status',
-      header: 'Status',
+      id: "status",
+      header: "Status",
       cell: ({ row }) => (
-        <Badge variant={row.original.isActive ? 'default' : 'secondary'}>
-          {row.original.isActive ? 'Active' : 'Inactive'}
+        <Badge variant={row.original.isActive ? "default" : "secondary"}>
+          {row.original.isActive ? "Active" : "Inactive"}
         </Badge>
       ),
     },
     {
-      id: 'actions',
+      id: "actions",
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -222,11 +267,13 @@ export default function StaffPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => openEdit(row.original)}>Edit</DropdownMenuItem>
-            {user?.role === 'admin' && (
+            <DropdownMenuItem onClick={() => openEdit(row.original)}>
+              Edit
+            </DropdownMenuItem>
+            {user?.role === "admin" && (
               <DropdownMenuItem
                 onClick={() => {
-                  setNewPassword('');
+                  setNewPassword("");
                   setShowNewPassword(false);
                   setResetUser(row.original);
                 }}
@@ -242,7 +289,7 @@ export default function StaffPage() {
                 })
               }
             >
-              {row.original.isActive ? 'Deactivate' : 'Activate'}
+              {row.original.isActive ? "Deactivate" : "Activate"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -251,15 +298,18 @@ export default function StaffPage() {
   ];
 
   if (user === null) return null;
-  if (user.role !== 'admin' && user.role !== 'manager') return (
-    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
-      <ShieldAlert className="h-10 w-10 opacity-40" />
-      <div className="text-center">
-        <p className="font-semibold text-foreground">Access Restricted</p>
-        <p className="text-sm mt-1">This page is only available to managers and administrators.</p>
+  if (user.role !== "admin" && user.role !== "manager")
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+        <ShieldAlert className="h-10 w-10 opacity-40" />
+        <div className="text-center">
+          <p className="font-semibold text-foreground">Access Restricted</p>
+          <p className="text-sm mt-1">
+            This page is only available to managers and administrators.
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   return (
     <div className="space-y-4">
@@ -270,8 +320,14 @@ export default function StaffPage() {
             {staff.length} team members across all locations
           </p>
         </div>
-        {user?.role === 'admin' && (
-          <Button onClick={() => { setCreateForm(EMPTY_CREATE); setShowCreatePassword(false); setCreateOpen(true); }}>
+        {user?.role === "admin" && (
+          <Button
+            onClick={() => {
+              setCreateForm(EMPTY_CREATE);
+              setShowCreatePassword(false);
+              setCreateOpen(true);
+            }}
+          >
             <UserPlus className="h-4 w-4 mr-2" /> Add staff
           </Button>
         )}
@@ -286,13 +342,23 @@ export default function StaffPage() {
         emptyState={
           <Empty className="border">
             <EmptyHeader>
-              <EmptyMedia variant="icon"><UserPlus /></EmptyMedia>
+              <EmptyMedia variant="icon">
+                <UserPlus />
+              </EmptyMedia>
               <EmptyTitle>No staff members yet</EmptyTitle>
-              <EmptyDescription>Add your first team member to get started with scheduling.</EmptyDescription>
+              <EmptyDescription>
+                Add your first team member to get started with scheduling.
+              </EmptyDescription>
             </EmptyHeader>
-            {user?.role === 'admin' && (
+            {user?.role === "admin" && (
               <EmptyContent>
-                <Button onClick={() => { setCreateForm(EMPTY_CREATE); setShowCreatePassword(false); setCreateOpen(true); }}>
+                <Button
+                  onClick={() => {
+                    setCreateForm(EMPTY_CREATE);
+                    setShowCreatePassword(false);
+                    setCreateOpen(true);
+                  }}
+                >
                   <UserPlus className="h-4 w-4 mr-2" /> Add staff member
                 </Button>
               </EmptyContent>
@@ -302,11 +368,18 @@ export default function StaffPage() {
       />
 
       {/* Create staff */}
-      <Sheet open={createOpen} onOpenChange={(open) => { if (!open) setCreateOpen(false); }}>
+      <Sheet
+        open={createOpen}
+        onOpenChange={(open) => {
+          if (!open) setCreateOpen(false);
+        }}
+      >
         <SheetContent className="sm:max-w-md overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Add staff member</SheetTitle>
-            <SheetDescription>Create a new account. Share the credentials directly.</SheetDescription>
+            <SheetDescription>
+              Create a new account. Share the credentials directly.
+            </SheetDescription>
           </SheetHeader>
 
           <div className="grid flex-1 auto-rows-min gap-6 px-4">
@@ -314,7 +387,9 @@ export default function StaffPage() {
               <Label>Full name</Label>
               <Input
                 value={createForm.name}
-                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, name: e.target.value })
+                }
                 autoComplete="off"
               />
             </div>
@@ -324,7 +399,9 @@ export default function StaffPage() {
               <Input
                 type="email"
                 value={createForm.email}
-                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, email: e.target.value })
+                }
                 autoComplete="off"
               />
             </div>
@@ -333,9 +410,11 @@ export default function StaffPage() {
               <Label>Password</Label>
               <div className="relative">
                 <Input
-                  type={showCreatePassword ? 'text' : 'password'}
+                  type={showCreatePassword ? "text" : "password"}
                   value={createForm.password}
-                  onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, password: e.target.value })
+                  }
                   className="pr-10"
                   autoComplete="new-password"
                 />
@@ -343,14 +422,22 @@ export default function StaffPage() {
                 <button
                   type="button"
                   onClick={() => setShowCreatePassword((v) => !v)}
-                  aria-label={showCreatePassword ? 'Hide password' : 'Show password'}
+                  aria-label={
+                    showCreatePassword ? "Hide password" : "Show password"
+                  }
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
                 >
-                  {showCreatePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showCreatePassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground">Minimum 12 characters</p>
+              <p className="text-xs text-muted-foreground">
+                Minimum 12 characters
+              </p>
             </div>
 
             <div className="grid gap-3">
@@ -375,12 +462,13 @@ export default function StaffPage() {
             <Button
               onClick={() => createMutation.mutate()}
               disabled={
-                !createForm.name || !createForm.email ||
+                !createForm.name ||
+                !createForm.email ||
                 createForm.password.length < 12 ||
                 createMutation.isPending
               }
             >
-              {createMutation.isPending ? 'Creating…' : 'Create account'}
+              {createMutation.isPending ? "Creating…" : "Create account"}
             </Button>
             <SheetClose asChild>
               <Button variant="outline">Cancel</Button>
@@ -390,11 +478,16 @@ export default function StaffPage() {
       </Sheet>
 
       {/* Edit staff */}
-      <Sheet open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
+      <Sheet
+        open={!!editUser}
+        onOpenChange={(open) => !open && setEditUser(null)}
+      >
         <SheetContent className="sm:max-w-md overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Edit {editUser?.name}</SheetTitle>
-            <SheetDescription>Update skills, locations, and profile details.</SheetDescription>
+            <SheetDescription>
+              Update skills, locations, and profile details.
+            </SheetDescription>
           </SheetHeader>
 
           <div className="grid flex-1 auto-rows-min gap-6 px-4">
@@ -402,7 +495,9 @@ export default function StaffPage() {
               <Label>Full name</Label>
               <Input
                 value={editForm.name}
-                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, name: e.target.value })
+                }
               />
             </div>
 
@@ -413,7 +508,12 @@ export default function StaffPage() {
                 min="0"
                 className="w-24"
                 value={editForm.desiredHoursPerWeek}
-                onChange={(e) => setEditForm({ ...editForm, desiredHoursPerWeek: e.target.value })}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    desiredHoursPerWeek: e.target.value,
+                  })
+                }
               />
             </div>
 
@@ -426,7 +526,9 @@ export default function StaffPage() {
                 className="w-28"
                 placeholder="e.g. 18.50"
                 value={editForm.hourlyRate}
-                onChange={(e) => setEditForm({ ...editForm, hourlyRate: e.target.value })}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, hourlyRate: e.target.value })
+                }
               />
             </div>
 
@@ -436,7 +538,9 @@ export default function StaffPage() {
                 {skills.map((s) => (
                   <Badge
                     key={s.id}
-                    variant={editForm.skillIds.includes(s.id) ? 'default' : 'outline'}
+                    variant={
+                      editForm.skillIds.includes(s.id) ? "default" : "outline"
+                    }
                     className="cursor-pointer select-none"
                     onClick={() => toggleSkill(s.id)}
                   >
@@ -452,7 +556,11 @@ export default function StaffPage() {
                 {locations.map((l) => (
                   <Badge
                     key={l.id}
-                    variant={editForm.certifiedLocationIds.includes(l.id) ? 'default' : 'outline'}
+                    variant={
+                      editForm.certifiedLocationIds.includes(l.id)
+                        ? "default"
+                        : "outline"
+                    }
                     className="cursor-pointer select-none"
                     onClick={() => toggleLocation(l.id)}
                   >
@@ -471,8 +579,14 @@ export default function StaffPage() {
                   id: editUser.id,
                   data: {
                     name: editForm.name,
-                    desiredHoursPerWeek: parseInt(editForm.desiredHoursPerWeek, 10),
-                    hourlyRate: editForm.hourlyRate !== '' ? parseFloat(editForm.hourlyRate) : null,
+                    desiredHoursPerWeek: parseInt(
+                      editForm.desiredHoursPerWeek,
+                      10,
+                    ),
+                    hourlyRate:
+                      editForm.hourlyRate !== ""
+                        ? parseFloat(editForm.hourlyRate)
+                        : null,
                     skillIds: editForm.skillIds,
                     certifiedLocationIds: editForm.certifiedLocationIds,
                   },
@@ -480,7 +594,7 @@ export default function StaffPage() {
               }
               disabled={updateMutation.isPending}
             >
-              {updateMutation.isPending ? 'Saving…' : 'Save changes'}
+              {updateMutation.isPending ? "Saving…" : "Save changes"}
             </Button>
             <SheetClose asChild>
               <Button variant="outline">Cancel</Button>
@@ -493,15 +607,19 @@ export default function StaffPage() {
       <Dialog
         open={!!resetUser}
         onOpenChange={(open) => {
-          if (!open) { setResetUser(null); setNewPassword(''); }
+          if (!open) {
+            setResetUser(null);
+            setNewPassword("");
+          }
         }}
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Reset password</DialogTitle>
             <DialogDescription>
-              Set a new password for <span className="font-medium">{resetUser?.name}</span>.
-              They will need to use this on their next login.
+              Set a new password for{" "}
+              <span className="font-medium">{resetUser?.name}</span>. They will
+              need to use this on their next login.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2 py-2">
@@ -509,7 +627,7 @@ export default function StaffPage() {
             <div className="relative">
               <Input
                 id="new-password"
-                type={showNewPassword ? 'text' : 'password'}
+                type={showNewPassword ? "text" : "password"}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="pr-10"
@@ -518,36 +636,51 @@ export default function StaffPage() {
               <button
                 type="button"
                 onClick={() => setShowNewPassword((v) => !v)}
-                aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                aria-label={showNewPassword ? "Hide password" : "Show password"}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 tabIndex={-1}
               >
-                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showNewPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
               </button>
             </div>
-            {newPassword && (() => {
-              const s = passwordStrength(newPassword);
-              return (
-                <div className="space-y-1">
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <div key={i} className={`h-1 flex-1 rounded-full ${i <= s.score ? s.color : 'bg-muted'}`} />
-                    ))}
+            {newPassword &&
+              (() => {
+                const s = passwordStrength(newPassword);
+                return (
+                  <div className="space-y-1">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <div
+                          key={i}
+                          className={`h-1 flex-1 rounded-full ${i <= s.score ? s.color : "bg-muted"}`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{s.label}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
-                </div>
-              );
-            })()}
+                );
+              })()}
           </div>
           <DialogFooter>
             <Button
               onClick={() =>
                 resetUser &&
-                resetPasswordMutation.mutate({ id: resetUser.id, password: newPassword })
+                resetPasswordMutation.mutate({
+                  id: resetUser.id,
+                  password: newPassword,
+                })
               }
-              disabled={newPassword.length < 12 || resetPasswordMutation.isPending}
+              disabled={
+                newPassword.length < 12 || resetPasswordMutation.isPending
+              }
             >
-              {resetPasswordMutation.isPending ? 'Resetting…' : 'Reset password'}
+              {resetPasswordMutation.isPending
+                ? "Resetting…"
+                : "Reset password"}
             </Button>
           </DialogFooter>
         </DialogContent>

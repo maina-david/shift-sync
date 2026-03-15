@@ -2,13 +2,28 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Shift, ShiftStatus } from '../shifts/entities/shift.entity';
-import { ShiftAssignment, AssignmentStatus } from '../shifts/entities/shift-assignment.entity';
+import {
+  ShiftAssignment,
+  AssignmentStatus,
+} from '../shifts/entities/shift-assignment.entity';
 import { User, UserRole } from '../users/entities/user.entity';
-import { TimeOffRequest, TimeOffStatus } from '../time-off-requests/entities/time-off-request.entity';
-import { SwapRequest, SwapRequestStatus } from '../swap-requests/entities/swap-request.entity';
-import { DropRequest, DropRequestStatus } from '../drop-requests/entities/drop-request.entity';
-import { Reservation, ReservationStatus } from '../reservations/entities/reservation.entity';
-import { minutesBetween, weekStart, addDays } from '../common/timezone.util';
+import {
+  TimeOffRequest,
+  TimeOffStatus,
+} from '../time-off-requests/entities/time-off-request.entity';
+import {
+  SwapRequest,
+  SwapRequestStatus,
+} from '../swap-requests/entities/swap-request.entity';
+import {
+  DropRequest,
+  DropRequestStatus,
+} from '../drop-requests/entities/drop-request.entity';
+import {
+  Reservation,
+  ReservationStatus,
+} from '../reservations/entities/reservation.entity';
+import { minutesBetween, addDays } from '../common/timezone.util';
 
 const PREMIUM_DAYS = [5, 6];
 
@@ -26,9 +41,11 @@ export interface LiveStatsSnapshot {
 export class AnalyticsService {
   constructor(
     @InjectRepository(Shift) private shiftRepo: Repository<Shift>,
-    @InjectRepository(ShiftAssignment) private assignRepo: Repository<ShiftAssignment>,
+    @InjectRepository(ShiftAssignment)
+    private assignRepo: Repository<ShiftAssignment>,
     @InjectRepository(User) private userRepo: Repository<User>,
-    @InjectRepository(TimeOffRequest) private timeOffRepo: Repository<TimeOffRequest>,
+    @InjectRepository(TimeOffRequest)
+    private timeOffRepo: Repository<TimeOffRequest>,
     @InjectRepository(SwapRequest) private swapRepo: Repository<SwapRequest>,
     @InjectRepository(DropRequest) private dropRepo: Repository<DropRequest>,
     @InjectRepository(Reservation) private reservRepo: Repository<Reservation>,
@@ -55,7 +72,9 @@ export class AnalyticsService {
       this.swapRepo.count({ where: { status: SwapRequestStatus.PENDING } }),
       this.swapRepo.count({ where: { status: SwapRequestStatus.ACCEPTED } }),
       this.dropRepo.count({ where: { status: DropRequestStatus.OPEN } }),
-      this.reservRepo.count({ where: { status: ReservationStatus.PENDING, date: today } }),
+      this.reservRepo.count({
+        where: { status: ReservationStatus.PENDING, date: today },
+      }),
     ]);
 
     return {
@@ -80,35 +99,50 @@ export class AnalyticsService {
       .innerJoinAndSelect('a.shift', 'shift')
       .innerJoinAndSelect('a.staff', 'staff')
       .where('a.status = :status', { status: AssignmentStatus.ASSIGNED })
-      .andWhere('shift.date >= :startDate AND shift.date <= :endDate', { startDate, endDate });
+      .andWhere('shift.date >= :startDate AND shift.date <= :endDate', {
+        startDate,
+        endDate,
+      });
 
-    if (locationId) qb.andWhere('shift.locationId = :locationId', { locationId });
+    if (locationId)
+      qb.andWhere('shift.locationId = :locationId', { locationId });
     if (requestingUser?.role === UserRole.MANAGER) {
-      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
+      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? [
+        '__none__',
+      ];
       qb.andWhere('shift.locationId IN (:...ids)', { ids });
     }
 
     const assignments = await qb.getMany();
 
-    const staffMap = new Map<string, { name: string; totalMinutes: number; desiredHours: number }>();
+    const staffMap = new Map<
+      string,
+      { name: string; totalMinutes: number; desiredHours: number }
+    >();
 
     for (const a of assignments) {
       const mins = minutesBetween(a.shift.startTime, a.shift.endTime);
       const key = a.staffId;
       let entry = staffMap.get(key);
       if (!entry) {
-        entry = { name: a.staff.name, totalMinutes: 0, desiredHours: a.staff.desiredHoursPerWeek };
+        entry = {
+          name: a.staff.name,
+          totalMinutes: 0,
+          desiredHours: a.staff.desiredHoursPerWeek,
+        };
         staffMap.set(key, entry);
       }
       entry.totalMinutes += mins;
     }
 
-    return Array.from(staffMap.entries()).map(([staffId, data]) => ({
-      staffId,
-      name: data.name,
-      totalHours: +(data.totalMinutes / 60).toFixed(2),
-      desiredHoursPerWeek: data.desiredHours,
-    })).sort((a, b) => b.totalHours - a.totalHours);
+    return Array.from(staffMap.entries())
+      .map(([staffId, data]) => ({
+        staffId,
+        name: data.name,
+        totalHours: +(data.totalMinutes / 60).toFixed(2),
+        desiredHoursPerWeek: data.desiredHours,
+      }))
+      .sort((a, b) => b.totalHours - a.totalHours);
   }
 
   async getFairnessReport(
@@ -124,17 +158,25 @@ export class AnalyticsService {
       .innerJoinAndSelect('a.shift', 'shift')
       .innerJoinAndSelect('a.staff', 'staff')
       .where('a.status = :status', { status: AssignmentStatus.ASSIGNED })
-      .andWhere('shift.date >= :startDate AND shift.date <= :endDate', { startDate, endDate });
+      .andWhere('shift.date >= :startDate AND shift.date <= :endDate', {
+        startDate,
+        endDate,
+      });
 
     if (!crossLocation) {
-      if (locationId) scopeQb.andWhere('shift.locationId = :locationId', { locationId });
+      if (locationId)
+        scopeQb.andWhere('shift.locationId = :locationId', { locationId });
       if (requestingUser?.role === UserRole.MANAGER) {
-        const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
+        const ids = requestingUser.managedLocations?.map((l) => l.id) ?? [
+          '__none__',
+        ];
         scopeQb.andWhere('shift.locationId IN (:...ids)', { ids });
       }
     } else if (requestingUser?.role === UserRole.MANAGER) {
       // Cross-location for managers: only their managed locations
-      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
+      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? [
+        '__none__',
+      ];
       scopeQb.andWhere('shift.locationId IN (:...ids)', { ids });
     }
 
@@ -150,28 +192,42 @@ export class AnalyticsService {
           .innerJoinAndSelect('a.shift', 'shift')
           .innerJoinAndSelect('a.staff', 'staff')
           .where('a.status = :status', { status: AssignmentStatus.ASSIGNED })
-          .andWhere('shift.date >= :startDate AND shift.date <= :endDate', { startDate, endDate })
-          .andWhere('a.staffId IN (:...staffIds)', { staffIds: Array.from(staffAtLocation) });
+          .andWhere('shift.date >= :startDate AND shift.date <= :endDate', {
+            startDate,
+            endDate,
+          })
+          .andWhere('a.staffId IN (:...staffIds)', {
+            staffIds: Array.from(staffAtLocation),
+          });
         assignments = await allQb.getMany();
       }
     }
 
-    const staffMap = new Map<string, {
-      name: string;
-      totalShifts: number;
-      premiumShifts: number;
-      totalHours: number;
-    }>();
+    const staffMap = new Map<
+      string,
+      {
+        name: string;
+        totalShifts: number;
+        premiumShifts: number;
+        totalHours: number;
+      }
+    >();
 
     for (const a of assignments) {
       const shiftDate = new Date(a.shift.date + 'T00:00:00Z');
       const day = shiftDate.getUTCDay();
-      const isPremium = PREMIUM_DAYS.includes(day) && a.shift.startTime >= '17:00';
+      const isPremium =
+        PREMIUM_DAYS.includes(day) && a.shift.startTime >= '17:00';
       const mins = minutesBetween(a.shift.startTime, a.shift.endTime);
 
       let entry = staffMap.get(a.staffId);
       if (!entry) {
-        entry = { name: a.staff.name, totalShifts: 0, premiumShifts: 0, totalHours: 0 };
+        entry = {
+          name: a.staff.name,
+          totalShifts: 0,
+          premiumShifts: 0,
+          totalHours: 0,
+        };
         staffMap.set(a.staffId, entry);
       }
       entry.totalShifts++;
@@ -185,7 +241,8 @@ export class AnalyticsService {
       totalShifts: d.totalShifts,
       premiumShifts: d.premiumShifts,
       totalHours: +d.totalHours.toFixed(2),
-      premiumRatio: d.totalShifts > 0 ? +(d.premiumShifts / d.totalShifts).toFixed(3) : 0,
+      premiumRatio:
+        d.totalShifts > 0 ? +(d.premiumShifts / d.totalShifts).toFixed(3) : 0,
     }));
 
     if (results.length === 0) {
@@ -194,7 +251,8 @@ export class AnalyticsService {
 
     const ratios = results.map((r) => r.premiumRatio);
     const mean = ratios.reduce((s, v) => s + v, 0) / ratios.length;
-    const variance = ratios.reduce((s, v) => s + (v - mean) ** 2, 0) / ratios.length;
+    const variance =
+      ratios.reduce((s, v) => s + (v - mean) ** 2, 0) / ratios.length;
     const stdDev = Math.sqrt(variance);
 
     return {
@@ -203,7 +261,11 @@ export class AnalyticsService {
     };
   }
 
-  async getOvertimeProjection(weekStartDate: string, locationId?: string, requestingUser?: User) {
+  async getOvertimeProjection(
+    weekStartDate: string,
+    locationId?: string,
+    requestingUser?: User,
+  ) {
     const weekEndDate = addDays(weekStartDate, 7);
 
     const qb = this.assignRepo
@@ -216,26 +278,44 @@ export class AnalyticsService {
         end: weekEndDate,
       });
 
-    if (locationId) qb.andWhere('shift.locationId = :locationId', { locationId });
+    if (locationId)
+      qb.andWhere('shift.locationId = :locationId', { locationId });
     if (requestingUser?.role === UserRole.MANAGER) {
-      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
+      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? [
+        '__none__',
+      ];
       qb.andWhere('shift.locationId IN (:...ids)', { ids });
     }
 
     const assignments = await qb.getMany();
 
-    const staffMap = new Map<string, {
-      name: string;
-      hourlyRate: number | null;
-      weeklyMinutes: number;
-      assignments: Array<{ assignmentId: string; shiftId: string; date: string; startTime: string; endTime: string; minutes: number }>;
-    }>();
+    const staffMap = new Map<
+      string,
+      {
+        name: string;
+        hourlyRate: number | null;
+        weeklyMinutes: number;
+        assignments: Array<{
+          assignmentId: string;
+          shiftId: string;
+          date: string;
+          startTime: string;
+          endTime: string;
+          minutes: number;
+        }>;
+      }
+    >();
 
     for (const a of assignments) {
       const mins = minutesBetween(a.shift.startTime, a.shift.endTime);
       let entry = staffMap.get(a.staffId);
       if (!entry) {
-        entry = { name: a.staff.name, hourlyRate: a.staff.hourlyRate, weeklyMinutes: 0, assignments: [] };
+        entry = {
+          name: a.staff.name,
+          hourlyRate: a.staff.hourlyRate,
+          weeklyMinutes: 0,
+          assignments: [],
+        };
         staffMap.set(a.staffId, entry);
       }
       entry.weeklyMinutes += mins;
@@ -249,51 +329,68 @@ export class AnalyticsService {
       });
     }
 
-    return Array.from(staffMap.entries()).map(([staffId, d]) => {
-      const weeklyHours = d.weeklyMinutes / 60;
-      const overtimeHours = Math.max(0, weeklyHours - 40);
-      const rate = d.hourlyRate ? Number(d.hourlyRate) : null;
-      const overtimeCost = rate !== null ? +(overtimeHours * 1.5 * rate).toFixed(2) : null;
+    return Array.from(staffMap.entries())
+      .map(([staffId, d]) => {
+        const weeklyHours = d.weeklyMinutes / 60;
+        const overtimeHours = Math.max(0, weeklyHours - 40);
+        const rate = d.hourlyRate ? Number(d.hourlyRate) : null;
+        const overtimeCost =
+          rate !== null ? +(overtimeHours * 1.5 * rate).toFixed(2) : null;
 
-      let cumulative = 0;
-      const annotatedAssignments = d.assignments
-        .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
-        .map((a) => {
-          const prevCumulative = cumulative;
-          cumulative += a.minutes / 60;
-          const isOvertimePusher = cumulative > 40 && prevCumulative < 40;
-          const isInOvertime = prevCumulative >= 40;
-          return { ...a, isOvertimePusher, isInOvertime };
-        });
+        let cumulative = 0;
+        const annotatedAssignments = d.assignments
+          .sort(
+            (a, b) =>
+              a.date.localeCompare(b.date) ||
+              a.startTime.localeCompare(b.startTime),
+          )
+          .map((a) => {
+            const prevCumulative = cumulative;
+            cumulative += a.minutes / 60;
+            const isOvertimePusher = cumulative > 40 && prevCumulative < 40;
+            const isInOvertime = prevCumulative >= 40;
+            return { ...a, isOvertimePusher, isInOvertime };
+          });
 
-      return {
-        staffId,
-        name: d.name,
-        hourlyRate: rate,
-        weeklyHours: +weeklyHours.toFixed(2),
-        overtimeHours: +overtimeHours.toFixed(2),
-        overtimeCost,
-        isAtRisk: weeklyHours >= 35,
-        isOvertime: weeklyHours > 40,
-        assignments: annotatedAssignments,
-      };
-    }).sort((a, b) => b.weeklyHours - a.weeklyHours);
+        return {
+          staffId,
+          name: d.name,
+          hourlyRate: rate,
+          weeklyHours: +weeklyHours.toFixed(2),
+          overtimeHours: +overtimeHours.toFixed(2),
+          overtimeCost,
+          isAtRisk: weeklyHours >= 35,
+          isOvertime: weeklyHours > 40,
+          assignments: annotatedAssignments,
+        };
+      })
+      .sort((a, b) => b.weeklyHours - a.weeklyHours);
   }
 
   // ─── PART 1: NEW ANALYTICS METHODS ─────────────────────────────────────────
 
-  async getLaborCost(startDate: string, endDate: string, locationId?: string, requestingUser?: User) {
+  async getLaborCost(
+    startDate: string,
+    endDate: string,
+    locationId?: string,
+    requestingUser?: User,
+  ) {
     const qb = this.shiftRepo
       .createQueryBuilder('s')
       .leftJoinAndSelect('s.assignments', 'a')
       .leftJoinAndSelect('a.staff', 'staff')
       .leftJoinAndSelect('s.location', 'loc')
       .where('s.status = :status', { status: ShiftStatus.PUBLISHED })
-      .andWhere('s.date >= :startDate AND s.date <= :endDate', { startDate, endDate });
+      .andWhere('s.date >= :startDate AND s.date <= :endDate', {
+        startDate,
+        endDate,
+      });
 
     if (locationId) qb.andWhere('s.locationId = :locationId', { locationId });
     if (requestingUser?.role === UserRole.MANAGER) {
-      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
+      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? [
+        '__none__',
+      ];
       qb.andWhere('s.locationId IN (:...ids)', { ids });
     }
 
@@ -302,23 +399,34 @@ export class AnalyticsService {
     let totalScheduledHours = 0;
     let totalLaborCost = 0;
 
-    const byLocationMap = new Map<string, {
-      name: string;
-      scheduledHours: number;
-      laborCost: number;
-      shiftCount: number;
-    }>();
+    const byLocationMap = new Map<
+      string,
+      {
+        name: string;
+        scheduledHours: number;
+        laborCost: number;
+        shiftCount: number;
+      }
+    >();
 
-    const byDateMap = new Map<string, { laborCost: number; scheduledHours: number }>();
+    const byDateMap = new Map<
+      string,
+      { laborCost: number; scheduledHours: number }
+    >();
 
     for (const shift of shifts) {
-      const scheduledHours = minutesBetween(shift.startTime, shift.endTime) / 60;
+      const scheduledHours =
+        minutesBetween(shift.startTime, shift.endTime) / 60;
       const activeAssignments = (shift.assignments ?? []).filter(
-        (a) => a.status === AssignmentStatus.ASSIGNED || a.status === AssignmentStatus.COMPLETED,
+        (a) =>
+          a.status === AssignmentStatus.ASSIGNED ||
+          a.status === AssignmentStatus.COMPLETED,
       );
-      const shiftLaborCost = scheduledHours * activeAssignments.reduce((sum, a) => {
-        return sum + (a.staff?.hourlyRate ? Number(a.staff.hourlyRate) : 0);
-      }, 0);
+      const shiftLaborCost =
+        scheduledHours *
+        activeAssignments.reduce((sum, a) => {
+          return sum + (a.staff?.hourlyRate ? Number(a.staff.hourlyRate) : 0);
+        }, 0);
 
       totalScheduledHours += scheduledHours;
       totalLaborCost += shiftLaborCost;
@@ -328,7 +436,12 @@ export class AnalyticsService {
       const locName = shift.location?.name ?? locId;
       let locEntry = byLocationMap.get(locId);
       if (!locEntry) {
-        locEntry = { name: locName, scheduledHours: 0, laborCost: 0, shiftCount: 0 };
+        locEntry = {
+          name: locName,
+          scheduledHours: 0,
+          laborCost: 0,
+          shiftCount: 0,
+        };
         byLocationMap.set(locId, locEntry);
       }
       locEntry.scheduledHours += scheduledHours;
@@ -364,33 +477,45 @@ export class AnalyticsService {
     };
   }
 
-  async getKpiRollup(startDate: string, endDate: string, requestingUser?: User) {
+  async getKpiRollup(
+    startDate: string,
+    endDate: string,
+    requestingUser?: User,
+  ) {
     const qb = this.shiftRepo
       .createQueryBuilder('s')
       .leftJoinAndSelect('s.assignments', 'a')
       .leftJoinAndSelect('a.staff', 'staff')
       .leftJoinAndSelect('s.location', 'loc')
-      .where('s.date >= :startDate AND s.date <= :endDate', { startDate, endDate });
+      .where('s.date >= :startDate AND s.date <= :endDate', {
+        startDate,
+        endDate,
+      });
 
     if (requestingUser?.role === UserRole.MANAGER) {
-      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
+      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? [
+        '__none__',
+      ];
       qb.andWhere('s.locationId IN (:...ids)', { ids });
     }
 
     const shifts = await qb.getMany();
 
-    const locMap = new Map<string, {
-      name: string;
-      timezone: string;
-      totalShifts: number;
-      publishedShifts: number;
-      draftShifts: number;
-      totalAssignments: number;
-      totalHeadcount: number;
-      publishedAssignments: number;
-      totalScheduledHours: number;
-      estimatedLaborCost: number;
-    }>();
+    const locMap = new Map<
+      string,
+      {
+        name: string;
+        timezone: string;
+        totalShifts: number;
+        publishedShifts: number;
+        draftShifts: number;
+        totalAssignments: number;
+        totalHeadcount: number;
+        publishedAssignments: number;
+        totalScheduledHours: number;
+        estimatedLaborCost: number;
+      }
+    >();
 
     for (const shift of shifts) {
       const locId = shift.locationId;
@@ -414,45 +539,60 @@ export class AnalyticsService {
 
       if (shift.status === ShiftStatus.PUBLISHED) {
         entry.publishedShifts += 1;
-        const scheduledHours = minutesBetween(shift.startTime, shift.endTime) / 60;
+        const scheduledHours =
+          minutesBetween(shift.startTime, shift.endTime) / 60;
         entry.totalScheduledHours += scheduledHours;
         entry.totalHeadcount += shift.headcount;
 
         const activeAssignments = (shift.assignments ?? []).filter(
-          (a) => a.status === AssignmentStatus.ASSIGNED || a.status === AssignmentStatus.COMPLETED,
+          (a) =>
+            a.status === AssignmentStatus.ASSIGNED ||
+            a.status === AssignmentStatus.COMPLETED,
         );
         entry.publishedAssignments += activeAssignments.length;
         entry.totalAssignments += activeAssignments.length;
 
-        entry.estimatedLaborCost += scheduledHours * activeAssignments.reduce((sum, a) => {
-          return sum + (a.staff?.hourlyRate ? Number(a.staff.hourlyRate) : 0);
-        }, 0);
+        entry.estimatedLaborCost +=
+          scheduledHours *
+          activeAssignments.reduce((sum, a) => {
+            return sum + (a.staff?.hourlyRate ? Number(a.staff.hourlyRate) : 0);
+          }, 0);
       } else {
         entry.draftShifts += 1;
         const activeAssignments = (shift.assignments ?? []).filter(
-          (a) => a.status === AssignmentStatus.ASSIGNED || a.status === AssignmentStatus.COMPLETED,
+          (a) =>
+            a.status === AssignmentStatus.ASSIGNED ||
+            a.status === AssignmentStatus.COMPLETED,
         );
         entry.totalAssignments += activeAssignments.length;
       }
     }
 
-    return Array.from(locMap.entries()).map(([locId, d]) => ({
-      locationId: locId,
-      name: d.name,
-      timezone: d.timezone,
-      totalShifts: d.totalShifts,
-      publishedShifts: d.publishedShifts,
-      draftShifts: d.draftShifts,
-      totalAssignments: d.totalAssignments,
-      totalScheduledHours: +d.totalScheduledHours.toFixed(2),
-      estimatedLaborCost: +d.estimatedLaborCost.toFixed(2),
-      fillRate: d.totalHeadcount > 0
-        ? +(d.publishedAssignments / d.totalHeadcount).toFixed(3)
-        : 0,
-    })).sort((a, b) => b.totalShifts - a.totalShifts);
+    return Array.from(locMap.entries())
+      .map(([locId, d]) => ({
+        locationId: locId,
+        name: d.name,
+        timezone: d.timezone,
+        totalShifts: d.totalShifts,
+        publishedShifts: d.publishedShifts,
+        draftShifts: d.draftShifts,
+        totalAssignments: d.totalAssignments,
+        totalScheduledHours: +d.totalScheduledHours.toFixed(2),
+        estimatedLaborCost: +d.estimatedLaborCost.toFixed(2),
+        fillRate:
+          d.totalHeadcount > 0
+            ? +(d.publishedAssignments / d.totalHeadcount).toFixed(3)
+            : 0,
+      }))
+      .sort((a, b) => b.totalShifts - a.totalShifts);
   }
 
-  async getAbsenteeism(startDate: string, endDate: string, locationId?: string, requestingUser?: User) {
+  async getAbsenteeism(
+    startDate: string,
+    endDate: string,
+    locationId?: string,
+    requestingUser?: User,
+  ) {
     const today = new Date().toISOString().split('T')[0];
 
     const qb = this.assignRepo
@@ -460,13 +600,20 @@ export class AnalyticsService {
       .innerJoinAndSelect('a.shift', 's')
       .innerJoinAndSelect('a.staff', 'staff')
       .where('s.status = :status', { status: ShiftStatus.PUBLISHED })
-      .andWhere('s.date >= :startDate AND s.date <= :endDate', { startDate, endDate })
+      .andWhere('s.date >= :startDate AND s.date <= :endDate', {
+        startDate,
+        endDate,
+      })
       .andWhere('s.date < :today', { today })
-      .andWhere('a.status = :assignedStatus', { assignedStatus: AssignmentStatus.ASSIGNED });
+      .andWhere('a.status = :assignedStatus', {
+        assignedStatus: AssignmentStatus.ASSIGNED,
+      });
 
     if (locationId) qb.andWhere('s.locationId = :locationId', { locationId });
     if (requestingUser?.role === UserRole.MANAGER) {
-      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
+      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? [
+        '__none__',
+      ];
       qb.andWhere('s.locationId IN (:...ids)', { ids });
     }
 
@@ -477,23 +624,30 @@ export class AnalyticsService {
       .createQueryBuilder('a')
       .innerJoin('a.shift', 's')
       .where('s.status = :status', { status: ShiftStatus.PUBLISHED })
-      .andWhere('s.date >= :startDate AND s.date <= :endDate', { startDate, endDate })
+      .andWhere('s.date >= :startDate AND s.date <= :endDate', {
+        startDate,
+        endDate,
+      })
       .andWhere('s.date < :today', { today })
       .andWhere('a.status IN (:...statuses)', {
         statuses: [AssignmentStatus.ASSIGNED, AssignmentStatus.COMPLETED],
       });
 
-    if (locationId) totalQb.andWhere('s.locationId = :locationId', { locationId });
+    if (locationId)
+      totalQb.andWhere('s.locationId = :locationId', { locationId });
     if (requestingUser?.role === UserRole.MANAGER) {
-      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? ['__none__'];
+      const ids = requestingUser.managedLocations?.map((l) => l.id) ?? [
+        '__none__',
+      ];
       totalQb.andWhere('s.locationId IN (:...ids)', { ids });
     }
 
     const totalAssignmentsInRange = await totalQb.getCount();
 
-    const noShowRate = totalAssignmentsInRange > 0
-      ? +(noShowCount / totalAssignmentsInRange).toFixed(3)
-      : 0;
+    const noShowRate =
+      totalAssignmentsInRange > 0
+        ? +(noShowCount / totalAssignmentsInRange).toFixed(3)
+        : 0;
 
     // Aggregate by staff
     const byStaffMap = new Map<string, { name: string; noShowCount: number }>();
@@ -516,7 +670,11 @@ export class AnalyticsService {
       noShowCount,
       noShowRate,
       byStaff: Array.from(byStaffMap.entries())
-        .map(([staffId, d]) => ({ staffId, name: d.name, noShowCount: d.noShowCount }))
+        .map(([staffId, d]) => ({
+          staffId,
+          name: d.name,
+          noShowCount: d.noShowCount,
+        }))
         .sort((a, b) => b.noShowCount - a.noShowCount),
       byDate: Array.from(byDateMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
@@ -551,7 +709,10 @@ export class AnalyticsService {
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      hiresByMonth.push({ month: monthKey, count: hiresByMonthMap.get(monthKey) ?? 0 });
+      hiresByMonth.push({
+        month: monthKey,
+        count: hiresByMonthMap.get(monthKey) ?? 0,
+      });
     }
 
     // Active staff count by location

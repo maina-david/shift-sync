@@ -24,11 +24,15 @@ export class SettingsService implements OnModuleInit {
   }
 
   private async seedDefaults() {
-    const flat = flattenObject(DEFAULT_SETTINGS as unknown as Record<string, unknown>);
+    const flat = flattenObject(
+      DEFAULT_SETTINGS as unknown as Record<string, unknown>,
+    );
     for (const [key, value] of Object.entries(flat)) {
       const existing = await this.repo.findOne({ where: { key } });
       if (!existing) {
-        await this.repo.save(this.repo.create({ key, value, description: null, isEnabled: true }));
+        await this.repo.save(
+          this.repo.create({ key, value, description: null, isEnabled: true }),
+        );
       }
     }
   }
@@ -48,23 +52,50 @@ export class SettingsService implements OnModuleInit {
   getScheduling(): SchedulingSettings {
     const d = DEFAULT_SETTINGS.scheduling;
     return {
-      minRestHours:                this.get('scheduling.minRestHours',                d.minRestHours),
-      dailyWarnHours:              this.get('scheduling.dailyWarnHours',              d.dailyWarnHours),
-      dailyBlockHours:             this.get('scheduling.dailyBlockHours',             d.dailyBlockHours),
-      weeklyWarnHours:             this.get('scheduling.weeklyWarnHours',             d.weeklyWarnHours),
-      weeklyOvertimeHours:         this.get('scheduling.weeklyOvertimeHours',         d.weeklyOvertimeHours),
-      maxConsecutiveDays:          this.get('scheduling.maxConsecutiveDays',          d.maxConsecutiveDays),
-      maxConsecutiveDaysHard:      this.get('scheduling.maxConsecutiveDaysHard',      d.maxConsecutiveDaysHard),
-      advanceNoticeHours:          this.get('scheduling.advanceNoticeHours',          d.advanceNoticeHours),
-      predictabilityPayMultiplier: this.get('scheduling.predictabilityPayMultiplier', d.predictabilityPayMultiplier),
+      minRestHours: this.get('scheduling.minRestHours', d.minRestHours),
+      dailyWarnHours: this.get('scheduling.dailyWarnHours', d.dailyWarnHours),
+      dailyBlockHours: this.get(
+        'scheduling.dailyBlockHours',
+        d.dailyBlockHours,
+      ),
+      weeklyWarnHours: this.get(
+        'scheduling.weeklyWarnHours',
+        d.weeklyWarnHours,
+      ),
+      weeklyOvertimeHours: this.get(
+        'scheduling.weeklyOvertimeHours',
+        d.weeklyOvertimeHours,
+      ),
+      maxConsecutiveDays: this.get(
+        'scheduling.maxConsecutiveDays',
+        d.maxConsecutiveDays,
+      ),
+      maxConsecutiveDaysHard: this.get(
+        'scheduling.maxConsecutiveDaysHard',
+        d.maxConsecutiveDaysHard,
+      ),
+      advanceNoticeHours: this.get(
+        'scheduling.advanceNoticeHours',
+        d.advanceNoticeHours,
+      ),
+      predictabilityPayMultiplier: this.get(
+        'scheduling.predictabilityPayMultiplier',
+        d.predictabilityPayMultiplier,
+      ),
     };
   }
 
   getPayroll(): PayrollSettings {
     const d = DEFAULT_SETTINGS.payroll;
     return {
-      overtimeMultiplier:           this.get('payroll.overtimeMultiplier',           d.overtimeMultiplier),
-      weeklyOvertimeThresholdHours: this.get('payroll.weeklyOvertimeThresholdHours', d.weeklyOvertimeThresholdHours),
+      overtimeMultiplier: this.get(
+        'payroll.overtimeMultiplier',
+        d.overtimeMultiplier,
+      ),
+      weeklyOvertimeThresholdHours: this.get(
+        'payroll.weeklyOvertimeThresholdHours',
+        d.weeklyOvertimeThresholdHours,
+      ),
     };
   }
 
@@ -74,12 +105,17 @@ export class SettingsService implements OnModuleInit {
 
   async set(
     key: string,
-    patch: { value?: unknown; description?: string | null; isEnabled?: boolean },
+    patch: {
+      value?: unknown;
+      description?: string | null;
+      isEnabled?: boolean;
+    },
   ): Promise<SystemSetting> {
     let setting = await this.repo.findOne({ where: { key } });
     if (setting) {
       if (patch.value !== undefined) setting.value = patch.value;
-      if (patch.description !== undefined) setting.description = patch.description;
+      if (patch.description !== undefined)
+        setting.description = patch.description;
       if (patch.isEnabled !== undefined) setting.isEnabled = patch.isEnabled;
     } else {
       setting = this.repo.create({
@@ -95,19 +131,27 @@ export class SettingsService implements OnModuleInit {
   }
 
   async resetToDefaults(): Promise<void> {
-    const flat = flattenObject(DEFAULT_SETTINGS as unknown as Record<string, unknown>);
+    const flat = flattenObject(
+      DEFAULT_SETTINGS as unknown as Record<string, unknown>,
+    );
     for (const [key, value] of Object.entries(flat)) {
       await this.set(key, { value, isEnabled: true });
     }
   }
 }
 
-function flattenObject(obj: Record<string, unknown>, prefix = ''): Record<string, unknown> {
+function flattenObject(
+  obj: Record<string, unknown>,
+  prefix = '',
+): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj)) {
     const fullKey = prefix ? `${prefix}.${k}` : k;
     if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
-      Object.assign(result, flattenObject(v as Record<string, unknown>, fullKey));
+      Object.assign(
+        result,
+        flattenObject(v as Record<string, unknown>, fullKey),
+      );
     } else {
       result[fullKey] = v;
     }

@@ -1,4 +1,11 @@
-import { IsUUID, IsDateString, IsOptional, IsInt, Min, Max } from 'class-validator';
+import {
+  IsUUID,
+  IsDateString,
+  IsOptional,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AutoScheduleDto {
@@ -6,18 +13,28 @@ export class AutoScheduleDto {
   @IsUUID()
   locationId: string;
 
-  @ApiProperty({ description: 'ISO date string for the Monday that starts the week (YYYY-MM-DD)' })
+  @ApiProperty({
+    description:
+      'ISO date string for the Monday that starts the week (YYYY-MM-DD)',
+  })
   @IsDateString()
   weekStart: string;
 
-  @ApiPropertyOptional({ default: 3, description: 'Number of time slots per day (default 3)' })
+  @ApiPropertyOptional({
+    default: 3,
+    description: 'Number of time slots per day (default 3)',
+  })
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(24)
   shiftsPerDay?: number;
 
-  @ApiPropertyOptional({ default: 1, description: 'Minimum staff to assign per slot; slots below this threshold are recorded as unfilled' })
+  @ApiPropertyOptional({
+    default: 1,
+    description:
+      'Minimum staff to assign per slot; slots below this threshold are recorded as unfilled',
+  })
   @IsOptional()
   @IsInt()
   @Min(0)

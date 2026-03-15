@@ -13,7 +13,7 @@ const makeItem = (overrides: any = {}): MenuItem =>
     sortOrder: 1,
     locationId: null,
     ...overrides,
-  } as unknown as MenuItem);
+  }) as unknown as MenuItem;
 
 describe('MenuService', () => {
   let service: MenuService;
@@ -48,7 +48,7 @@ describe('MenuService', () => {
   });
 
   describe('findHighlights', () => {
-    it('returns only today\'s highlights', async () => {
+    it("returns only today's highlights", async () => {
       repo.find.mockResolvedValue([makeItem({ isTodaysHighlight: true })]);
       const result = await service.findHighlights();
       expect(repo.find).toHaveBeenCalled();
@@ -59,7 +59,9 @@ describe('MenuService', () => {
   describe('findOne', () => {
     it('throws NotFoundException when item does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('returns item when found', async () => {
@@ -82,7 +84,9 @@ describe('MenuService', () => {
   describe('update', () => {
     it('throws NotFoundException when item does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.update('missing', {})).rejects.toThrow(NotFoundException);
+      await expect(service.update('missing', {})).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('merges dto and saves', async () => {
@@ -112,7 +116,9 @@ describe('MenuService', () => {
   describe('remove', () => {
     it('throws NotFoundException when item does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('removes the item when found', async () => {

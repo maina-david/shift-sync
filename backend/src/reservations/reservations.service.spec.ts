@@ -26,7 +26,7 @@ const makeReservation = (overrides: any = {}): Reservation =>
     locationId: 'loc-1',
     status: ReservationStatus.PENDING,
     ...overrides,
-  } as unknown as Reservation);
+  }) as unknown as Reservation;
 
 describe('ReservationsService', () => {
   let service: ReservationsService;
@@ -84,8 +84,16 @@ describe('ReservationsService', () => {
       repo.create.mockReturnValue(res);
       repo.save.mockResolvedValue(res);
 
-      await service.create({ customerName: 'Jane', partySize: 2, date: '2026-04-01', time: '18:00' } as any);
-      expect(events.emit).not.toHaveBeenCalledWith('notification.sendToManagers', expect.any(Object));
+      await service.create({
+        customerName: 'Jane',
+        partySize: 2,
+        date: '2026-04-01',
+        time: '18:00',
+      } as any);
+      expect(events.emit).not.toHaveBeenCalledWith(
+        'notification.sendToManagers',
+        expect.any(Object),
+      );
     });
   });
 
@@ -102,7 +110,11 @@ describe('ReservationsService', () => {
       const qb = buildQb({ getMany: [] });
       repo.createQueryBuilder.mockReturnValue(qb);
 
-      await service.findAll({ date: '2026-04-01', locationId: 'loc-1', status: 'PENDING' });
+      await service.findAll({
+        date: '2026-04-01',
+        locationId: 'loc-1',
+        status: 'PENDING',
+      });
       expect(qb.andWhere).toHaveBeenCalledTimes(3);
     });
   });
@@ -110,7 +122,9 @@ describe('ReservationsService', () => {
   describe('findOne', () => {
     it('throws NotFoundException when reservation not found', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('returns reservation when found', async () => {
@@ -123,13 +137,17 @@ describe('ReservationsService', () => {
   describe('update', () => {
     it('throws NotFoundException when reservation not found', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.update('missing', {})).rejects.toThrow(NotFoundException);
+      await expect(service.update('missing', {})).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('merges dto and saves', async () => {
       repo.findOne.mockResolvedValue(makeReservation());
       repo.save.mockImplementation((r: any) => Promise.resolve(r));
-      const result = await service.update('res-1', { status: ReservationStatus.CONFIRMED } as any);
+      const result = await service.update('res-1', {
+        status: ReservationStatus.CONFIRMED,
+      } as any);
       expect(repo.save).toHaveBeenCalled();
     });
   });
@@ -137,7 +155,9 @@ describe('ReservationsService', () => {
   describe('remove', () => {
     it('throws NotFoundException when reservation not found', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('removes when found', async () => {

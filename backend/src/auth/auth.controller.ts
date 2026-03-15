@@ -1,5 +1,13 @@
 import {
-  Controller, Post, Get, Body, UseGuards, HttpCode, Request, Res, UnauthorizedException,
+  Controller,
+  Post,
+  Get,
+  Body,
+  UseGuards,
+  HttpCode,
+  Request,
+  Res,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -19,7 +27,11 @@ import { User, UserRole } from '../users/entities/user.entity';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Throttle({ short: { ttl: 60_000, limit: 5 }, medium: { ttl: 60_000, limit: 5 }, long: { ttl: 60_000, limit: 5 } })
+  @Throttle({
+    short: { ttl: 60_000, limit: 5 },
+    medium: { ttl: 60_000, limit: 5 },
+    long: { ttl: 60_000, limit: 5 },
+  })
   @Post('register')
   @HttpCode(201)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,11 +42,18 @@ export class AuthController {
     return this.authService.register(dto);
   }
 
-  @Throttle({ short: { ttl: 60_000, limit: 5 }, medium: { ttl: 60_000, limit: 5 }, long: { ttl: 60_000, limit: 5 } })
+  @Throttle({
+    short: { ttl: 60_000, limit: 5 },
+    medium: { ttl: 60_000, limit: 5 },
+    long: { ttl: 60_000, limit: 5 },
+  })
   @UseGuards(LocalAuthGuard)
   @Post('login')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Login — receive short-lived access token + httpOnly refresh cookie' })
+  @ApiOperation({
+    summary:
+      'Login — receive short-lived access token + httpOnly refresh cookie',
+  })
   @ApiBody({ type: LoginDto })
   login(
     @Request() req: { user: Omit<User, 'password'> },
@@ -43,10 +62,17 @@ export class AuthController {
     return this.authService.login(req.user, res);
   }
 
-  @Throttle({ short: { ttl: 60_000, limit: 10 }, medium: { ttl: 60_000, limit: 10 }, long: { ttl: 60_000, limit: 10 } })
+  @Throttle({
+    short: { ttl: 60_000, limit: 10 },
+    medium: { ttl: 60_000, limit: 10 },
+    long: { ttl: 60_000, limit: 10 },
+  })
   @Post('refresh')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Exchange refresh token cookie for a new access token — rotates the refresh token on every use' })
+  @ApiOperation({
+    summary:
+      'Exchange refresh token cookie for a new access token — rotates the refresh token on every use',
+  })
   refresh(
     @Request() req: { cookies: Record<string, string> },
     @Res({ passthrough: true }) res: Response,

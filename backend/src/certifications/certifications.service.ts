@@ -19,17 +19,25 @@ export class CertificationsService {
     private userRepo: Repository<User>,
   ) {}
 
-  async findForUser(userId: string, managedLocationIds?: string[]): Promise<Certification[]> {
+  async findForUser(
+    userId: string,
+    managedLocationIds?: string[],
+  ): Promise<Certification[]> {
     if (managedLocationIds !== undefined) {
       // Manager: verify the target user is certified at one of the manager's locations
       const targetUser = await this.userRepo.findOne({
         where: { id: userId },
         relations: ['certifiedLocations'],
       });
-      const staffLocationIds = targetUser?.certifiedLocations?.map((l) => l.id) ?? [];
-      const hasOverlap = staffLocationIds.some((id) => managedLocationIds.includes(id));
+      const staffLocationIds =
+        targetUser?.certifiedLocations?.map((l) => l.id) ?? [];
+      const hasOverlap = staffLocationIds.some((id) =>
+        managedLocationIds.includes(id),
+      );
       if (!hasOverlap) {
-        throw new ForbiddenException('You do not manage any location this staff member is certified for');
+        throw new ForbiddenException(
+          'You do not manage any location this staff member is certified for',
+        );
       }
     }
 
@@ -56,22 +64,31 @@ export class CertificationsService {
       .getMany();
   }
 
-  async create(userId: string, dto: CreateCertificationDto, requester: User): Promise<Certification> {
+  async create(
+    userId: string,
+    dto: CreateCertificationDto,
+    requester: User,
+  ): Promise<Certification> {
     if (requester.role === UserRole.MANAGER) {
       const targetUser = await this.userRepo.findOne({
         where: { id: userId },
         relations: ['certifiedLocations'],
       });
-      const staffLocationIds = targetUser?.certifiedLocations?.map((l) => l.id) ?? [];
+      const staffLocationIds =
+        targetUser?.certifiedLocations?.map((l) => l.id) ?? [];
       const managedIds = requester.managedLocations?.map((l) => l.id) ?? [];
       const hasOverlap = staffLocationIds.some((id) => managedIds.includes(id));
       if (!hasOverlap) {
-        throw new ForbiddenException('You do not manage any location this staff member is certified for');
+        throw new ForbiddenException(
+          'You do not manage any location this staff member is certified for',
+        );
       }
     }
 
     if (dto.expiryDate && new Date(dto.expiryDate) < new Date(dto.issuedDate)) {
-      throw new BadRequestException('Expiry date must be on or after issued date');
+      throw new BadRequestException(
+        'Expiry date must be on or after issued date',
+      );
     }
 
     const cert = this.repo.create({
@@ -103,13 +120,20 @@ export class CertificationsService {
           where: { id: cert.userId },
           relations: ['certifiedLocations'],
         });
-        const staffLocationIds = certUser?.certifiedLocations?.map((l) => l.id) ?? [];
-        const hasOverlap = staffLocationIds.some((lid) => (managerLocationIds ?? []).includes(lid));
+        const staffLocationIds =
+          certUser?.certifiedLocations?.map((l) => l.id) ?? [];
+        const hasOverlap = staffLocationIds.some((lid) =>
+          (managerLocationIds ?? []).includes(lid),
+        );
         if (!hasOverlap) {
-          throw new ForbiddenException('You do not manage any location this staff member is certified for');
+          throw new ForbiddenException(
+            'You do not manage any location this staff member is certified for',
+          );
         }
       } else {
-        throw new ForbiddenException('Only the cert owner, a manager, or an admin can delete this certification');
+        throw new ForbiddenException(
+          'Only the cert owner, a manager, or an admin can delete this certification',
+        );
       }
     }
 

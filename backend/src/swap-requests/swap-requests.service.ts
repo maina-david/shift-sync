@@ -10,7 +10,10 @@ import { DataSource, Repository } from 'typeorm';
 import { Cron } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SwapRequest, SwapRequestStatus } from './entities/swap-request.entity';
-import { ShiftAssignment, AssignmentStatus } from '../shifts/entities/shift-assignment.entity';
+import {
+  ShiftAssignment,
+  AssignmentStatus,
+} from '../shifts/entities/shift-assignment.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { ConstraintCheckerService } from '../shifts/constraint-checker.service';
 import { shiftToUTCRange } from '../common/timezone.util';
@@ -26,7 +29,8 @@ export class SwapRequestsService {
 
   constructor(
     @InjectRepository(SwapRequest) private swapRepo: Repository<SwapRequest>,
-    @InjectRepository(ShiftAssignment) private assignRepo: Repository<ShiftAssignment>,
+    @InjectRepository(ShiftAssignment)
+    private assignRepo: Repository<ShiftAssignment>,
     @InjectRepository(User) private userRepo: Repository<User>,
     private constraints: ConstraintCheckerService,
     private events: EventEmitter2,
@@ -37,7 +41,10 @@ export class SwapRequestsService {
     try {
       this.events.emit(event, payload);
     } catch (err) {
-      this.logger.error(`Event emission failed for "${event}": ${(err as Error).message}`, (err as Error).stack);
+      this.logger.error(
+        `Event emission failed for "${event}": ${(err as Error).message}`,
+        (err as Error).stack,
+      );
     }
   }
 
@@ -57,7 +64,9 @@ export class SwapRequestsService {
     if (user.role === UserRole.STAFF) {
       qb.where('fa.staffId = :uid OR sr.toUserId = :uid', { uid: user.id });
     } else if (user.role === UserRole.MANAGER) {
-      const managedIds = user.managedLocations?.map((l) => l.id) ?? ['__none__'];
+      const managedIds = user.managedLocations?.map((l) => l.id) ?? [
+        '__none__',
+      ];
       qb.where('shift.locationId IN (:...managedIds)', { managedIds });
     }
 
@@ -67,17 +76,27 @@ export class SwapRequestsService {
 
   async create(dto: CreateSwapRequestDto, requester: User) {
     const pendingCount = await this.swapRepo.count({
-      where: { fromAssignment: { staffId: requester.id }, status: SwapRequestStatus.PENDING },
+      where: {
+        fromAssignment: { staffId: requester.id },
+        status: SwapRequestStatus.PENDING,
+      },
     });
     if (pendingCount >= MAX_PENDING_REQUESTS) {
-      throw new BadRequestException(`You cannot have more than ${MAX_PENDING_REQUESTS} pending swap requests at once.`);
+      throw new BadRequestException(
+        `You cannot have more than ${MAX_PENDING_REQUESTS} pending swap requests at once.`,
+      );
     }
 
     const assignment = await this.assignRepo.findOne({
-      where: { id: dto.fromAssignmentId, staffId: requester.id, status: AssignmentStatus.ASSIGNED },
+      where: {
+        id: dto.fromAssignmentId,
+        staffId: requester.id,
+        status: AssignmentStatus.ASSIGNED,
+      },
       relations: ['shift', 'shift.location', 'shift.requiredSkill'],
     });
-    if (!assignment) throw new NotFoundException('Assignment not found or not yours');
+    if (!assignment)
+      throw new NotFoundException('Assignment not found or not yours');
 
     const toUser = await this.userRepo.findOne({
       where: { id: dto.toUserId },
@@ -85,7 +104,10 @@ export class SwapRequestsService {
     });
     if (!toUser) throw new NotFoundException('Target staff member not found');
 
-    const constraintResult = await this.constraints.check(assignment.shift, toUser);
+    const constraintResult = await this.constraints.check(
+      assignment.shift,
+      toUser,
+    );
     if (!constraintResult.valid) {
       throw new BadRequestException({
         message: `${toUser.name} cannot take this shift`,
@@ -128,7 +150,8 @@ export class SwapRequestsService {
 
   async accept(swapId: string, user: User) {
     const swap = await this.findOneOr404(swapId);
-    if (swap.toUserId !== user.id) throw new ForbiddenException('This swap request is not for you');
+    if (swap.toUserId !== user.id)
+      throw new ForbiddenException('This swap request is not for you');
     if (swap.status !== SwapRequestStatus.PENDING) {
       throw new BadRequestException('Swap is no longer pending');
     }
@@ -175,7 +198,9 @@ export class SwapRequestsService {
     const saved = await this.dataSource.transaction(async (em) => {
       swap.status = SwapRequestStatus.REJECTED;
       const savedSwap = await em.save(SwapRequest, swap);
-      await em.update(ShiftAssignment, swap.fromAssignmentId, { status: AssignmentStatus.ASSIGNED });
+      await em.update(ShiftAssignment, swap.fromAssignmentId, {
+        status: AssignmentStatus.ASSIGNED,
+      });
       return savedSwap;
     });
 
@@ -202,13 +227,18 @@ export class SwapRequestsService {
   async approve(swapId: string, manager: User, dto: ReviewSwapDto) {
     const swap = await this.findOneOr404(swapId);
     if (swap.status !== SwapRequestStatus.ACCEPTED) {
-      throw new BadRequestException('Swap must be accepted by both parties first');
+      throw new BadRequestException(
+        'Swap must be accepted by both parties first',
+      );
     }
 
     if (manager.role === UserRole.MANAGER) {
       const locationId = swap.fromAssignment?.shift?.locationId;
-      const manages = manager.managedLocations?.some((l) => l.id === locationId);
-      if (!manages) throw new ForbiddenException('You do not manage this shift location');
+      const manages = manager.managedLocations?.some(
+        (l) => l.id === locationId,
+      );
+      if (!manages)
+        throw new ForbiddenException('You do not manage this shift location');
     }
 
     const saved = await this.dataSource.transaction(async (em) => {
@@ -218,9 +248,13 @@ export class SwapRequestsService {
         relations: ['fromAssignment', 'fromAssignment.shift'],
       });
       if (!locked || locked.status !== SwapRequestStatus.ACCEPTED) {
-        throw new BadRequestException('Swap is no longer in an approvable state');
+        throw new BadRequestException(
+          'Swap is no longer in an approvable state',
+        );
       }
-      await em.update(ShiftAssignment, locked.fromAssignmentId, { status: AssignmentStatus.CANCELLED });
+      await em.update(ShiftAssignment, locked.fromAssignmentId, {
+        status: AssignmentStatus.CANCELLED,
+      });
       const newAssignment = em.create(ShiftAssignment, {
         shiftId: locked.fromAssignment.shiftId,
         staffId: locked.toUserId,
@@ -245,7 +279,9 @@ export class SwapRequestsService {
       });
     }
 
-    this.safeEmit('schedule.updated', { locationId: swap.fromAssignment.shift.locationId });
+    this.safeEmit('schedule.updated', {
+      locationId: swap.fromAssignment.shift.locationId,
+    });
     this.safeEmit('audit.log', {
       entity: 'swap_request',
       entityId: swapId,
@@ -261,13 +297,18 @@ export class SwapRequestsService {
   async deny(swapId: string, manager: User, dto: ReviewSwapDto) {
     const swap = await this.findOneOr404(swapId);
     if (swap.status !== SwapRequestStatus.ACCEPTED) {
-      throw new BadRequestException('Cannot deny a swap that has not been accepted by both parties');
+      throw new BadRequestException(
+        'Cannot deny a swap that has not been accepted by both parties',
+      );
     }
 
     if (manager.role === UserRole.MANAGER) {
       const locationId = swap.fromAssignment?.shift?.locationId;
-      const manages = manager.managedLocations?.some((l) => l.id === locationId);
-      if (!manages) throw new ForbiddenException('You do not manage this shift location');
+      const manages = manager.managedLocations?.some(
+        (l) => l.id === locationId,
+      );
+      if (!manages)
+        throw new ForbiddenException('You do not manage this shift location');
     }
 
     const saved = await this.dataSource.transaction(async (em) => {
@@ -276,7 +317,9 @@ export class SwapRequestsService {
       swap.managerNote = dto.managerNote ?? null;
       swap.reviewedAt = new Date();
       const savedSwap = await em.save(SwapRequest, swap);
-      await em.update(ShiftAssignment, swap.fromAssignmentId, { status: AssignmentStatus.ASSIGNED });
+      await em.update(ShiftAssignment, swap.fromAssignmentId, {
+        status: AssignmentStatus.ASSIGNED,
+      });
       return savedSwap;
     });
 
@@ -297,14 +340,20 @@ export class SwapRequestsService {
   async cancel(swapId: string, user: User) {
     const swap = await this.findOneOr404(swapId);
     if (swap.fromAssignment.staffId !== user.id) throw new ForbiddenException();
-    if (![SwapRequestStatus.PENDING, SwapRequestStatus.ACCEPTED].includes(swap.status)) {
+    if (
+      ![SwapRequestStatus.PENDING, SwapRequestStatus.ACCEPTED].includes(
+        swap.status,
+      )
+    ) {
       throw new BadRequestException('Cannot cancel this swap');
     }
 
     const saved = await this.dataSource.transaction(async (em) => {
       swap.status = SwapRequestStatus.CANCELLED;
       const savedSwap = await em.save(SwapRequest, swap);
-      await em.update(ShiftAssignment, swap.fromAssignmentId, { status: AssignmentStatus.ASSIGNED });
+      await em.update(ShiftAssignment, swap.fromAssignmentId, {
+        status: AssignmentStatus.ASSIGNED,
+      });
       return savedSwap;
     });
 
@@ -336,12 +385,19 @@ export class SwapRequestsService {
     for (const swap of pending) {
       const shift = swap.fromAssignment?.shift;
       if (!shift?.location?.timezone) continue;
-      const { startUTC } = shiftToUTCRange(shift.date, shift.startTime, shift.endTime, shift.location.timezone);
+      const { startUTC } = shiftToUTCRange(
+        shift.date,
+        shift.startTime,
+        shift.endTime,
+        shift.location.timezone,
+      );
       if (startUTC > cutoff) continue;
 
       swap.status = SwapRequestStatus.CANCELLED;
       await this.swapRepo.save(swap);
-      await this.assignRepo.update(swap.fromAssignmentId, { status: AssignmentStatus.ASSIGNED });
+      await this.assignRepo.update(swap.fromAssignmentId, {
+        status: AssignmentStatus.ASSIGNED,
+      });
 
       for (const userId of [swap.fromAssignment.staffId, swap.toUserId]) {
         this.safeEmit('notification.send', {
@@ -360,8 +416,11 @@ export class SwapRequestsService {
     const swap = await this.swapRepo.findOne({
       where: { id },
       relations: [
-        'fromAssignment', 'fromAssignment.shift', 'fromAssignment.shift.location',
-        'fromAssignment.staff', 'toUser',
+        'fromAssignment',
+        'fromAssignment.shift',
+        'fromAssignment.shift.location',
+        'fromAssignment.staff',
+        'toUser',
       ],
     });
     if (!swap) throw new NotFoundException('Swap request not found');

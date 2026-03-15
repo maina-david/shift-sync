@@ -223,13 +223,12 @@ All seeded accounts share the same password: **`Coastal2024!`**
 - **Digital menu** — full menu management with categories, tags, pricing, today's highlights, and location scoping
 - **Reservations board** — guest reservations with automatic no-show marking after 30 minutes
 - **Personal bookmarks** — staff bookmark shifts or other items for quick access
-- **Direct messages** — staff-to-staff and manager-to-staff internal messaging
+- **Direct messages** — staff-to-staff and manager-to-staff internal messaging; new messages delivered instantly via WebSocket (no polling); typing indicators in both the sidebar sheet and the full messages page
 
 ### Visibility & Compliance
 
 - **Labour analytics** — hours distribution, fairness score (0–1 scale), overtime breakdown per location; SSE live stream
 - **Audit log** — append-only ledger of every scheduling action; filterable by location, entity, and date range; CSV export (admin)
-- **3D floor-plan viewer** — interactive Three.js scene per location; admin drag-and-drop zone editor
 - **Staff directory** — searchable, filterable by location; hourly rate visible to managers/admins only
 - **Public landing page** — `/` accessible without login
 
@@ -371,7 +370,7 @@ shift-sync/
 └── frontend/                                       # Next.js 16 App Router — http://localhost:3000
     ├── .env.example
     ├── app/
-    │   ├── page.tsx                                # Public landing page (3D scene)
+    │   ├── page.tsx                                # Public landing page
     │   ├── (auth)/login/                           # Login page
     │   └── (dashboard)/
     │       ├── analytics/                          # Hours distribution, fairness, overtime
@@ -380,10 +379,10 @@ shift-sync/
     │       ├── checklists/                         # Opening/closing checklist management
     │       ├── dashboard/                          # Live stats overview
     │       ├── fair-workweek/                      # Predictive scheduling compliance
-    │       ├── locations/[id]/                     # 3D floor plan viewer + zone editor (admin)
+    │       ├── locations/[id]/                     # Location detail (admin)
     │       ├── log-book/                           # Operational shift log
     │       ├── menu/                               # Digital menu management
-    │       ├── messages/                           # Internal messaging
+    │       ├── messages/                           # Internal messaging (real-time WS)
     │       ├── my-schedule/                        # Staff personal schedule view
     │       ├── notifications/                      # Notification centre
     │       ├── pickup/                             # Available shifts for staff to claim
@@ -391,7 +390,7 @@ shift-sync/
     │       ├── schedule/                           # Weekly schedule builder (manager/admin)
     │       ├── schedule-templates/                 # Save and apply schedule templates
     │       ├── settings/                           # Profile, password, notification preferences
-    │       │   └── availability/                   # Weekly availability + one-off exceptions
+    │       │   └── availability/                   # Weekly availability + one-off exceptions (TimePicker)
     │       ├── shift-feedback/                     # Post-shift staff feedback
     │       ├── skills/                             # Skills management (admin)
     │       ├── staff/                              # Staff directory
@@ -399,16 +398,16 @@ shift-sync/
     │       ├── time-off/                           # Time-off request management
     │       └── timesheets/                         # Clock in/out + timesheet review
     ├── components/
-    │   ├── floor-plan/                             # React Three Fiber 3D scene + zone editor
     │   ├── schedule/                               # Shift cards + assignment dialog
-    │   ├── ui/                                     # shadcn/ui primitives
-    │   └── welcome/                                # Landing page 3D scene components
+    │   └── ui/                                     # shadcn/ui primitives + custom TimePicker
     ├── contexts/
     │   ├── auth-context.tsx                        # JWT in-memory token + silent refresh
+    │   ├── messages-context.tsx                    # Active chat state + WS message:new listener
     │   └── notifications-context.tsx               # Socket.IO real-time notification feed
     ├── hooks/
     │   ├── use-live-stats.ts                       # SSE analytics stream hook
-    │   └── use-sse.ts                              # Generic SSE subscription hook
+    │   ├── use-sse.ts                              # Generic SSE subscription hook
+    │   └── use-typing-indicator.ts                 # Emit typing:start/stop; track partner typing state
     └── lib/
         ├── api/                                    # Per-resource Axios API modules
         ├── socket.ts                               # Socket.IO client singleton

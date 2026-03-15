@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ShiftFeedbackService } from './shift-feedback.service';
 import { ShiftFeedback } from './entities/shift-feedback.entity';
 import { ShiftAssignment } from '../shifts/entities/shift-assignment.entity';
@@ -27,14 +31,14 @@ const makeFeedback = (overrides: any = {}): ShiftFeedback =>
     adequatelyStaffed: true,
     wouldRepeat: true,
     ...overrides,
-  } as unknown as ShiftFeedback);
+  }) as unknown as ShiftFeedback;
 
 const makeAssignment = (staffId = 'staff-1'): ShiftAssignment =>
   ({
     id: 'assign-1',
     staffId,
     shift: { id: 'shift-1', locationId: 'loc-1' },
-  } as unknown as ShiftAssignment);
+  }) as unknown as ShiftAssignment;
 
 describe('ShiftFeedbackService', () => {
   let service: ShiftFeedbackService;
@@ -55,7 +59,10 @@ describe('ShiftFeedbackService', () => {
       providers: [
         ShiftFeedbackService,
         { provide: getRepositoryToken(ShiftFeedback), useValue: repo },
-        { provide: getRepositoryToken(ShiftAssignment), useValue: assignmentRepo },
+        {
+          provide: getRepositoryToken(ShiftAssignment),
+          useValue: assignmentRepo,
+        },
       ],
     }).compile();
 
@@ -66,14 +73,20 @@ describe('ShiftFeedbackService', () => {
     it('throws NotFoundException when assignment does not exist', async () => {
       assignmentRepo.findOne.mockResolvedValue(null);
       await expect(
-        service.submit('staff-1', { assignmentId: 'missing', rating: 4 } as any),
+        service.submit('staff-1', {
+          assignmentId: 'missing',
+          rating: 4,
+        } as any),
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('throws ForbiddenException when submitting for another staff member\'s assignment', async () => {
+    it("throws ForbiddenException when submitting for another staff member's assignment", async () => {
       assignmentRepo.findOne.mockResolvedValue(makeAssignment('staff-2'));
       await expect(
-        service.submit('staff-1', { assignmentId: 'assign-1', rating: 4 } as any),
+        service.submit('staff-1', {
+          assignmentId: 'assign-1',
+          rating: 4,
+        } as any),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -81,7 +94,10 @@ describe('ShiftFeedbackService', () => {
       assignmentRepo.findOne.mockResolvedValue(makeAssignment('staff-1'));
       repo.findOne.mockResolvedValue(makeFeedback());
       await expect(
-        service.submit('staff-1', { assignmentId: 'assign-1', rating: 4 } as any),
+        service.submit('staff-1', {
+          assignmentId: 'assign-1',
+          rating: 4,
+        } as any),
       ).rejects.toThrow(ConflictException);
     });
 

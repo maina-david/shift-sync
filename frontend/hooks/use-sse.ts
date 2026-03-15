@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
-export type SseStatus = 'connecting' | 'open' | 'closed' | 'error';
+export type SseStatus = "connecting" | "open" | "closed" | "error";
 
 export interface SseResult<T> {
   data: T | null;
@@ -26,21 +26,21 @@ export interface SseResult<T> {
  */
 export function useSse<T>(url: string | null): SseResult<T> {
   const [data, setData] = useState<T | null>(null);
-  const [status, setStatus] = useState<SseStatus>('connecting');
+  const [status, setStatus] = useState<SseStatus>("connecting");
   const [error, setError] = useState<Event | null>(null);
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     if (!url) {
-      setStatus('closed');
+      setStatus("closed");
       return;
     }
 
-    setStatus('connecting');
+    setStatus("connecting");
     const es = new EventSource(url);
     esRef.current = es;
 
-    es.onopen = () => setStatus('open');
+    es.onopen = () => setStatus("open");
 
     es.onmessage = (event: MessageEvent<string>) => {
       try {
@@ -52,19 +52,19 @@ export function useSse<T>(url: string | null): SseResult<T> {
 
     es.onerror = (err) => {
       setError(err);
-      setStatus('error');
+      setStatus("error");
     };
 
     return () => {
       es.close();
       esRef.current = null;
-      setStatus('closed');
+      setStatus("closed");
     };
   }, [url]);
 
   const close = () => {
     esRef.current?.close();
-    setStatus('closed');
+    setStatus("closed");
   };
 
   return { data, status, error, close };

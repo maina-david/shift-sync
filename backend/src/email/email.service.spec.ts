@@ -23,7 +23,16 @@ describe('EmailService', () => {
         { provide: MailerService, useValue: mailer },
         { provide: ConfigService, useValue: config },
       ],
-    }).setLogger({ log: () => {}, error: () => {}, warn: () => {}, debug: () => {}, verbose: () => {}, fatal: () => {} }).compile();
+    })
+      .setLogger({
+        log: () => {},
+        error: () => {},
+        warn: () => {},
+        debug: () => {},
+        verbose: () => {},
+        fatal: () => {},
+      })
+      .compile();
 
     return module.get<EmailService>(EmailService);
   };
@@ -57,7 +66,9 @@ describe('EmailService', () => {
 
     it('swallows mailer errors without throwing', async () => {
       mailer.sendMail.mockRejectedValue(new Error('SMTP failure'));
-      await expect(service.send('to@example.com', 'Subject', '<p>Hello</p>')).resolves.not.toThrow();
+      await expect(
+        service.send('to@example.com', 'Subject', '<p>Hello</p>'),
+      ).resolves.not.toThrow();
     });
   });
 
@@ -67,7 +78,11 @@ describe('EmailService', () => {
     });
 
     it('wraps body in HTML template and sends', async () => {
-      await service.sendNotification('to@example.com', 'Shift Alert', 'You have a shift.');
+      await service.sendNotification(
+        'to@example.com',
+        'Shift Alert',
+        'You have a shift.',
+      );
       expect(mailer.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'to@example.com',
@@ -78,7 +93,11 @@ describe('EmailService', () => {
     });
 
     it('HTML-escapes special characters in subject and body', async () => {
-      await service.sendNotification('to@example.com', '<script>Alert</script>', '<XSS>');
+      await service.sendNotification(
+        'to@example.com',
+        '<script>Alert</script>',
+        '<XSS>',
+      );
       const call = mailer.sendMail.mock.calls[0][0];
       expect(call.html).not.toContain('<script>');
       expect(call.html).toContain('&lt;script&gt;');

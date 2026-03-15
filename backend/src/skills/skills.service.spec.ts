@@ -5,7 +5,7 @@ import { SkillsService } from './skills.service';
 import { Skill } from './entities/skill.entity';
 
 const makeSkill = (overrides: any = {}): Skill =>
-  ({ id: 'skill-1', name: 'Barista', ...overrides } as unknown as Skill);
+  ({ id: 'skill-1', name: 'Barista', ...overrides }) as unknown as Skill;
 
 describe('SkillsService', () => {
   let service: SkillsService;
@@ -34,7 +34,9 @@ describe('SkillsService', () => {
     it('returns all skills ordered by name', async () => {
       repo.find.mockResolvedValue([makeSkill()]);
       const result = await service.findAll();
-      expect(repo.find).toHaveBeenCalledWith(expect.objectContaining({ order: { name: 'ASC' } }));
+      expect(repo.find).toHaveBeenCalledWith(
+        expect.objectContaining({ order: { name: 'ASC' } }),
+      );
       expect(result).toHaveLength(1);
     });
   });
@@ -42,7 +44,9 @@ describe('SkillsService', () => {
   describe('findOne', () => {
     it('throws NotFoundException when skill does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('returns skill when found', async () => {
@@ -66,7 +70,9 @@ describe('SkillsService', () => {
   describe('remove', () => {
     it('throws NotFoundException when skill does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('removes and returns the skill', async () => {

@@ -13,7 +13,12 @@ import {
   DefaultValuePipe,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -21,7 +26,10 @@ import { Roles } from '../common/roles.decorator';
 import { CurrentUser } from '../common/current-user.decorator';
 import { User, UserRole } from './entities/user.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { SetAvailabilityDto, AvailabilityExceptionDto } from './dto/set-availability.dto';
+import {
+  SetAvailabilityDto,
+  AvailabilityExceptionDto,
+} from './dto/set-availability.dto';
 import { ChangePasswordDto, ResetPasswordDto } from './dto/change-password.dto';
 
 @ApiTags('users')
@@ -32,7 +40,9 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get('directory')
-  @ApiOperation({ summary: 'Lightweight user list for messaging (any authenticated user)' })
+  @ApiOperation({
+    summary: 'Lightweight user list for messaging (any authenticated user)',
+  })
   directory() {
     return this.usersService.directory();
   }
@@ -60,7 +70,11 @@ export class UsersController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update user profile / skills / locations' })
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto, @CurrentUser() user: User) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser() user: User,
+  ) {
     return this.usersService.update(id, dto, user);
   }
 
@@ -82,7 +96,12 @@ export class UsersController {
     @Body() dto: ChangePasswordDto,
     @CurrentUser() user: User,
   ) {
-    return this.usersService.changePassword(id, dto.currentPassword, dto.newPassword, user);
+    return this.usersService.changePassword(
+      id,
+      dto.currentPassword,
+      dto.newPassword,
+      user,
+    );
   }
 
   @Get(':id/availability')

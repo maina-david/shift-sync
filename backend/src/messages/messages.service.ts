@@ -33,10 +33,7 @@ export class MessagesService {
     }
 
     if (dto.type === MessageType.ANNOUNCEMENT) {
-      if (
-        senderRole !== UserRole.ADMIN &&
-        senderRole !== UserRole.MANAGER
-      ) {
+      if (senderRole !== UserRole.ADMIN && senderRole !== UserRole.MANAGER) {
         throw new ForbiddenException(
           'Only admins and managers can send announcements',
         );
@@ -86,16 +83,18 @@ export class MessagesService {
       .where('msg.type = :type', { type: MessageType.ANNOUNCEMENT });
 
     if (locationId) {
-      qb.andWhere(
-        '(msg.locationId = :locationId OR msg.locationId IS NULL)',
-        { locationId },
-      );
+      qb.andWhere('(msg.locationId = :locationId OR msg.locationId IS NULL)', {
+        locationId,
+      });
     }
 
     return qb.orderBy('msg.createdAt', 'DESC').getMany();
   }
 
-  async getInbox(userId: string, userLocationId?: string): Promise<{
+  async getInbox(
+    userId: string,
+    userLocationId?: string,
+  ): Promise<{
     threads: Message[];
     announcements: Message[];
   }> {
@@ -105,10 +104,9 @@ export class MessagesService {
       .leftJoinAndSelect('msg.sender', 'sender')
       .leftJoinAndSelect('msg.recipient', 'recipient')
       .where('msg.type = :type', { type: MessageType.DIRECT })
-      .andWhere(
-        '(msg.senderId = :userId OR msg.recipientId = :userId)',
-        { userId },
-      )
+      .andWhere('(msg.senderId = :userId OR msg.recipientId = :userId)', {
+        userId,
+      })
       .orderBy('msg.createdAt', 'DESC')
       .getMany();
 
@@ -116,8 +114,7 @@ export class MessagesService {
     const seenPartners = new Set<string>();
     const latestPerThread: Message[] = [];
     for (const msg of threads) {
-      const partner =
-        msg.senderId === userId ? msg.recipientId : msg.senderId;
+      const partner = msg.senderId === userId ? msg.recipientId : msg.senderId;
       if (partner && !seenPartners.has(partner)) {
         seenPartners.add(partner);
         latestPerThread.push(msg);

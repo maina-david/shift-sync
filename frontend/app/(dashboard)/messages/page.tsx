@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { useState, useRef, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { format } from "date-fns";
 import {
   MessageSquare,
   Megaphone,
@@ -11,17 +11,26 @@ import {
   PenSquare,
   ChevronDown,
   ChevronUp,
-} from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
-  Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
-} from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Separator } from '@/components/ui/separator';
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -29,44 +38,52 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { messagesApi, usersApi, getErrorMessage } from '@/lib/api';
-import { getSocket } from '@/lib/socket';
-import { Message, User } from '@/lib/types';
-import { useAuth } from '@/contexts/auth-context';
-import { useMessages } from '@/contexts/messages-context';
-import { useTypingIndicator } from '@/hooks/use-typing-indicator';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/dialog";
+import { messagesApi, usersApi, getErrorMessage } from "@/lib/api";
+import { getSocket } from "@/lib/socket";
+import { Message, User } from "@/lib/types";
+import { useAuth } from "@/contexts/auth-context";
+import { useMessages } from "@/contexts/messages-context";
+import { useTypingIndicator } from "@/hooks/use-typing-indicator";
+import { cn } from "@/lib/utils";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function timeLabel(iso: string) {
-  return format(new Date(iso), 'MMM d, HH:mm');
+  return format(new Date(iso), "MMM d, HH:mm");
 }
 
 /** Deduplicate inbox partners: for a given DM, the "other" user is the one who
  *  is not the currently logged-in user. */
-function dmPartners(messages: Message[], myId: string): { user: User; latest: Message }[] {
+function dmPartners(
+  messages: Message[],
+  myId: string,
+): { user: User; latest: Message }[] {
   const map = new Map<string, { user: User; latest: Message }>();
   for (const m of messages) {
-    if (m.type !== 'direct') continue;
+    if (m.type !== "direct") continue;
     const other = m.senderId === myId ? m.recipient : m.sender;
     if (!other) continue;
     const existing = map.get(other.id);
-    if (!existing || new Date(m.createdAt) > new Date(existing.latest.createdAt)) {
+    if (
+      !existing ||
+      new Date(m.createdAt) > new Date(existing.latest.createdAt)
+    ) {
       map.set(other.id, { user: other, latest: m });
     }
   }
   return Array.from(map.values()).sort(
-    (a, b) => new Date(b.latest.createdAt).getTime() - new Date(a.latest.createdAt).getTime(),
+    (a, b) =>
+      new Date(b.latest.createdAt).getTime() -
+      new Date(a.latest.createdAt).getTime(),
   );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 type Selection =
-  | { kind: 'announcement'; message: Message }
-  | { kind: 'dm'; userId: string; user: User };
+  | { kind: "announcement"; message: Message }
+  | { kind: "dm"; userId: string; user: User };
 
 export default function MessagesPage() {
   const { user } = useAuth();
@@ -74,19 +91,21 @@ export default function MessagesPage() {
   const { selectedUserId: sheetUserId } = useMessages();
 
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [expandedAnnouncements, setExpandedAnnouncements] = useState<Set<string>>(new Set());
+  const [expandedAnnouncements, setExpandedAnnouncements] = useState<
+    Set<string>
+  >(new Set());
   const [composeOpen, setComposeOpen] = useState(false);
-  const [composeRecipient, setComposeRecipient] = useState('');
-  const [composeBody, setComposeBody] = useState('');
+  const [composeRecipient, setComposeRecipient] = useState("");
+  const [composeBody, setComposeBody] = useState("");
   const [recipientOpen, setRecipientOpen] = useState(false);
-  const [replyBody, setReplyBody] = useState('');
+  const [replyBody, setReplyBody] = useState("");
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // ── Queries ──
 
   const { data: inboxData, isLoading: inboxLoading } = useQuery({
-    queryKey: ['messages-inbox'],
+    queryKey: ["messages-inbox"],
     queryFn: messagesApi.getInbox,
     refetchInterval: 30_000,
   });
@@ -95,18 +114,22 @@ export default function MessagesPage() {
   const announcements: Message[] = inboxData?.announcements ?? [];
   const annLoading = inboxLoading;
 
-  const selectedUserId = selection?.kind === 'dm' ? selection.userId : undefined;
-  const { isPartnerTyping, onKeyStroke, onStopTyping } = useTypingIndicator(selectedUserId);
+  const selectedUserId =
+    selection?.kind === "dm" ? selection.userId : undefined;
+  const { isPartnerTyping, onKeyStroke, onStopTyping } =
+    useTypingIndicator(selectedUserId);
 
   const { data: thread = [] } = useQuery<Message[]>({
-    queryKey: ['thread', selectedUserId],
+    queryKey: ["thread", selectedUserId],
     queryFn: () => messagesApi.getThread(selectedUserId!),
     enabled: !!selectedUserId,
     refetchInterval: 30_000,
   });
 
-  const { data: staffList = [] } = useQuery<{ id: string; name: string; role: string }[]>({
-    queryKey: ['users-directory'],
+  const { data: staffList = [] } = useQuery<
+    { id: string; name: string; role: string }[]
+  >({
+    queryKey: ["users-directory"],
     queryFn: usersApi.directory,
     staleTime: 5 * 60_000,
   });
@@ -114,15 +137,16 @@ export default function MessagesPage() {
   // ── Mutations ──
 
   const sendMutation = useMutation({
-    mutationFn: (data: Parameters<typeof messagesApi.send>[0]) => messagesApi.send(data),
+    mutationFn: (data: Parameters<typeof messagesApi.send>[0]) =>
+      messagesApi.send(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages-inbox'] });
+      queryClient.invalidateQueries({ queryKey: ["messages-inbox"] });
       if (selectedUserId) {
-        queryClient.invalidateQueries({ queryKey: ['thread', selectedUserId] });
+        queryClient.invalidateQueries({ queryKey: ["thread", selectedUserId] });
       }
-      setReplyBody('');
-      setComposeBody('');
-      setComposeRecipient('');
+      setReplyBody("");
+      setComposeBody("");
+      setComposeRecipient("");
       setComposeOpen(false);
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -131,9 +155,9 @@ export default function MessagesPage() {
   const markReadMutation = useMutation({
     mutationFn: (id: string) => messagesApi.markRead(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages-inbox'] });
+      queryClient.invalidateQueries({ queryKey: ["messages-inbox"] });
       if (selectedUserId) {
-        queryClient.invalidateQueries({ queryKey: ['thread', selectedUserId] });
+        queryClient.invalidateQueries({ queryKey: ["thread", selectedUserId] });
       }
     },
   });
@@ -142,13 +166,14 @@ export default function MessagesPage() {
   useEffect(() => {
     if (!sheetUserId || !staffList.length || selection) return;
     const found = staffList.find((s) => s.id === sheetUserId);
-    if (found) setSelection({ kind: 'dm', userId: found.id, user: found as User });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (found)
+      setSelection({ kind: "dm", userId: found.id, user: found as User });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staffList]);
 
   // Auto-scroll to bottom when thread changes
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [thread]);
 
   // Real-time: refresh on incoming message:new socket event
@@ -156,17 +181,23 @@ export default function MessagesPage() {
     if (!user) return;
     const socket = getSocket();
 
-    const onNewMessage = (payload: { senderId: string; recipientId: string | null }) => {
-      queryClient.invalidateQueries({ queryKey: ['messages-inbox'] });
-      const partner = payload.senderId === user.id ? payload.recipientId : payload.senderId;
+    const onNewMessage = (payload: {
+      senderId: string;
+      recipientId: string | null;
+    }) => {
+      queryClient.invalidateQueries({ queryKey: ["messages-inbox"] });
+      const partner =
+        payload.senderId === user.id ? payload.recipientId : payload.senderId;
       if (partner && partner === selectedUserId) {
-        queryClient.invalidateQueries({ queryKey: ['thread', selectedUserId] });
+        queryClient.invalidateQueries({ queryKey: ["thread", selectedUserId] });
       }
     };
 
-    socket.on('message:new', onNewMessage);
-    return () => { socket.off('message:new', onNewMessage); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    socket.on("message:new", onNewMessage);
+    return () => {
+      socket.off("message:new", onNewMessage);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, selectedUserId]);
 
   // Mark unread messages in open thread as read
@@ -175,7 +206,7 @@ export default function MessagesPage() {
     thread
       .filter((m) => !m.isRead && m.recipientId === user.id)
       .forEach((m) => markReadMutation.mutate(m.id));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [thread, selectedUserId]);
 
   const toggleAnnouncementExpand = (id: string) => {
@@ -186,18 +217,26 @@ export default function MessagesPage() {
     });
   };
 
-  const partners = dmPartners(inbox, user?.id ?? '');
+  const partners = dmPartners(inbox, user?.id ?? "");
   const recentAnnouncements = announcements.slice(0, 5);
 
   const handleSendReply = () => {
     if (!replyBody.trim() || !selectedUserId) return;
     onStopTyping(selectedUserId);
-    sendMutation.mutate({ type: 'direct', recipientId: selectedUserId, body: replyBody.trim() });
+    sendMutation.mutate({
+      type: "direct",
+      recipientId: selectedUserId,
+      body: replyBody.trim(),
+    });
   };
 
   const handleCompose = () => {
     if (!composeBody.trim() || !composeRecipient) return;
-    sendMutation.mutate({ type: 'direct', recipientId: composeRecipient, body: composeBody.trim() });
+    sendMutation.mutate({
+      type: "direct",
+      recipientId: composeRecipient,
+      body: composeBody.trim(),
+    });
   };
 
   return (
@@ -207,7 +246,11 @@ export default function MessagesPage() {
         {/* New Message button */}
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <h1 className="text-base font-semibold">Messages</h1>
-          <Button size="sm" variant="outline" onClick={() => setComposeOpen(true)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setComposeOpen(true)}
+          >
             <PenSquare className="h-3.5 w-3.5 mr-1.5" />
             New
           </Button>
@@ -220,42 +263,64 @@ export default function MessagesPage() {
           </p>
           {annLoading ? (
             <div className="flex flex-col gap-1 px-1 py-1">
-              {[1, 2].map((i) => <Skeleton key={i} className="h-10 w-full rounded-md" />)}
+              {[1, 2].map((i) => (
+                <Skeleton key={i} className="h-10 w-full rounded-md" />
+              ))}
             </div>
           ) : recentAnnouncements.length === 0 ? (
-            <p className="text-xs text-muted-foreground px-1 py-2">No announcements</p>
+            <p className="text-xs text-muted-foreground px-1 py-2">
+              No announcements
+            </p>
           ) : (
             <div className="flex flex-col gap-0.5">
               {recentAnnouncements.map((a) => {
                 const isExpanded = expandedAnnouncements.has(a.id);
-                const isSelected = selection?.kind === 'announcement' && selection.message.id === a.id;
+                const isSelected =
+                  selection?.kind === "announcement" &&
+                  selection.message.id === a.id;
                 return (
                   <div key={a.id}>
                     {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
                     <div
                       onClick={() => {
-                        setSelection({ kind: 'announcement', message: a });
+                        setSelection({ kind: "announcement", message: a });
                         if (!a.isRead) markReadMutation.mutate(a.id);
                       }}
                       className={cn(
-                        'w-full text-left px-2 py-1.5 rounded-md text-xs transition-colors cursor-pointer select-none',
-                        isSelected ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50',
-                        !a.isRead && 'font-medium',
+                        "w-full text-left px-2 py-1.5 rounded-md text-xs transition-colors cursor-pointer select-none",
+                        isSelected
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-muted/50",
+                        !a.isRead && "font-medium",
                       )}
                     >
                       <div className="flex items-start justify-between gap-1">
-                        <span className="truncate flex-1">{a.body.slice(0, 40)}{a.body.length > 40 ? '…' : ''}</span>
+                        <span className="truncate flex-1">
+                          {a.body.slice(0, 40)}
+                          {a.body.length > 40 ? "…" : ""}
+                        </span>
                         <button
                           type="button"
-                          onClick={(e) => { e.stopPropagation(); toggleAnnouncementExpand(a.id); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleAnnouncementExpand(a.id);
+                          }}
                           className="shrink-0 text-muted-foreground hover:text-foreground"
                         >
-                          {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                          {isExpanded ? (
+                            <ChevronUp className="h-3 w-3" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3" />
+                          )}
                         </button>
                       </div>
-                      <p className="text-muted-foreground text-[0.6rem] mt-0.5">{a.sender?.name ?? 'Unknown'} · {timeLabel(a.createdAt)}</p>
+                      <p className="text-muted-foreground text-[0.6rem] mt-0.5">
+                        {a.sender?.name ?? "Unknown"} · {timeLabel(a.createdAt)}
+                      </p>
                       {isExpanded && (
-                        <p className="mt-1 text-xs text-foreground whitespace-pre-wrap">{a.body}</p>
+                        <p className="mt-1 text-xs text-foreground whitespace-pre-wrap">
+                          {a.body}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -274,44 +339,74 @@ export default function MessagesPage() {
           </p>
           {inboxLoading ? (
             <div className="flex flex-col gap-1 px-1 py-1">
-              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)}
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-md" />
+              ))}
             </div>
           ) : partners.length === 0 ? (
             <div className="px-1 py-3 flex flex-col items-center gap-2 text-center">
               <MessageSquare className="h-6 w-6 text-muted-foreground/40" />
-              <p className="text-xs text-muted-foreground">No conversations yet</p>
-              <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={() => setComposeOpen(true)}>
+              <p className="text-xs text-muted-foreground">
+                No conversations yet
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs w-full"
+                onClick={() => setComposeOpen(true)}
+              >
                 <PenSquare className="h-3 w-3 mr-1.5" /> Start a conversation
               </Button>
             </div>
           ) : (
             <div className="flex flex-col gap-0.5">
               {partners.map(({ user: partner, latest }) => {
-                const isSelected = selection?.kind === 'dm' && selection.userId === partner.id;
-                const isUnread = !latest.isRead && latest.recipientId === user?.id;
+                const isSelected =
+                  selection?.kind === "dm" && selection.userId === partner.id;
+                const isUnread =
+                  !latest.isRead && latest.recipientId === user?.id;
                 return (
                   <button
                     key={partner.id}
-                    onClick={() => setSelection({ kind: 'dm', userId: partner.id, user: partner })}
+                    onClick={() =>
+                      setSelection({
+                        kind: "dm",
+                        userId: partner.id,
+                        user: partner,
+                      })
+                    }
                     className={cn(
-                      'w-full text-left px-2 py-2 rounded-md transition-colors',
-                      isSelected ? 'bg-primary/10' : 'hover:bg-muted/50',
+                      "w-full text-left px-2 py-2 rounded-md transition-colors",
+                      isSelected ? "bg-primary/10" : "hover:bg-muted/50",
                     )}
                   >
                     <div className="flex items-center gap-2">
-                      <div className={cn(
-                        'w-6 h-6 rounded-full flex items-center justify-center text-[0.6rem] font-semibold shrink-0',
-                        isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
-                      )}>
+                      <div
+                        className={cn(
+                          "w-6 h-6 rounded-full flex items-center justify-center text-[0.6rem] font-semibold shrink-0",
+                          isSelected
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground",
+                        )}
+                      >
                         {partner.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={cn('text-xs truncate', isUnread ? 'font-semibold' : 'font-medium')}>
+                        <p
+                          className={cn(
+                            "text-xs truncate",
+                            isUnread ? "font-semibold" : "font-medium",
+                          )}
+                        >
                           {partner.name}
                         </p>
-                        <p className="text-[0.6rem] text-muted-foreground truncate">{latest.body}</p>
+                        <p className="text-[0.6rem] text-muted-foreground truncate">
+                          {latest.body}
+                        </p>
                       </div>
-                      {isUnread && <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
+                      {isUnread && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                      )}
                     </div>
                   </button>
                 );
@@ -330,7 +425,7 @@ export default function MessagesPage() {
             <p className="text-sm font-medium">Select a conversation</p>
             <p className="text-xs">Choose a message thread from the sidebar</p>
           </div>
-        ) : selection.kind === 'announcement' ? (
+        ) : selection.kind === "announcement" ? (
           /* Announcement detail */
           <div className="flex-1 overflow-y-auto p-6">
             <div className="max-w-2xl mx-auto">
@@ -341,7 +436,7 @@ export default function MessagesPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-indigo-900 dark:text-indigo-100 text-sm">
-                      {selection.message.sender?.name ?? 'Unknown'}
+                      {selection.message.sender?.name ?? "Unknown"}
                     </p>
                     <p className="text-xs text-indigo-600 dark:text-indigo-400">
                       {timeLabel(selection.message.createdAt)}
@@ -367,7 +462,9 @@ export default function MessagesPage() {
               </div>
               <div>
                 <p className="text-sm font-semibold">{selection.user.name}</p>
-                <p className="text-xs text-muted-foreground capitalize">{selection.user.role}</p>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {selection.user.role}
+                </p>
               </div>
             </div>
 
@@ -381,20 +478,32 @@ export default function MessagesPage() {
               {thread.map((m) => {
                 const isMine = m.senderId === user?.id;
                 return (
-                  <div key={m.id} className={cn('flex', isMine ? 'justify-end' : 'justify-start')}>
+                  <div
+                    key={m.id}
+                    className={cn(
+                      "flex",
+                      isMine ? "justify-end" : "justify-start",
+                    )}
+                  >
                     <div
                       className={cn(
-                        'max-w-[70%] rounded-2xl px-4 py-2.5 text-sm',
+                        "max-w-[70%] rounded-2xl px-4 py-2.5 text-sm",
                         isMine
-                          ? 'bg-primary text-primary-foreground rounded-br-sm'
-                          : 'bg-muted text-foreground rounded-bl-sm',
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "bg-muted text-foreground rounded-bl-sm",
                       )}
                     >
-                      <p className="leading-relaxed whitespace-pre-wrap">{m.body}</p>
-                      <p className={cn(
-                        'text-[0.6rem] mt-1',
-                        isMine ? 'text-primary-foreground/60 text-right' : 'text-muted-foreground',
-                      )}>
+                      <p className="leading-relaxed whitespace-pre-wrap">
+                        {m.body}
+                      </p>
+                      <p
+                        className={cn(
+                          "text-[0.6rem] mt-1",
+                          isMine
+                            ? "text-primary-foreground/60 text-right"
+                            : "text-muted-foreground",
+                        )}
+                      >
                         {timeLabel(m.createdAt)}
                       </p>
                     </div>
@@ -417,7 +526,9 @@ export default function MessagesPage() {
                       />
                     ))}
                   </div>
-                  <span className="text-[0.6rem] text-muted-foreground">{selection.user.name} is typing…</span>
+                  <span className="text-[0.6rem] text-muted-foreground">
+                    {selection.user.name} is typing…
+                  </span>
                 </div>
               )}
               <div className="flex gap-2 items-end">
@@ -429,9 +540,11 @@ export default function MessagesPage() {
                   }}
                   placeholder={`Message ${selection.user.name}…`}
                   className="min-h-10 max-h-32 resize-none text-sm"
-                  onBlur={() => { if (selectedUserId) onStopTyping(selectedUserId); }}
+                  onBlur={() => {
+                    if (selectedUserId) onStopTyping(selectedUserId);
+                  }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
+                    if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       handleSendReply();
                     }
@@ -446,7 +559,9 @@ export default function MessagesPage() {
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-[0.6rem] text-muted-foreground mt-1">Enter to send · Shift+Enter for new line</p>
+              <p className="text-[0.6rem] text-muted-foreground mt-1">
+                Enter to send · Shift+Enter for new line
+              </p>
             </div>
           </>
         )}
@@ -457,7 +572,9 @@ export default function MessagesPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New Message</DialogTitle>
-            <DialogDescription>Send a direct message to a team member.</DialogDescription>
+            <DialogDescription>
+              Send a direct message to a team member.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-2">
@@ -470,10 +587,14 @@ export default function MessagesPage() {
                     role="combobox"
                     className="w-full justify-between font-normal"
                   >
-                    <span className={composeRecipient ? '' : 'text-muted-foreground'}>
+                    <span
+                      className={
+                        composeRecipient ? "" : "text-muted-foreground"
+                      }
+                    >
                       {composeRecipient
                         ? staffList.find((s) => s.id === composeRecipient)?.name
-                        : 'Select a team member…'}
+                        : "Select a team member…"}
                     </span>
                   </Button>
                 </PopoverTrigger>
@@ -521,10 +642,14 @@ export default function MessagesPage() {
             </Button>
             <Button
               onClick={handleCompose}
-              disabled={!composeBody.trim() || !composeRecipient || sendMutation.isPending}
+              disabled={
+                !composeBody.trim() ||
+                !composeRecipient ||
+                sendMutation.isPending
+              }
             >
               <Send className="h-4 w-4 mr-2" />
-              {sendMutation.isPending ? 'Sending…' : 'Send'}
+              {sendMutation.isPending ? "Sending…" : "Send"}
             </Button>
           </DialogFooter>
         </DialogContent>

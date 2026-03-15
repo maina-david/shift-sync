@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { format, parseISO } from 'date-fns';
-import { ColumnDef } from '@tanstack/react-table';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { format, parseISO } from "date-fns";
+import { ColumnDef } from "@tanstack/react-table";
 import {
   Clock,
   LogIn,
@@ -13,17 +13,23 @@ import {
   XCircle,
   Download,
   ClockIcon,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { DatePicker } from '@/components/ui/date-picker';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -31,19 +37,25 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { DataTable } from '@/components/ui/data-table';
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import { timesheetsApi, shiftsApi, getErrorMessage } from '@/lib/api';
-import { Timesheet, TimesheetStatus } from '@/lib/types';
-import { useAuth } from '@/contexts/auth-context';
+} from "@/components/ui/dialog";
+import { DataTable } from "@/components/ui/data-table";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty";
+import { timesheetsApi, shiftsApi, getErrorMessage } from "@/lib/api";
+import { Timesheet, TimesheetStatus } from "@/lib/types";
+import { useAuth } from "@/contexts/auth-context";
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<TimesheetStatus, string> = {
-  pending:  'bg-chart-warning/15 text-chart-warning border-chart-warning/30',
-  approved: 'bg-chart-success/15 text-chart-success border-chart-success/30',
-  rejected: 'bg-destructive/15 text-destructive border-destructive/30',
+  pending: "bg-chart-warning/15 text-chart-warning border-chart-warning/30",
+  approved: "bg-chart-success/15 text-chart-success border-chart-success/30",
+  rejected: "bg-destructive/15 text-destructive border-destructive/30",
 };
 
 function TimesheetStatusBadge({ status }: { status: TimesheetStatus }) {
@@ -60,53 +72,62 @@ function ClockWidget() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [clockOutOpen, setClockOutOpen] = useState(false);
-  const [breakMinutes, setBreakMinutes] = useState('0');
+  const [breakMinutes, setBreakMinutes] = useState("0");
 
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const today = format(new Date(), "yyyy-MM-dd");
 
-  const { data: openTimesheet, isLoading: openLoading } = useQuery<Timesheet | null>({
-    queryKey: ['timesheet-open'],
-    queryFn: timesheetsApi.getOpen,
-    refetchInterval: 60_000,
-  });
+  const { data: openTimesheet, isLoading: openLoading } =
+    useQuery<Timesheet | null>({
+      queryKey: ["timesheet-open"],
+      queryFn: timesheetsApi.getOpen,
+      refetchInterval: 60_000,
+    });
 
   // Fetch today's shifts to auto-detect the user's current assignment
   const { data: todayShifts = [] } = useQuery({
-    queryKey: ['shifts-today', today],
-    queryFn: () => shiftsApi.list({ startDate: today, endDate: today, status: 'published' }),
+    queryKey: ["shifts-today", today],
+    queryFn: () =>
+      shiftsApi.list({ startDate: today, endDate: today, status: "published" }),
     enabled: !openTimesheet,
     staleTime: 5 * 60_000,
   });
 
   const todayAssignment = !openTimesheet
     ? todayShifts
-        .flatMap((s: any) => (s.assignments ?? []).map((a: any) => ({ ...a, shift: s })))
-        .find((a: any) => a.staffId === user?.id && a.status === 'assigned')
+        .flatMap((s: any) =>
+          (s.assignments ?? []).map((a: any) => ({ ...a, shift: s })),
+        )
+        .find((a: any) => a.staffId === user?.id && a.status === "assigned")
     : null;
 
   const clockInMutation = useMutation({
     mutationFn: () => {
       if (!todayAssignment) {
-        return Promise.reject(new Error('No scheduled shift found for today. Check your schedule or ask your manager to assign you a shift.'));
+        return Promise.reject(
+          new Error(
+            "No scheduled shift found for today. Check your schedule or ask your manager to assign you a shift.",
+          ),
+        );
       }
       return timesheetsApi.clockIn({ assignmentId: todayAssignment.id });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['timesheet-open'] });
-      queryClient.invalidateQueries({ queryKey: ['timesheets-mine'] });
-      toast.success('Clocked in successfully');
+      queryClient.invalidateQueries({ queryKey: ["timesheet-open"] });
+      queryClient.invalidateQueries({ queryKey: ["timesheets-mine"] });
+      toast.success("Clocked in successfully");
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 
   const clockOutMutation = useMutation({
-    mutationFn: () => timesheetsApi.clockOut({ breakMinutes: parseInt(breakMinutes) || 0 }),
+    mutationFn: () =>
+      timesheetsApi.clockOut({ breakMinutes: parseInt(breakMinutes) || 0 }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['timesheet-open'] });
-      queryClient.invalidateQueries({ queryKey: ['timesheets-mine'] });
-      toast.success('Clocked out successfully');
+      queryClient.invalidateQueries({ queryKey: ["timesheet-open"] });
+      queryClient.invalidateQueries({ queryKey: ["timesheets-mine"] });
+      toast.success("Clocked out successfully");
       setClockOutOpen(false);
-      setBreakMinutes('0');
+      setBreakMinutes("0");
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
@@ -121,29 +142,38 @@ function ClockWidget() {
         <CardContent className="pt-5 pb-5">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-full ${openTimesheet ? 'bg-chart-success/15' : 'bg-muted'}`}>
-                <Clock className={`h-5 w-5 ${openTimesheet ? 'text-chart-success' : 'text-muted-foreground'}`} />
+              <div
+                className={`flex h-10 w-10 items-center justify-center rounded-full ${openTimesheet ? "bg-chart-success/15" : "bg-muted"}`}
+              >
+                <Clock
+                  className={`h-5 w-5 ${openTimesheet ? "text-chart-success" : "text-muted-foreground"}`}
+                />
               </div>
               <div>
                 {openTimesheet ? (
                   <>
-                    <p className="text-sm font-semibold text-chart-success">Currently clocked in</p>
+                    <p className="text-sm font-semibold text-chart-success">
+                      Currently clocked in
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      Since {format(parseISO(openTimesheet.clockIn), 'HH:mm')} on{' '}
-                      {format(parseISO(openTimesheet.clockIn), 'MMM d')}
+                      Since {format(parseISO(openTimesheet.clockIn), "HH:mm")}{" "}
+                      on {format(parseISO(openTimesheet.clockIn), "MMM d")}
                     </p>
                   </>
                 ) : todayAssignment ? (
                   <>
                     <p className="text-sm font-semibold">Not clocked in</p>
                     <p className="text-xs text-muted-foreground">
-                      Shift today: {todayAssignment.shift.startTime}–{todayAssignment.shift.endTime}
+                      Shift today: {todayAssignment.shift.startTime}–
+                      {todayAssignment.shift.endTime}
                     </p>
                   </>
                 ) : (
                   <>
                     <p className="text-sm font-semibold">Not clocked in</p>
-                    <p className="text-xs text-muted-foreground">No shift scheduled for today</p>
+                    <p className="text-xs text-muted-foreground">
+                      No shift scheduled for today
+                    </p>
                   </>
                 )}
               </div>
@@ -164,10 +194,12 @@ function ClockWidget() {
                 className="gap-2"
                 onClick={() => clockInMutation.mutate()}
                 disabled={clockInMutation.isPending || !todayAssignment}
-                title={!todayAssignment ? 'No shift scheduled for today' : undefined}
+                title={
+                  !todayAssignment ? "No shift scheduled for today" : undefined
+                }
               >
                 <LogIn className="h-4 w-4" />
-                {clockInMutation.isPending ? 'Clocking in…' : 'Clock In'}
+                {clockInMutation.isPending ? "Clocking in…" : "Clock In"}
               </Button>
             )}
           </div>
@@ -175,7 +207,13 @@ function ClockWidget() {
       </Card>
 
       {/* Clock-out dialog */}
-      <Dialog open={clockOutOpen} onOpenChange={(open) => { setClockOutOpen(open); if (!open) setBreakMinutes('0'); }}>
+      <Dialog
+        open={clockOutOpen}
+        onOpenChange={(open) => {
+          setClockOutOpen(open);
+          if (!open) setBreakMinutes("0");
+        }}
+      >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Clock Out</DialogTitle>
@@ -204,7 +242,9 @@ function ClockWidget() {
               onClick={() => clockOutMutation.mutate()}
               disabled={clockOutMutation.isPending}
             >
-              {clockOutMutation.isPending ? 'Clocking out…' : 'Confirm Clock Out'}
+              {clockOutMutation.isPending
+                ? "Clocking out…"
+                : "Confirm Clock Out"}
             </Button>
             <Button variant="ghost" onClick={() => setClockOutOpen(false)}>
               Cancel
@@ -220,40 +260,44 @@ function ClockWidget() {
 
 function MyTimesheets() {
   const { data: timesheets = [], isLoading } = useQuery<Timesheet[]>({
-    queryKey: ['timesheets-mine'],
+    queryKey: ["timesheets-mine"],
     queryFn: timesheetsApi.getMine,
   });
 
   const myColumns: ColumnDef<Timesheet>[] = [
     {
-      id: 'date',
-      header: 'Date',
+      id: "date",
+      header: "Date",
       cell: ({ row }) => (
         <span className="text-sm">
-          {format(parseISO(row.original.clockIn), 'EEE, MMM d yyyy')}
+          {format(parseISO(row.original.clockIn), "EEE, MMM d yyyy")}
         </span>
       ),
     },
     {
-      id: 'clockIn',
-      header: 'Clock In',
+      id: "clockIn",
+      header: "Clock In",
       cell: ({ row }) => (
-        <span className="tabular-nums text-sm">{format(parseISO(row.original.clockIn), 'HH:mm')}</span>
+        <span className="tabular-nums text-sm">
+          {format(parseISO(row.original.clockIn), "HH:mm")}
+        </span>
       ),
     },
     {
-      id: 'clockOut',
-      header: 'Clock Out',
+      id: "clockOut",
+      header: "Clock Out",
       cell: ({ row }) =>
         row.original.clockOut ? (
-          <span className="tabular-nums text-sm">{format(parseISO(row.original.clockOut), 'HH:mm')}</span>
+          <span className="tabular-nums text-sm">
+            {format(parseISO(row.original.clockOut), "HH:mm")}
+          </span>
         ) : (
           <span className="text-xs text-chart-success font-medium">Active</span>
         ),
     },
     {
-      id: 'break',
-      header: 'Break',
+      id: "break",
+      header: "Break",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground tabular-nums">
           {row.original.breakMinutes}m
@@ -261,18 +305,20 @@ function MyTimesheets() {
       ),
     },
     {
-      id: 'hours',
-      header: 'Hours',
+      id: "hours",
+      header: "Hours",
       cell: ({ row }) =>
         row.original.actualHours != null ? (
-          <span className="tabular-nums text-sm font-medium">{Number(row.original.actualHours).toFixed(2)}h</span>
+          <span className="tabular-nums text-sm font-medium">
+            {Number(row.original.actualHours).toFixed(2)}h
+          </span>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
         ),
     },
     {
-      id: 'status',
-      header: 'Status',
+      id: "status",
+      header: "Status",
       cell: ({ row }) => <TimesheetStatusBadge status={row.original.status} />,
     },
   ];
@@ -286,9 +332,13 @@ function MyTimesheets() {
       emptyState={
         <Empty className="border">
           <EmptyHeader>
-            <EmptyMedia variant="icon"><ClockIcon /></EmptyMedia>
+            <EmptyMedia variant="icon">
+              <ClockIcon />
+            </EmptyMedia>
             <EmptyTitle>No timesheet entries yet</EmptyTitle>
-            <EmptyDescription>Your clock-in and clock-out history will appear here.</EmptyDescription>
+            <EmptyDescription>
+              Your clock-in and clock-out history will appear here.
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       }
@@ -301,54 +351,64 @@ function MyTimesheets() {
 function ManageTimesheets() {
   const queryClient = useQueryClient();
 
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [search, setSearch] = useState("");
 
   // Review dialog state
   const [reviewTarget, setReviewTarget] = useState<{
     id: string;
-    action: 'approved' | 'rejected';
+    action: "approved" | "rejected";
   } | null>(null);
-  const [managerNote, setManagerNote] = useState('');
+  const [managerNote, setManagerNote] = useState("");
 
   // Export dialog state
   const [exportOpen, setExportOpen] = useState(false);
-  const [exportStart, setExportStart] = useState('');
-  const [exportEnd, setExportEnd] = useState('');
+  const [exportStart, setExportStart] = useState("");
+  const [exportEnd, setExportEnd] = useState("");
 
   const filters = {
-    status: statusFilter === 'all' ? undefined : statusFilter,
+    status: statusFilter === "all" ? undefined : statusFilter,
     startDate: startDate || undefined,
     endDate: endDate || undefined,
   };
 
   const { data: timesheets = [], isLoading } = useQuery<Timesheet[]>({
-    queryKey: ['timesheets', filters],
+    queryKey: ["timesheets", filters],
     queryFn: () => timesheetsApi.list(filters),
   });
 
   const reviewMutation = useMutation({
-    mutationFn: ({ id, status, note }: { id: string; status: 'approved' | 'rejected'; note?: string }) =>
-      timesheetsApi.review(id, { status, managerNote: note }),
+    mutationFn: ({
+      id,
+      status,
+      note,
+    }: {
+      id: string;
+      status: "approved" | "rejected";
+      note?: string;
+    }) => timesheetsApi.review(id, { status, managerNote: note }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['timesheets'] });
-      queryClient.invalidateQueries({ queryKey: ['timesheets-mine'] });
-      toast.success('Timesheet updated');
+      queryClient.invalidateQueries({ queryKey: ["timesheets"] });
+      queryClient.invalidateQueries({ queryKey: ["timesheets-mine"] });
+      toast.success("Timesheet updated");
       setReviewTarget(null);
-      setManagerNote('');
+      setManagerNote("");
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 
   function handleExport() {
     if (!exportStart || !exportEnd) {
-      toast.error('Please select a date range');
+      toast.error("Please select a date range");
       return;
     }
-    const url = timesheetsApi.exportUrl({ startDate: exportStart, endDate: exportEnd });
-    window.open(url, '_blank');
+    const url = timesheetsApi.exportUrl({
+      startDate: exportStart,
+      endDate: exportEnd,
+    });
+    window.open(url, "_blank");
     setExportOpen(false);
   }
 
@@ -361,66 +421,79 @@ function ManageTimesheets() {
 
   const columns: ColumnDef<Timesheet>[] = [
     {
-      id: 'employee',
-      header: 'Employee',
+      id: "employee",
+      header: "Employee",
       cell: ({ row }) => (
         <div>
-          <p className="text-sm font-medium">{row.original.staff?.name ?? '—'}</p>
+          <p className="text-sm font-medium">
+            {row.original.staff?.name ?? "—"}
+          </p>
         </div>
       ),
     },
     {
-      id: 'date',
-      header: 'Date',
+      id: "date",
+      header: "Date",
       cell: ({ row }) => (
-        <span className="text-sm">{format(parseISO(row.original.clockIn), 'EEE, MMM d yyyy')}</span>
+        <span className="text-sm">
+          {format(parseISO(row.original.clockIn), "EEE, MMM d yyyy")}
+        </span>
       ),
     },
     {
-      id: 'clockIn',
-      header: 'Clock In',
+      id: "clockIn",
+      header: "Clock In",
       cell: ({ row }) => (
-        <span className="tabular-nums text-sm">{format(parseISO(row.original.clockIn), 'HH:mm')}</span>
+        <span className="tabular-nums text-sm">
+          {format(parseISO(row.original.clockIn), "HH:mm")}
+        </span>
       ),
     },
     {
-      id: 'clockOut',
-      header: 'Clock Out',
+      id: "clockOut",
+      header: "Clock Out",
       cell: ({ row }) =>
         row.original.clockOut ? (
-          <span className="tabular-nums text-sm">{format(parseISO(row.original.clockOut), 'HH:mm')}</span>
+          <span className="tabular-nums text-sm">
+            {format(parseISO(row.original.clockOut), "HH:mm")}
+          </span>
         ) : (
           <span className="text-xs text-chart-success font-medium">Active</span>
         ),
     },
     {
-      id: 'hours',
-      header: 'Hours',
+      id: "hours",
+      header: "Hours",
       cell: ({ row }) =>
         row.original.actualHours != null ? (
-          <span className="tabular-nums text-sm font-medium">{Number(row.original.actualHours).toFixed(2)}h</span>
+          <span className="tabular-nums text-sm font-medium">
+            {Number(row.original.actualHours).toFixed(2)}h
+          </span>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
         ),
     },
     {
-      id: 'status',
-      header: 'Status',
+      id: "status",
+      header: "Status",
       cell: ({ row }) => <TimesheetStatusBadge status={row.original.status} />,
     },
     {
-      id: 'actions',
-      header: '',
+      id: "actions",
+      header: "",
       cell: ({ row }) => {
         const ts = row.original;
-        if (ts.status !== 'pending') return null;
+        if (ts.status !== "pending") return null;
         return (
           <div className="flex items-center gap-1">
             <Button
               size="sm"
               variant="ghost"
               className="h-7 gap-1 text-chart-success hover:bg-chart-success/10 hover:text-chart-success"
-              onClick={() => { setManagerNote(''); setReviewTarget({ id: ts.id, action: 'approved' }); }}
+              onClick={() => {
+                setManagerNote("");
+                setReviewTarget({ id: ts.id, action: "approved" });
+              }}
             >
               <CheckCircle className="h-3.5 w-3.5" />
               Approve
@@ -429,7 +502,10 @@ function ManageTimesheets() {
               size="sm"
               variant="ghost"
               className="h-7 gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => { setManagerNote(''); setReviewTarget({ id: ts.id, action: 'rejected' }); }}
+              onClick={() => {
+                setManagerNote("");
+                setReviewTarget({ id: ts.id, action: "rejected" });
+              }}
             >
               <XCircle className="h-3.5 w-3.5" />
               Reject
@@ -446,11 +522,21 @@ function ManageTimesheets() {
       <div className="flex items-end gap-3 flex-wrap">
         <div className="space-y-1">
           <Label className="text-xs">From</Label>
-          <DatePicker value={startDate || undefined} onChange={setStartDate} placeholder="Start date" className="w-40" />
+          <DatePicker
+            value={startDate || undefined}
+            onChange={setStartDate}
+            placeholder="Start date"
+            className="w-40"
+          />
         </div>
         <div className="space-y-1">
           <Label className="text-xs">To</Label>
-          <DatePicker value={endDate || undefined} onChange={setEndDate} placeholder="End date" className="w-40" />
+          <DatePicker
+            value={endDate || undefined}
+            onChange={setEndDate}
+            placeholder="End date"
+            className="w-40"
+          />
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Status</Label>
@@ -476,7 +562,12 @@ function ManageTimesheets() {
           />
         </div>
         <div className="ml-auto">
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => setExportOpen(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setExportOpen(true)}
+          >
             <Download className="h-4 w-4" />
             Payroll Export
           </Button>
@@ -493,9 +584,13 @@ function ManageTimesheets() {
           emptyState={
             <Empty className="border">
               <EmptyHeader>
-                <EmptyMedia variant="icon"><ClockIcon /></EmptyMedia>
+                <EmptyMedia variant="icon">
+                  <ClockIcon />
+                </EmptyMedia>
                 <EmptyTitle>No timesheets found</EmptyTitle>
-                <EmptyDescription>No timesheet records match the current filters.</EmptyDescription>
+                <EmptyDescription>
+                  No timesheet records match the current filters.
+                </EmptyDescription>
               </EmptyHeader>
             </Empty>
           }
@@ -503,11 +598,15 @@ function ManageTimesheets() {
       )}
 
       {/* Review dialog */}
-      <Dialog open={!!reviewTarget} onOpenChange={(open) => !open && setReviewTarget(null)}>
+      <Dialog
+        open={!!reviewTarget}
+        onOpenChange={(open) => !open && setReviewTarget(null)}
+      >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>
-              {reviewTarget?.action === 'approved' ? 'Approve' : 'Reject'} Timesheet
+              {reviewTarget?.action === "approved" ? "Approve" : "Reject"}{" "}
+              Timesheet
             </DialogTitle>
             <DialogDescription>
               Optionally add a note to explain your decision.
@@ -524,7 +623,9 @@ function ManageTimesheets() {
           </div>
           <DialogFooter>
             <Button
-              variant={reviewTarget?.action === 'rejected' ? 'destructive' : 'default'}
+              variant={
+                reviewTarget?.action === "rejected" ? "destructive" : "default"
+              }
               onClick={() =>
                 reviewTarget &&
                 reviewMutation.mutate({
@@ -535,9 +636,11 @@ function ManageTimesheets() {
               }
               disabled={reviewMutation.isPending}
             >
-              {reviewTarget?.action === 'approved' ? 'Approve' : 'Reject'}
+              {reviewTarget?.action === "approved" ? "Approve" : "Reject"}
             </Button>
-            <Button variant="ghost" onClick={() => setReviewTarget(null)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setReviewTarget(null)}>
+              Cancel
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -554,11 +657,21 @@ function ManageTimesheets() {
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
               <Label className="text-xs">From</Label>
-              <DatePicker value={exportStart || undefined} onChange={setExportStart} placeholder="Start date" className="w-full" />
+              <DatePicker
+                value={exportStart || undefined}
+                onChange={setExportStart}
+                placeholder="Start date"
+                className="w-full"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">To</Label>
-              <DatePicker value={exportEnd || undefined} onChange={setExportEnd} placeholder="End date" className="w-full" />
+              <DatePicker
+                value={exportEnd || undefined}
+                onChange={setExportEnd}
+                placeholder="End date"
+                className="w-full"
+              />
             </div>
           </div>
           <DialogFooter>
@@ -566,7 +679,9 @@ function ManageTimesheets() {
               <Download className="h-4 w-4" />
               Download CSV
             </Button>
-            <Button variant="ghost" onClick={() => setExportOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setExportOpen(false)}>
+              Cancel
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -578,13 +693,15 @@ function ManageTimesheets() {
 
 export default function TimesheetsPage() {
   const { user } = useAuth();
-  const isManager = user?.role === 'admin' || user?.role === 'manager';
+  const isManager = user?.role === "admin" || user?.role === "manager";
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Timesheets</h1>
-        <p className="text-muted-foreground text-sm">Track hours worked and manage timesheet approvals</p>
+        <p className="text-muted-foreground text-sm">
+          Track hours worked and manage timesheet approvals
+        </p>
       </div>
 
       <Tabs defaultValue="mine">
@@ -602,7 +719,9 @@ export default function TimesheetsPage() {
         <TabsContent value="mine" className="space-y-4 mt-4">
           <ClockWidget />
           <div>
-            <h2 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wider">History</h2>
+            <h2 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wider">
+              History
+            </h2>
             <MyTimesheets />
           </div>
         </TabsContent>

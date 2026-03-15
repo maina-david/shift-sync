@@ -14,7 +14,7 @@ const makeUser = (overrides: Partial<User> = {}): User =>
     role: UserRole.STAFF,
     notificationPreferences: { inApp: true, email: false },
     ...overrides,
-  } as unknown as User);
+  }) as unknown as User;
 
 const makeNotif = () =>
   ({
@@ -26,7 +26,7 @@ const makeNotif = () =>
     isRead: false,
     entityType: null,
     entityId: null,
-  } as unknown as Notification);
+  }) as unknown as Notification;
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -43,7 +43,11 @@ describe('NotificationsService', () => {
       create: jest.fn(),
       save: jest.fn(),
     };
-    userRepo = { findOne: jest.fn(), find: jest.fn(), createQueryBuilder: jest.fn() };
+    userRepo = {
+      findOne: jest.fn(),
+      find: jest.fn(),
+      createQueryBuilder: jest.fn(),
+    };
     gateway = { emitToUser: jest.fn() };
     email = { sendNotification: jest.fn().mockResolvedValue(undefined) };
 
@@ -55,7 +59,16 @@ describe('NotificationsService', () => {
         { provide: NotificationsGateway, useValue: gateway },
         { provide: EmailService, useValue: email },
       ],
-    }).setLogger({ log: () => {}, error: () => {}, warn: () => {}, debug: () => {}, verbose: () => {}, fatal: () => {} }).compile();
+    })
+      .setLogger({
+        log: () => {},
+        error: () => {},
+        warn: () => {},
+        debug: () => {},
+        verbose: () => {},
+        fatal: () => {},
+      })
+      .compile();
 
     service = module.get<NotificationsService>(NotificationsService);
   });
@@ -124,39 +137,65 @@ describe('NotificationsService', () => {
     });
 
     it('saves in-app notification and emits to gateway when inApp preference is true', async () => {
-      userRepo.findOne.mockResolvedValue(makeUser({ notificationPreferences: { inApp: true, email: false } }));
+      userRepo.findOne.mockResolvedValue(
+        makeUser({ notificationPreferences: { inApp: true, email: false } }),
+      );
       const saved = makeNotif();
       notifRepo.create.mockReturnValue(saved);
       notifRepo.save.mockResolvedValue(saved);
 
       await service.handleSendNotification(payload);
       expect(notifRepo.save).toHaveBeenCalled();
-      expect(gateway.emitToUser).toHaveBeenCalledWith('user-1', 'notification', saved);
+      expect(gateway.emitToUser).toHaveBeenCalledWith(
+        'user-1',
+        'notification',
+        saved,
+      );
     });
 
     it('skips in-app notification when inApp preference is false', async () => {
-      userRepo.findOne.mockResolvedValue(makeUser({ notificationPreferences: { inApp: false, email: false } }));
+      userRepo.findOne.mockResolvedValue(
+        makeUser({ notificationPreferences: { inApp: false, email: false } }),
+      );
       await service.handleSendNotification(payload);
       expect(notifRepo.save).not.toHaveBeenCalled();
     });
 
     it('sends email when email preference is true', async () => {
-      userRepo.findOne.mockResolvedValue(makeUser({ notificationPreferences: { inApp: false, email: true } }));
+      userRepo.findOne.mockResolvedValue(
+        makeUser({ notificationPreferences: { inApp: false, email: true } }),
+      );
       await service.handleSendNotification(payload);
-      expect(email.sendNotification).toHaveBeenCalledWith('alice@example.com', 'Hello', 'World');
+      expect(email.sendNotification).toHaveBeenCalledWith(
+        'alice@example.com',
+        'Hello',
+        'World',
+      );
     });
 
     it('suppresses email errors without throwing', async () => {
-      userRepo.findOne.mockResolvedValue(makeUser({ notificationPreferences: { inApp: false, email: true } }));
+      userRepo.findOne.mockResolvedValue(
+        makeUser({ notificationPreferences: { inApp: false, email: true } }),
+      );
       email.sendNotification.mockRejectedValue(new Error('SMTP failure'));
-      await expect(service.handleSendNotification(payload)).resolves.not.toThrow();
+      await expect(
+        service.handleSendNotification(payload),
+      ).resolves.not.toThrow();
     });
   });
 
   describe('handleSendToManagers', () => {
     it('sends notifications to all managers at the given location', async () => {
-      const manager1 = makeUser({ id: 'manager-1', role: UserRole.MANAGER, notificationPreferences: { inApp: true, email: false } });
-      const manager2 = makeUser({ id: 'manager-2', role: UserRole.MANAGER, notificationPreferences: { inApp: true, email: false } });
+      const manager1 = makeUser({
+        id: 'manager-1',
+        role: UserRole.MANAGER,
+        notificationPreferences: { inApp: true, email: false },
+      });
+      const manager2 = makeUser({
+        id: 'manager-2',
+        role: UserRole.MANAGER,
+        notificationPreferences: { inApp: true, email: false },
+      });
       const qb = {
         innerJoin: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
@@ -182,13 +221,21 @@ describe('NotificationsService', () => {
 
   describe('handleSendToAdmins', () => {
     it('sends notifications to all admins', async () => {
-      const admin = makeUser({ id: 'admin-1', role: UserRole.ADMIN, notificationPreferences: { inApp: true, email: false } });
+      const admin = makeUser({
+        id: 'admin-1',
+        role: UserRole.ADMIN,
+        notificationPreferences: { inApp: true, email: false },
+      });
       userRepo.find.mockResolvedValue([admin]);
       userRepo.findOne.mockResolvedValue(admin);
       notifRepo.create.mockReturnValue(makeNotif());
       notifRepo.save.mockResolvedValue(makeNotif());
 
-      await service.handleSendToAdmins({ type: 'TEST', title: 'Hello', message: 'World' });
+      await service.handleSendToAdmins({
+        type: 'TEST',
+        title: 'Hello',
+        message: 'World',
+      });
       expect(notifRepo.save).toHaveBeenCalledTimes(1);
     });
   });

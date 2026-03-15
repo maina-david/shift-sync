@@ -3,22 +3,39 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SchedulerService } from './scheduler.service';
-import { ShiftAssignment, AssignmentStatus } from '../shifts/entities/shift-assignment.entity';
+import {
+  ShiftAssignment,
+  AssignmentStatus,
+} from '../shifts/entities/shift-assignment.entity';
 import { Shift, ShiftStatus } from '../shifts/entities/shift.entity';
-import { TimeOffRequest, TimeOffStatus } from '../time-off-requests/entities/time-off-request.entity';
-import { Reservation, ReservationStatus } from '../reservations/entities/reservation.entity';
-import { SwapRequest, SwapRequestStatus } from '../swap-requests/entities/swap-request.entity';
+import {
+  TimeOffRequest,
+  TimeOffStatus,
+} from '../time-off-requests/entities/time-off-request.entity';
+import {
+  Reservation,
+  ReservationStatus,
+} from '../reservations/entities/reservation.entity';
+import {
+  SwapRequest,
+  SwapRequestStatus,
+} from '../swap-requests/entities/swap-request.entity';
 import { User, UserRole } from '../users/entities/user.entity';
-import { Notification, NotificationType } from '../notifications/entities/notification.entity';
+import {
+  Notification,
+  NotificationType,
+} from '../notifications/entities/notification.entity';
 import { Certification } from '../certifications/entities/certification.entity';
 
-function buildQb(opts: {
-  getMany?: any[];
-  getManyAndCount?: [any[], number];
-  getCount?: number;
-  getRawMany?: any[];
-  select?: jest.Mock;
-} = {}) {
+function buildQb(
+  opts: {
+    getMany?: any[];
+    getManyAndCount?: [any[], number];
+    getCount?: number;
+    getRawMany?: any[];
+    select?: jest.Mock;
+  } = {},
+) {
   return {
     innerJoin: jest.fn().mockReturnThis(),
     innerJoinAndSelect: jest.fn().mockReturnThis(),
@@ -31,14 +48,20 @@ function buildQb(opts: {
     delete: jest.fn().mockReturnThis(),
     execute: jest.fn().mockResolvedValue({ affected: 5 }),
     getMany: jest.fn().mockResolvedValue(opts.getMany ?? []),
-    getManyAndCount: jest.fn().mockResolvedValue(opts.getManyAndCount ?? [[], 0]),
+    getManyAndCount: jest
+      .fn()
+      .mockResolvedValue(opts.getManyAndCount ?? [[], 0]),
     getCount: jest.fn().mockResolvedValue(opts.getCount ?? 0),
     getRawMany: jest.fn().mockResolvedValue(opts.getRawMany ?? []),
   };
 }
 
 const makeManager = (): User =>
-  ({ id: 'manager-1', role: UserRole.MANAGER, isActive: true } as unknown as User);
+  ({
+    id: 'manager-1',
+    role: UserRole.MANAGER,
+    isActive: true,
+  }) as unknown as User;
 
 describe('SchedulerService', () => {
   beforeAll(() => jest.useFakeTimers());
@@ -58,9 +81,19 @@ describe('SchedulerService', () => {
   beforeEach(async () => {
     assignRepo = { createQueryBuilder: jest.fn(), update: jest.fn() };
     shiftRepo = { createQueryBuilder: jest.fn() };
-    timeOffRepo = { find: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0) };
-    reservRepo = { createQueryBuilder: jest.fn(), update: jest.fn(), count: jest.fn().mockResolvedValue(0) };
-    swapRepo = { createQueryBuilder: jest.fn(), count: jest.fn().mockResolvedValue(0) };
+    timeOffRepo = {
+      find: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+    };
+    reservRepo = {
+      createQueryBuilder: jest.fn(),
+      update: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
+    };
+    swapRepo = {
+      createQueryBuilder: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
+    };
     userRepo = { createQueryBuilder: jest.fn() };
     notifRepo = { createQueryBuilder: jest.fn() };
     certRepo = { createQueryBuilder: jest.fn() };
@@ -100,7 +133,9 @@ describe('SchedulerService', () => {
 
     it('deletes the interval on destroy', () => {
       service.onModuleDestroy();
-      expect(schedulerRegistry.deleteInterval).toHaveBeenCalledWith('cleanup-old-notifications');
+      expect(schedulerRegistry.deleteInterval).toHaveBeenCalledWith(
+        'cleanup-old-notifications',
+      );
     });
   });
 
@@ -112,7 +147,9 @@ describe('SchedulerService', () => {
     });
 
     it('bulk-updates past ASSIGNED assignments to COMPLETED', async () => {
-      assignRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: [{ id: 'a-1' }, { id: 'a-2' }] }));
+      assignRepo.createQueryBuilder.mockReturnValue(
+        buildQb({ getMany: [{ id: 'a-1' }, { id: 'a-2' }] }),
+      );
       assignRepo.update.mockResolvedValue({ affected: 2 });
       await service.completePastAssignments();
       expect(assignRepo.update).toHaveBeenCalledWith(
@@ -140,12 +177,17 @@ describe('SchedulerService', () => {
           requiredSkill: null,
         },
       };
-      assignRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: [assignment] }));
+      assignRepo.createQueryBuilder.mockReturnValue(
+        buildQb({ getMany: [assignment] }),
+      );
 
       await service.sendDailyShiftReminders();
       expect(events.emit).toHaveBeenCalledWith(
         'notification.send',
-        expect.objectContaining({ type: NotificationType.SHIFT_REMINDER, userId: 'staff-1' }),
+        expect.objectContaining({
+          type: NotificationType.SHIFT_REMINDER,
+          userId: 'staff-1',
+        }),
       );
     });
   });
@@ -159,7 +201,9 @@ describe('SchedulerService', () => {
 
     it('notifies all managers when stale requests exist', async () => {
       timeOffRepo.find.mockResolvedValue([{ id: 'tor-1' }, { id: 'tor-2' }]);
-      userRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: [makeManager()] }));
+      userRepo.createQueryBuilder.mockReturnValue(
+        buildQb({ getMany: [makeManager()] }),
+      );
 
       await service.remindStalePendingTimeOff();
       expect(events.emit).toHaveBeenCalledWith(
@@ -178,12 +222,16 @@ describe('SchedulerService', () => {
 
     it('warns all managers when no shifts published for next week', async () => {
       shiftRepo.createQueryBuilder.mockReturnValue(buildQb({ getCount: 0 }));
-      userRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: [makeManager()] }));
+      userRepo.createQueryBuilder.mockReturnValue(
+        buildQb({ getMany: [makeManager()] }),
+      );
 
       await service.warnUnpublishedSchedule();
       expect(events.emit).toHaveBeenCalledWith(
         'notification.send',
-        expect.objectContaining({ type: NotificationType.SCHEDULE_UNPUBLISHED_WARNING }),
+        expect.objectContaining({
+          type: NotificationType.SCHEDULE_UNPUBLISHED_WARNING,
+        }),
       );
     });
   });
@@ -196,14 +244,15 @@ describe('SchedulerService', () => {
     });
 
     it('marks past pending/confirmed reservations as NO_SHOW', async () => {
-      reservRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: [{ id: 'res-1' }] }));
+      reservRepo.createQueryBuilder.mockReturnValue(
+        buildQb({ getMany: [{ id: 'res-1' }] }),
+      );
       reservRepo.update.mockResolvedValue({ affected: 1 });
 
       await service.markNoShowReservations();
-      expect(reservRepo.update).toHaveBeenCalledWith(
-        expect.any(Object),
-        { status: ReservationStatus.NO_SHOW },
-      );
+      expect(reservRepo.update).toHaveBeenCalledWith(expect.any(Object), {
+        status: ReservationStatus.NO_SHOW,
+      });
     });
   });
 
@@ -225,7 +274,10 @@ describe('SchedulerService', () => {
       await service.remindUnansweredSwapRequests();
       expect(events.emit).toHaveBeenCalledWith(
         'notification.send',
-        expect.objectContaining({ type: NotificationType.SWAP_PENDING_REMINDER, userId: 'staff-2' }),
+        expect.objectContaining({
+          type: NotificationType.SWAP_PENDING_REMINDER,
+          userId: 'staff-2',
+        }),
       );
     });
   });
@@ -238,9 +290,15 @@ describe('SchedulerService', () => {
     });
 
     it('notifies managers when certs are expiring within 30 days', async () => {
-      const cert = { id: 'cert-1', user: { name: 'Alice' }, expiryDate: '2026-04-01' };
+      const cert = {
+        id: 'cert-1',
+        user: { name: 'Alice' },
+        expiryDate: '2026-04-01',
+      };
       certRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: [cert] }));
-      userRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: [makeManager()] }));
+      userRepo.createQueryBuilder.mockReturnValue(
+        buildQb({ getMany: [makeManager()] }),
+      );
 
       await service.warnExpiringCertifications();
       expect(events.emit).toHaveBeenCalledWith(

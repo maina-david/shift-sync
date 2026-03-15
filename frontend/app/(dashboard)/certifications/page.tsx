@@ -1,17 +1,29 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { BadgeCheck, PlusCircle, Trash2, AlertTriangle, Search } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import {
+  BadgeCheck,
+  PlusCircle,
+  Trash2,
+  AlertTriangle,
+  Search,
+} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -19,7 +31,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +39,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,39 +49,42 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { certificationsApi, usersApi, getErrorMessage } from '@/lib/api';
-import { Certification, User } from '@/lib/types';
-import { useAuth } from '@/contexts/auth-context';
-import { cn } from '@/lib/utils';
-import { DatePicker } from '@/components/ui/date-picker';
+} from "@/components/ui/alert-dialog";
+import { certificationsApi, usersApi, getErrorMessage } from "@/lib/api";
+import { Certification, User } from "@/lib/types";
+import { useAuth } from "@/contexts/auth-context";
+import { cn } from "@/lib/utils";
+import { DatePicker } from "@/components/ui/date-picker";
 
 // ─── Expiry logic ─────────────────────────────────────────────────────────────
 
-type CertStatus = 'valid' | 'expiring' | 'expired';
+type CertStatus = "valid" | "expiring" | "expired";
 
 function certStatus(expiryDate: string | null | undefined): CertStatus {
-  if (!expiryDate) return 'expired';
+  if (!expiryDate) return "expired";
   const d = new Date(expiryDate);
-  if (isNaN(d.getTime())) return 'expired';
+  if (isNaN(d.getTime())) return "expired";
   const days = Math.floor((d.getTime() - Date.now()) / 86400000);
-  if (days < 0) return 'expired';
-  if (days <= 30) return 'expiring';
-  return 'valid';
+  if (days < 0) return "expired";
+  if (days <= 30) return "expiring";
+  return "valid";
 }
 
 const STATUS_BADGE: Record<CertStatus, { label: string; className: string }> = {
   valid: {
-    label: 'Valid',
-    className: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border-green-200 dark:border-green-800',
+    label: "Valid",
+    className:
+      "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border-green-200 dark:border-green-800",
   },
   expiring: {
-    label: 'Expiring Soon',
-    className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800',
+    label: "Expiring Soon",
+    className:
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
   },
   expired: {
-    label: 'Expired',
-    className: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border-red-200 dark:border-red-800',
+    label: "Expired",
+    className:
+      "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border-red-200 dark:border-red-800",
   },
 };
 
@@ -77,7 +92,7 @@ function StatusBadge({ expiryDate }: { expiryDate: string }) {
   const s = certStatus(expiryDate);
   const { label, className } = STATUS_BADGE[s];
   return (
-    <Badge variant="outline" className={cn('text-xs font-medium', className)}>
+    <Badge variant="outline" className={cn("text-xs font-medium", className)}>
       {label}
     </Badge>
   );
@@ -86,11 +101,11 @@ function StatusBadge({ expiryDate }: { expiryDate: string }) {
 // ─── Form types ───────────────────────────────────────────────────────────────
 
 const EMPTY_CERT_FORM = {
-  name: '',
-  issuer: '',
-  issuedDate: '',
-  expiryDate: '',
-  documentUrl: '',
+  name: "",
+  issuer: "",
+  issuedDate: "",
+  expiryDate: "",
+  documentUrl: "",
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -98,37 +113,39 @@ const EMPTY_CERT_FORM = {
 export default function CertificationsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const canManage = user?.role === 'admin' || user?.role === 'manager';
+  const canManage = user?.role === "admin" || user?.role === "manager";
 
   // Dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [certForm, setCertForm] = useState(EMPTY_CERT_FORM);
-  const [forStaffId, setForStaffId] = useState('');
+  const [forStaffId, setForStaffId] = useState("");
   const [isTeamDialog, setIsTeamDialog] = useState(false);
 
   // Delete confirm state
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Team tab filter
-  const [staffSearch, setStaffSearch] = useState('');
+  const [staffSearch, setStaffSearch] = useState("");
 
   // ── Queries ──
 
-  const { data: myCerts = [], isLoading: myLoading } = useQuery<Certification[]>({
-    queryKey: ['certifications-mine'],
+  const { data: myCerts = [], isLoading: myLoading } = useQuery<
+    Certification[]
+  >({
+    queryKey: ["certifications-mine"],
     queryFn: certificationsApi.getMine,
   });
 
   type ExpiringCert = Certification & { user: User };
 
   const { data: expiring = [] } = useQuery<ExpiringCert[]>({
-    queryKey: ['certifications-expiring'],
+    queryKey: ["certifications-expiring"],
     queryFn: () => certificationsApi.getExpiring(30),
     enabled: canManage,
   });
 
   const { data: staffList = [] } = useQuery<User[]>({
-    queryKey: ['users'],
+    queryKey: ["users"],
     queryFn: () => usersApi.list(),
     enabled: canManage,
   });
@@ -138,7 +155,7 @@ export default function CertificationsPage() {
   // Since there's no "get all" endpoint, we use getExpiring with a large window to build
   // the team table, supplemented by each staff member's own certs.
   const { data: allExpiring = [] } = useQuery<ExpiringCert[]>({
-    queryKey: ['certifications-expiring-all'],
+    queryKey: ["certifications-expiring-all"],
     queryFn: () => certificationsApi.getExpiring(36500), // ~100 years = all certs
     enabled: canManage,
   });
@@ -146,7 +163,13 @@ export default function CertificationsPage() {
   // ── Mutations ──
 
   const createMutation = useMutation({
-    mutationFn: ({ userId, data }: { userId: string; data: typeof EMPTY_CERT_FORM }) =>
+    mutationFn: ({
+      userId,
+      data,
+    }: {
+      userId: string;
+      data: typeof EMPTY_CERT_FORM;
+    }) =>
       certificationsApi.create(userId, {
         name: data.name,
         issuedDate: data.issuedDate,
@@ -155,13 +178,15 @@ export default function CertificationsPage() {
         documentUrl: data.documentUrl || undefined,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['certifications-mine'] });
-      queryClient.invalidateQueries({ queryKey: ['certifications-expiring'] });
-      queryClient.invalidateQueries({ queryKey: ['certifications-expiring-all'] });
-      toast.success('Certification added');
+      queryClient.invalidateQueries({ queryKey: ["certifications-mine"] });
+      queryClient.invalidateQueries({ queryKey: ["certifications-expiring"] });
+      queryClient.invalidateQueries({
+        queryKey: ["certifications-expiring-all"],
+      });
+      toast.success("Certification added");
       setAddDialogOpen(false);
       setCertForm(EMPTY_CERT_FORM);
-      setForStaffId('');
+      setForStaffId("");
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
@@ -169,10 +194,12 @@ export default function CertificationsPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => certificationsApi.remove(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['certifications-mine'] });
-      queryClient.invalidateQueries({ queryKey: ['certifications-expiring'] });
-      queryClient.invalidateQueries({ queryKey: ['certifications-expiring-all'] });
-      toast.success('Certification deleted');
+      queryClient.invalidateQueries({ queryKey: ["certifications-mine"] });
+      queryClient.invalidateQueries({ queryKey: ["certifications-expiring"] });
+      queryClient.invalidateQueries({
+        queryKey: ["certifications-expiring-all"],
+      });
+      toast.success("Certification deleted");
       setDeleteId(null);
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -182,24 +209,28 @@ export default function CertificationsPage() {
 
   const openAddMine = () => {
     setCertForm(EMPTY_CERT_FORM);
-    setForStaffId(user?.id ?? '');
+    setForStaffId(user?.id ?? "");
     setIsTeamDialog(false);
     setAddDialogOpen(true);
   };
 
   const openAddForTeam = () => {
     setCertForm(EMPTY_CERT_FORM);
-    setForStaffId('');
+    setForStaffId("");
     setIsTeamDialog(true);
     setAddDialogOpen(true);
   };
 
   const handleCreate = () => {
-    const targetId = isTeamDialog ? forStaffId : (user?.id ?? '');
+    const targetId = isTeamDialog ? forStaffId : (user?.id ?? "");
     if (!targetId) return;
     createMutation.mutate({
       userId: targetId,
-      data: { ...certForm, name: certForm.name.trim(), issuer: certForm.issuer.trim() },
+      data: {
+        ...certForm,
+        name: certForm.name.trim(),
+        issuer: certForm.issuer.trim(),
+      },
     });
   };
 
@@ -215,7 +246,7 @@ export default function CertificationsPage() {
   const teamCerts = allExpiring;
   const filteredTeamCerts = staffSearch.trim()
     ? teamCerts.filter((c) =>
-        c.user.name.toLowerCase().includes(staffSearch.toLowerCase())
+        c.user.name.toLowerCase().includes(staffSearch.toLowerCase()),
       )
     : teamCerts;
 
@@ -225,21 +256,25 @@ export default function CertificationsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Certifications</h1>
-          <p className="text-muted-foreground text-sm">Manage staff certifications and expiry dates</p>
+          <p className="text-muted-foreground text-sm">
+            Manage staff certifications and expiry dates
+          </p>
         </div>
       </div>
 
       <Tabs defaultValue="mine">
         <TabsList>
           <TabsTrigger value="mine">My Certifications</TabsTrigger>
-          {canManage && <TabsTrigger value="team">Team Certifications</TabsTrigger>}
+          {canManage && (
+            <TabsTrigger value="team">Team Certifications</TabsTrigger>
+          )}
         </TabsList>
 
         {/* ── My Certifications ── */}
         <TabsContent value="mine" className="mt-4 space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {myCerts.length} certification{myCerts.length !== 1 ? 's' : ''}
+              {myCerts.length} certification{myCerts.length !== 1 ? "s" : ""}
             </p>
             <Button size="sm" onClick={openAddMine}>
               <PlusCircle className="h-4 w-4 mr-2" />
@@ -249,13 +284,19 @@ export default function CertificationsPage() {
 
           {myLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-36 w-full rounded-xl" />)}
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-36 w-full rounded-xl" />
+              ))}
             </div>
           ) : myCerts.length === 0 ? (
             <div className="border rounded-lg p-12 text-center">
               <BadgeCheck className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-              <p className="font-medium text-muted-foreground">No certifications yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Add your first certification to keep your records up to date.</p>
+              <p className="font-medium text-muted-foreground">
+                No certifications yet
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Add your first certification to keep your records up to date.
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -266,9 +307,13 @@ export default function CertificationsPage() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{cert.name}</p>
+                      <p className="font-semibold text-sm truncate">
+                        {cert.name}
+                      </p>
                       {cert.issuer && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{cert.issuer}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {cert.issuer}
+                        </p>
                       )}
                     </div>
                     <StatusBadge expiryDate={cert.expiryDate} />
@@ -277,15 +322,19 @@ export default function CertificationsPage() {
                   <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                     <div>
                       <p className="font-medium text-foreground">Issued</p>
-                      <p>{format(new Date(cert.issuedDate), 'MMM d, yyyy')}</p>
+                      <p>{format(new Date(cert.issuedDate), "MMM d, yyyy")}</p>
                     </div>
                     <div>
                       <p className="font-medium text-foreground">Expires</p>
-                      <p className={cn(
-                        certStatus(cert.expiryDate) === 'expired' && 'text-red-600',
-                        certStatus(cert.expiryDate) === 'expiring' && 'text-yellow-600',
-                      )}>
-                        {format(new Date(cert.expiryDate), 'MMM d, yyyy')}
+                      <p
+                        className={cn(
+                          certStatus(cert.expiryDate) === "expired" &&
+                            "text-red-600",
+                          certStatus(cert.expiryDate) === "expiring" &&
+                            "text-yellow-600",
+                        )}
+                      >
+                        {format(new Date(cert.expiryDate), "MMM d, yyyy")}
                       </p>
                     </div>
                   </div>
@@ -324,8 +373,11 @@ export default function CertificationsPage() {
               <div className="flex items-start gap-3 rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 px-4 py-3">
                 <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5" />
                 <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  <span className="font-semibold">{expiring.length} certification{expiring.length !== 1 ? 's' : ''}</span>
-                  {' '}expiring within the next 30 days. Review the team tab below.
+                  <span className="font-semibold">
+                    {expiring.length} certification
+                    {expiring.length !== 1 ? "s" : ""}
+                  </span>{" "}
+                  expiring within the next 30 days. Review the team tab below.
                 </p>
               </div>
             )}
@@ -350,7 +402,9 @@ export default function CertificationsPage() {
               <div className="border rounded-lg p-12 text-center">
                 <BadgeCheck className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
                 <p className="font-medium text-muted-foreground">
-                  {staffSearch ? 'No certifications match your search' : 'No team certifications on record'}
+                  {staffSearch
+                    ? "No certifications match your search"
+                    : "No team certifications on record"}
                 </p>
               </div>
             ) : (
@@ -370,18 +424,26 @@ export default function CertificationsPage() {
                   <TableBody>
                     {filteredTeamCerts.map((cert) => (
                       <TableRow key={cert.id}>
-                        <TableCell className="font-medium text-sm">{cert.user.name}</TableCell>
-                        <TableCell className="text-sm">{cert.name}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{cert.issuer ?? '—'}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {format(new Date(cert.issuedDate), 'MMM d, yyyy')}
+                        <TableCell className="font-medium text-sm">
+                          {cert.user.name}
                         </TableCell>
-                        <TableCell className={cn(
-                          'text-sm',
-                          certStatus(cert.expiryDate) === 'expired' && 'text-red-600 font-medium',
-                          certStatus(cert.expiryDate) === 'expiring' && 'text-yellow-600 font-medium',
-                        )}>
-                          {format(new Date(cert.expiryDate), 'MMM d, yyyy')}
+                        <TableCell className="text-sm">{cert.name}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {cert.issuer ?? "—"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {format(new Date(cert.issuedDate), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            "text-sm",
+                            certStatus(cert.expiryDate) === "expired" &&
+                              "text-red-600 font-medium",
+                            certStatus(cert.expiryDate) === "expiring" &&
+                              "text-yellow-600 font-medium",
+                          )}
+                        >
+                          {format(new Date(cert.expiryDate), "MMM d, yyyy")}
                         </TableCell>
                         <TableCell>
                           <StatusBadge expiryDate={cert.expiryDate} />
@@ -411,12 +473,14 @@ export default function CertificationsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {isTeamDialog ? 'Add Certification for Staff' : 'Add Certification'}
+              {isTeamDialog
+                ? "Add Certification for Staff"
+                : "Add Certification"}
             </DialogTitle>
             <DialogDescription>
               {isTeamDialog
-                ? 'Record a certification for a team member.'
-                : 'Add a new certification to your profile.'}
+                ? "Record a certification for a team member."
+                : "Add a new certification to your profile."}
             </DialogDescription>
           </DialogHeader>
 
@@ -430,7 +494,9 @@ export default function CertificationsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {staffList.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -441,7 +507,9 @@ export default function CertificationsPage() {
               <Label>Certification name</Label>
               <Input
                 value={certForm.name}
-                onChange={(e) => setCertForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={(e) =>
+                  setCertForm((f) => ({ ...f, name: e.target.value }))
+                }
                 placeholder="e.g. Food Handler's Certificate"
               />
             </div>
@@ -450,7 +518,9 @@ export default function CertificationsPage() {
               <Label>Issuer</Label>
               <Input
                 value={certForm.issuer}
-                onChange={(e) => setCertForm((f) => ({ ...f, issuer: e.target.value }))}
+                onChange={(e) =>
+                  setCertForm((f) => ({ ...f, issuer: e.target.value }))
+                }
                 placeholder="e.g. National Restaurant Association"
               />
             </div>
@@ -460,27 +530,42 @@ export default function CertificationsPage() {
                 <Label>Issued date</Label>
                 <DatePicker
                   value={certForm.issuedDate || undefined}
-                  onChange={(v) => setCertForm((f) => ({ ...f, issuedDate: v }))}
+                  onChange={(v) =>
+                    setCertForm((f) => ({ ...f, issuedDate: v }))
+                  }
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Expiry date</Label>
                 <DatePicker
                   value={certForm.expiryDate || undefined}
-                  onChange={(v) => setCertForm((f) => ({ ...f, expiryDate: v }))}
+                  onChange={(v) =>
+                    setCertForm((f) => ({ ...f, expiryDate: v }))
+                  }
                 />
               </div>
             </div>
-            {certForm.issuedDate && certForm.expiryDate && certForm.expiryDate < certForm.issuedDate && (
-              <p className="text-xs text-destructive">Expiry date must be on or after the issued date.</p>
-            )}
+            {certForm.issuedDate &&
+              certForm.expiryDate &&
+              certForm.expiryDate < certForm.issuedDate && (
+                <p className="text-xs text-destructive">
+                  Expiry date must be on or after the issued date.
+                </p>
+              )}
 
             <div className="grid gap-2">
-              <Label>Document URL <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Label>
+                Document URL{" "}
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
+              </Label>
               <Input
                 type="url"
                 value={certForm.documentUrl}
-                onChange={(e) => setCertForm((f) => ({ ...f, documentUrl: e.target.value }))}
+                onChange={(e) =>
+                  setCertForm((f) => ({ ...f, documentUrl: e.target.value }))
+                }
                 placeholder="https://…"
               />
             </div>
@@ -491,19 +576,25 @@ export default function CertificationsPage() {
               Cancel
             </Button>
             <Button onClick={handleCreate} disabled={!canSubmit}>
-              {createMutation.isPending ? 'Saving…' : 'Save certification'}
+              {createMutation.isPending ? "Saving…" : "Save certification"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* ── Delete Confirm ── */}
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+      <AlertDialog
+        open={!!deleteId}
+        onOpenChange={(open) => {
+          if (!open) setDeleteId(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete certification?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. The certification record will be permanently removed.
+              This action cannot be undone. The certification record will be
+              permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -512,7 +603,7 @@ export default function CertificationsPage() {
               onClick={() => deleteId && deleteMutation.mutate(deleteId)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

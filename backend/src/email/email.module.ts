@@ -8,11 +8,11 @@ import { EmailService } from './email.service';
   imports: [
     MailerModule.forRootAsync({
       imports: [ConfigModule],
-      inject:  [ConfigService],
+      inject: [ConfigService],
       useFactory: (cfg: ConfigService) => ({
         transport: {
-          host:   cfg.get<string>('SMTP_HOST', 'sandbox.smtp.mailtrap.io'),
-          port:   cfg.get<number>('SMTP_PORT', 587),
+          host: cfg.get<string>('SMTP_HOST', 'sandbox.smtp.mailtrap.io'),
+          port: cfg.get<number>('SMTP_PORT', 587),
           secure: false, // STARTTLS on port 587
           auth: {
             user: cfg.get<string>('SMTP_USER', ''),
@@ -20,12 +20,15 @@ import { EmailService } from './email.service';
           },
         },
         defaults: {
-          from: cfg.get<string>('SMTP_FROM', 'ShiftSync <noreply@shiftsync.dev>'),
+          from: cfg.get<string>(
+            'SMTP_FROM',
+            'ShiftSync <noreply@shiftsync.dev>',
+          ),
         },
       }),
     }),
   ],
   providers: [EmailService],
-  exports:   [EmailService],
+  exports: [EmailService],
 })
 export class EmailModule {}

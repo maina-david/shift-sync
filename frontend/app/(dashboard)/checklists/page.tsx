@@ -1,18 +1,24 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { PlusCircle, CheckCircle2, Trash2, Plus, X } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Progress } from '@/components/ui/progress';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { PlusCircle, CheckCircle2, Trash2, Plus, X } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetClose,
@@ -21,28 +27,31 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
-import { checklistsApi, locationsApi, getErrorMessage } from '@/lib/api';
-import { Checklist, ChecklistType, Location } from '@/lib/types';
-import { useAuth } from '@/contexts/auth-context';
-import { cn } from '@/lib/utils';
-import { DatePicker } from '@/components/ui/date-picker';
+} from "@/components/ui/sheet";
+import { checklistsApi, locationsApi, getErrorMessage } from "@/lib/api";
+import { Checklist, ChecklistType, Location } from "@/lib/types";
+import { useAuth } from "@/contexts/auth-context";
+import { cn } from "@/lib/utils";
+import { DatePicker } from "@/components/ui/date-picker";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const TYPE_LABELS: Record<ChecklistType, string> = {
-  opening: 'Opening',
-  closing: 'Closing',
-  custom: 'Custom',
+  opening: "Opening",
+  closing: "Closing",
+  custom: "Custom",
 };
 
 const TYPE_BADGE_CLASSES: Record<ChecklistType, string> = {
-  opening: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border-green-200 dark:border-green-800',
-  closing: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 border-orange-200 dark:border-orange-800',
-  custom: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+  opening:
+    "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border-green-200 dark:border-green-800",
+  closing:
+    "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 border-orange-200 dark:border-orange-800",
+  custom:
+    "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800",
 };
 
-const ALL_TYPES = 'all';
+const ALL_TYPES = "all";
 
 interface NewItem {
   label: string;
@@ -50,10 +59,10 @@ interface NewItem {
 }
 
 const EMPTY_FORM = {
-  type: 'opening' as ChecklistType,
-  title: '',
-  locationId: '',
-  items: [{ label: '', required: false }] as NewItem[],
+  type: "opening" as ChecklistType,
+  title: "",
+  locationId: "",
+  items: [{ label: "", required: false }] as NewItem[],
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -61,23 +70,27 @@ const EMPTY_FORM = {
 export default function ChecklistsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const canManage = user?.role === 'admin' || user?.role === 'manager';
+  const canManage = user?.role === "admin" || user?.role === "manager";
 
-  const [filterLocation, setFilterLocation] = useState<string>('');
+  const [filterLocation, setFilterLocation] = useState<string>("");
   const [filterType, setFilterType] = useState<string>(ALL_TYPES);
-  const [filterDate, setFilterDate] = useState<string>('');
+  const [filterDate, setFilterDate] = useState<string>("");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
 
   // ── Queries ──
 
   const { data: locations = [] } = useQuery<Location[]>({
-    queryKey: ['locations'],
+    queryKey: ["locations"],
     queryFn: locationsApi.list,
   });
 
-  const { data: checklists = [], isLoading, isError } = useQuery<Checklist[]>({
-    queryKey: ['checklists', filterLocation, filterDate],
+  const {
+    data: checklists = [],
+    isLoading,
+    isError,
+  } = useQuery<Checklist[]>({
+    queryKey: ["checklists", filterLocation, filterDate],
     queryFn: () =>
       checklistsApi.list({
         locationId: filterLocation || undefined,
@@ -88,10 +101,15 @@ export default function ChecklistsPage() {
   // ── Mutations ──
 
   const completeItemMutation = useMutation({
-    mutationFn: ({ checklistId, itemId }: { checklistId: string; itemId: string }) =>
-      checklistsApi.completeItem(checklistId, itemId),
+    mutationFn: ({
+      checklistId,
+      itemId,
+    }: {
+      checklistId: string;
+      itemId: string;
+    }) => checklistsApi.completeItem(checklistId, itemId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['checklists'] });
+      queryClient.invalidateQueries({ queryKey: ["checklists"] });
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
@@ -105,8 +123,8 @@ export default function ChecklistsPage() {
         items: form.items.filter((i) => i.label.trim()),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['checklists'] });
-      toast.success('Checklist created');
+      queryClient.invalidateQueries({ queryKey: ["checklists"] });
+      toast.success("Checklist created");
       setSheetOpen(false);
       setForm(EMPTY_FORM);
     },
@@ -123,7 +141,10 @@ export default function ChecklistsPage() {
   // ── Item helpers ──
 
   const addItem = () =>
-    setForm((f) => ({ ...f, items: [...f.items, { label: '', required: false }] }));
+    setForm((f) => ({
+      ...f,
+      items: [...f.items, { label: "", required: false }],
+    }));
 
   const removeItem = (idx: number) =>
     setForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
@@ -131,7 +152,9 @@ export default function ChecklistsPage() {
   const updateItem = (idx: number, patch: Partial<NewItem>) =>
     setForm((f) => ({
       ...f,
-      items: f.items.map((item, i) => (i === idx ? { ...item, ...patch } : item)),
+      items: f.items.map((item, i) =>
+        i === idx ? { ...item, ...patch } : item,
+      ),
     }));
 
   const canCreate =
@@ -147,11 +170,16 @@ export default function ChecklistsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Checklists</h1>
           <p className="text-muted-foreground text-sm">
-            {filtered.length} checklist{filtered.length !== 1 ? 's' : ''}
+            {filtered.length} checklist{filtered.length !== 1 ? "s" : ""}
           </p>
         </div>
         {canManage && (
-          <Button onClick={() => { setForm(EMPTY_FORM); setSheetOpen(true); }}>
+          <Button
+            onClick={() => {
+              setForm(EMPTY_FORM);
+              setSheetOpen(true);
+            }}
+          >
             <PlusCircle className="h-4 w-4 mr-2" />
             New Checklist
           </Button>
@@ -160,14 +188,19 @@ export default function ChecklistsPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
-        <Select value={filterLocation || '__all__'} onValueChange={(v) => setFilterLocation(v === '__all__' ? '' : v)}>
+        <Select
+          value={filterLocation || "__all__"}
+          onValueChange={(v) => setFilterLocation(v === "__all__" ? "" : v)}
+        >
           <SelectTrigger className="w-44">
             <SelectValue placeholder="All locations" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">All locations</SelectItem>
             {locations.map((l) => (
-              <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+              <SelectItem key={l.id} value={l.id}>
+                {l.name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -195,7 +228,11 @@ export default function ChecklistsPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { setFilterLocation(''); setFilterType(ALL_TYPES); setFilterDate(''); }}
+            onClick={() => {
+              setFilterLocation("");
+              setFilterType(ALL_TYPES);
+              setFilterDate("");
+            }}
           >
             <X className="h-3.5 w-3.5 mr-1" /> Clear
           </Button>
@@ -205,26 +242,38 @@ export default function ChecklistsPage() {
       {/* Grid */}
       {isError ? (
         <div className="border rounded-lg p-12 text-center">
-          <p className="font-medium text-destructive">Failed to load checklists</p>
-          <p className="text-sm text-muted-foreground mt-1">Please refresh the page or try again.</p>
+          <p className="font-medium text-destructive">
+            Failed to load checklists
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Please refresh the page or try again.
+          </p>
         </div>
       ) : isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-44 w-full rounded-xl" />)}
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-44 w-full rounded-xl" />
+          ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="border rounded-lg p-12 text-center">
           <CheckCircle2 className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="font-medium text-muted-foreground">No checklists found</p>
+          <p className="font-medium text-muted-foreground">
+            No checklists found
+          </p>
           <p className="text-sm text-muted-foreground mt-1">
-            {canManage ? 'Create a new checklist to get started.' : 'No checklists match your filters.'}
+            {canManage
+              ? "Create a new checklist to get started."
+              : "No checklists match your filters."}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((checklist) => {
             const total = checklist.items.length;
-            const completed = checklist.items.filter((i) => i.completedAt !== null).length;
+            const completed = checklist.items.filter(
+              (i) => i.completedAt !== null,
+            ).length;
             const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
             return (
@@ -238,7 +287,10 @@ export default function ChecklistsPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <Badge
                         variant="outline"
-                        className={cn('text-xs font-medium', TYPE_BADGE_CLASSES[checklist.type])}
+                        className={cn(
+                          "text-xs font-medium",
+                          TYPE_BADGE_CLASSES[checklist.type],
+                        )}
                       >
                         {TYPE_LABELS[checklist.type]}
                       </Badge>
@@ -249,15 +301,21 @@ export default function ChecklistsPage() {
                         </Badge>
                       )}
                     </div>
-                    <h3 className="font-semibold text-sm mt-1.5 truncate">{checklist.title}</h3>
-                    <p className="text-xs text-muted-foreground">{checklist.location.name}</p>
+                    <h3 className="font-semibold text-sm mt-1.5 truncate">
+                      {checklist.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {checklist.location.name}
+                    </p>
                   </div>
                 </div>
 
                 {/* Progress */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{completed}/{total} items</span>
+                    <span>
+                      {completed}/{total} items
+                    </span>
                     <span>{pct}%</span>
                   </div>
                   <Progress value={pct} className="h-1.5" />
@@ -288,8 +346,10 @@ export default function ChecklistsPage() {
                             <label
                               htmlFor={`item-${item.id}`}
                               className={cn(
-                                'text-xs leading-snug cursor-pointer',
-                                isDone ? 'line-through text-muted-foreground' : 'text-foreground',
+                                "text-xs leading-snug cursor-pointer",
+                                isDone
+                                  ? "line-through text-muted-foreground"
+                                  : "text-foreground",
                               )}
                             >
                               {item.label}
@@ -299,7 +359,10 @@ export default function ChecklistsPage() {
                             </label>
                             {isDone && item.completedAt && (
                               <p className="text-[0.6rem] text-muted-foreground mt-0.5">
-                                {format(new Date(item.completedAt), 'MMM d, HH:mm')}
+                                {format(
+                                  new Date(item.completedAt),
+                                  "MMM d, HH:mm",
+                                )}
                               </p>
                             )}
                           </div>
@@ -315,11 +378,18 @@ export default function ChecklistsPage() {
       )}
 
       {/* ── New Checklist Sheet ── */}
-      <Sheet open={sheetOpen} onOpenChange={(open) => { if (!open) setSheetOpen(false); }}>
+      <Sheet
+        open={sheetOpen}
+        onOpenChange={(open) => {
+          if (!open) setSheetOpen(false);
+        }}
+      >
         <SheetContent className="sm:max-w-md overflow-y-auto">
           <SheetHeader>
             <SheetTitle>New Checklist</SheetTitle>
-            <SheetDescription>Create a checklist for a shift or location.</SheetDescription>
+            <SheetDescription>
+              Create a checklist for a shift or location.
+            </SheetDescription>
           </SheetHeader>
 
           <div className="grid flex-1 auto-rows-min gap-6 px-4">
@@ -327,7 +397,9 @@ export default function ChecklistsPage() {
               <Label>Type</Label>
               <Select
                 value={form.type}
-                onValueChange={(v) => setForm((f) => ({ ...f, type: v as ChecklistType }))}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, type: v as ChecklistType }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -344,7 +416,9 @@ export default function ChecklistsPage() {
               <Label>Title</Label>
               <Input
                 value={form.title}
-                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, title: e.target.value }))
+                }
                 placeholder="e.g. Morning Opening Checklist"
               />
             </div>
@@ -360,7 +434,9 @@ export default function ChecklistsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {locations.map((l) => (
-                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                    <SelectItem key={l.id} value={l.id}>
+                      {l.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -370,7 +446,12 @@ export default function ChecklistsPage() {
             <div className="grid gap-3">
               <div className="flex items-center justify-between">
                 <Label>Checklist items</Label>
-                <Button variant="ghost" size="sm" onClick={addItem} className="h-7 text-xs">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={addItem}
+                  className="h-7 text-xs"
+                >
                   <Plus className="h-3.5 w-3.5 mr-1" /> Add item
                 </Button>
               </div>
@@ -379,7 +460,9 @@ export default function ChecklistsPage() {
                   <div key={idx} className="flex items-center gap-2">
                     <Input
                       value={item.label}
-                      onChange={(e) => updateItem(idx, { label: e.target.value })}
+                      onChange={(e) =>
+                        updateItem(idx, { label: e.target.value })
+                      }
                       placeholder={`Item ${idx + 1}`}
                       className="flex-1 text-sm"
                     />
@@ -387,9 +470,14 @@ export default function ChecklistsPage() {
                       <Checkbox
                         id={`req-${idx}`}
                         checked={item.required}
-                        onCheckedChange={(checked) => updateItem(idx, { required: !!checked })}
+                        onCheckedChange={(checked) =>
+                          updateItem(idx, { required: !!checked })
+                        }
                       />
-                      <label htmlFor={`req-${idx}`} className="text-xs text-muted-foreground whitespace-nowrap">
+                      <label
+                        htmlFor={`req-${idx}`}
+                        className="text-xs text-muted-foreground whitespace-nowrap"
+                      >
                         Required
                       </label>
                     </div>
@@ -408,8 +496,11 @@ export default function ChecklistsPage() {
           </div>
 
           <SheetFooter>
-            <Button onClick={() => createMutation.mutate()} disabled={!canCreate}>
-              {createMutation.isPending ? 'Creating…' : 'Create checklist'}
+            <Button
+              onClick={() => createMutation.mutate()}
+              disabled={!canCreate}
+            >
+              {createMutation.isPending ? "Creating…" : "Create checklist"}
             </Button>
             <SheetClose asChild>
               <Button variant="outline">Cancel</Button>

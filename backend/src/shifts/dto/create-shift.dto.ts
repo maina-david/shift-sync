@@ -1,4 +1,17 @@
-import { IsDateString, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, registerDecorator, ValidationOptions, ValidationArguments } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  registerDecorator,
+  ValidationOptions,
+  ValidationArguments,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 function IsNotSameAs(property: string, opts?: ValidationOptions) {
@@ -8,10 +21,17 @@ function IsNotSameAs(property: string, opts?: ValidationOptions) {
       target: object.constructor,
       propertyName,
       constraints: [property],
-      options: { message: `${propertyName} must not equal ${property}`, ...opts },
+      options: {
+        message: `${propertyName} must not equal ${property}`,
+        ...opts,
+      },
       validator: {
         validate(value: unknown, args: ValidationArguments) {
-          return value !== (args.object as Record<string, unknown>)[args.constraints[0]];
+          return (
+            value !==
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            (args.object as Record<string, unknown>)[args.constraints[0]]
+          );
         },
       },
     });

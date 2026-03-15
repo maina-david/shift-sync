@@ -18,9 +18,9 @@ const makeLog = (overrides: any = {}): ScheduleChangeLog =>
   ({
     id: 'log-1',
     triggersPredictabilityPay: true,
-    predictabilityPayAmount: 25.00,
+    predictabilityPayAmount: 25.0,
     ...overrides,
-  } as unknown as ScheduleChangeLog);
+  }) as unknown as ScheduleChangeLog;
 
 describe('FairWorkweekService', () => {
   let service: FairWorkweekService;
@@ -83,15 +83,15 @@ describe('FairWorkweekService', () => {
     it('sums predictabilityPayAmount across violations', async () => {
       const qb = buildQb({
         getMany: [
-          makeLog({ predictabilityPayAmount: 25.00 }),
-          makeLog({ id: 'log-2', predictabilityPayAmount: 50.50 }),
+          makeLog({ predictabilityPayAmount: 25.0 }),
+          makeLog({ id: 'log-2', predictabilityPayAmount: 50.5 }),
         ],
       });
       repo.createQueryBuilder.mockReturnValue(qb);
 
       const result = await service.getSummary();
       expect(result.totalViolations).toBe(2);
-      expect(result.totalPredictabilityPayOwed).toBe(75.50);
+      expect(result.totalPredictabilityPayOwed).toBe(75.5);
     });
 
     it('scopes summary to locationId when provided', async () => {
@@ -110,13 +110,13 @@ describe('FairWorkweekService', () => {
       const qb = buildQb({
         getMany: [
           makeLog({ predictabilityPayAmount: null }),
-          makeLog({ id: 'log-2', predictabilityPayAmount: 30.00 }),
+          makeLog({ id: 'log-2', predictabilityPayAmount: 30.0 }),
         ],
       });
       repo.createQueryBuilder.mockReturnValue(qb);
 
       const result = await service.getSummary();
-      expect(result.totalPredictabilityPayOwed).toBe(30.00);
+      expect(result.totalPredictabilityPayOwed).toBe(30.0);
     });
   });
 });

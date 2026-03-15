@@ -1,13 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Location, FloorZoneConfig, DEFAULT_FLOOR_ZONES } from './entities/location.entity';
+import {
+  Location,
+  FloorZoneConfig,
+  DEFAULT_FLOOR_ZONES,
+} from './entities/location.entity';
 import { CreateLocationDto } from './dto/create-location.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 
 @Injectable()
 export class LocationsService {
-  constructor(@InjectRepository(Location) private locationRepo: Repository<Location>) {}
+  constructor(
+    @InjectRepository(Location) private locationRepo: Repository<Location>,
+  ) {}
 
   findAll() {
     return this.locationRepo.find({ order: { name: 'ASC' } });

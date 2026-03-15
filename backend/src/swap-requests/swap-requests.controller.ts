@@ -1,5 +1,23 @@
-import { Controller, DefaultValuePipe, Delete, Get, HttpCode, Param, ParseIntPipe, Patch, Post, Body, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  Controller,
+  DefaultValuePipe,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Body,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { SwapRequestsService } from './swap-requests.service';
 import { CreateSwapRequestDto } from './dto/create-swap-request.dto';
 import { ReviewSwapDto } from './dto/review-swap.dto';
@@ -17,14 +35,18 @@ export class SwapRequestsController {
   constructor(private svc: SwapRequestsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List swap requests relevant to the current user (paginated)' })
+  @ApiOperation({
+    summary: 'List swap requests relevant to the current user (paginated)',
+  })
   @ApiQuery({ name: 'limit', required: false, example: 50 })
   @ApiQuery({ name: 'offset', required: false, example: 0 })
   findAll(
     @CurrentUser() user: User,
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
-  ) { return this.svc.findAll(user, limit, offset); }
+  ) {
+    return this.svc.findAll(user, limit, offset);
+  }
 
   @Post()
   @HttpCode(201)
@@ -51,14 +73,22 @@ export class SwapRequestsController {
   @Patch(':id/approve')
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Approve a swap request (manager)' })
-  approve(@Param('id') id: string, @Body() dto: ReviewSwapDto, @CurrentUser() user: User) {
+  approve(
+    @Param('id') id: string,
+    @Body() dto: ReviewSwapDto,
+    @CurrentUser() user: User,
+  ) {
     return this.svc.approve(id, user, dto);
   }
 
   @Patch(':id/deny')
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Deny a swap request (manager)' })
-  deny(@Param('id') id: string, @Body() dto: ReviewSwapDto, @CurrentUser() user: User) {
+  deny(
+    @Param('id') id: string,
+    @Body() dto: ReviewSwapDto,
+    @CurrentUser() user: User,
+  ) {
     return this.svc.deny(id, user, dto);
   }
 

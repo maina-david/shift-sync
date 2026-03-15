@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Bookmark } from './entities/bookmark.entity';
@@ -6,9 +6,7 @@ import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 
 @Injectable()
 export class BookmarksService {
-  constructor(
-    @InjectRepository(Bookmark) private repo: Repository<Bookmark>,
-  ) {}
+  constructor(@InjectRepository(Bookmark) private repo: Repository<Bookmark>) {}
 
   findAll(userId: string) {
     return this.repo.find({

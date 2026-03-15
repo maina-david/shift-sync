@@ -12,11 +12,13 @@ export class SseJwtGuard implements CanActivate {
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const req = ctx.switchToHttp().getRequest<any>();
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const token: string | undefined =
-      req.query?.token ??
-      req.headers?.authorization?.replace('Bearer ', '');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+      req.query?.token ?? req.headers?.authorization?.replace('Bearer ', '');
 
     if (!token) return false;
 
@@ -27,6 +29,7 @@ export class SseJwtGuard implements CanActivate {
         relations: ['managedLocations'],
       });
       if (!user) return false;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       req.user = user;
       return true;
     } catch {

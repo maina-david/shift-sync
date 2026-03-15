@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LogEntry } from './entities/log-entry.entity';
@@ -12,7 +16,11 @@ export class LogBookService {
     @InjectRepository(User) private userRepo: Repository<User>,
   ) {}
 
-  async list(date: string, locationId: string | undefined, requestingUser: User): Promise<LogEntry[]> {
+  async list(
+    date: string,
+    locationId: string | undefined,
+    requestingUser: User,
+  ): Promise<LogEntry[]> {
     const qb = this.repo
       .createQueryBuilder('e')
       .where('e.date = :date', { date })
@@ -25,7 +33,8 @@ export class LogBookService {
       });
       const managedIds = (mgr?.managedLocations ?? []).map((l) => l.id);
       if (managedIds.length === 0) return [];
-      const scopedId = locationId && managedIds.includes(locationId) ? locationId : undefined;
+      const scopedId =
+        locationId && managedIds.includes(locationId) ? locationId : undefined;
       if (scopedId) {
         qb.andWhere('e.locationId = :locationId', { locationId: scopedId });
       } else {
@@ -53,7 +62,10 @@ export class LogBookService {
   async remove(id: string, requestingUser: User): Promise<void> {
     const entry = await this.repo.findOne({ where: { id } });
     if (!entry) throw new NotFoundException('Log entry not found');
-    if (requestingUser.role !== UserRole.ADMIN && entry.authorId !== requestingUser.id) {
+    if (
+      requestingUser.role !== UserRole.ADMIN &&
+      entry.authorId !== requestingUser.id
+    ) {
       throw new ForbiddenException('You can only delete your own entries');
     }
     await this.repo.remove(entry);

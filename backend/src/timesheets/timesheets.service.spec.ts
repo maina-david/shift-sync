@@ -1,6 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ConflictException, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TimesheetsService } from './timesheets.service';
@@ -29,8 +34,8 @@ const makeManager = (managedLocationIds: string[] = ['loc-1']): User =>
     id: 'manager-1',
     name: 'Marcus Johnson',
     role: UserRole.MANAGER,
-    managedLocations: managedLocationIds.map((id) => ({ id } as Location)),
-  } as User);
+    managedLocations: managedLocationIds.map((id) => ({ id }) as Location),
+  }) as User;
 
 const makeAdmin = (): User =>
   ({
@@ -38,14 +43,14 @@ const makeAdmin = (): User =>
     name: 'Sarah Chen',
     role: UserRole.ADMIN,
     managedLocations: [],
-  } as unknown as User);
+  }) as unknown as User;
 
 const makeStaff = (): User =>
   ({
     id: 'staff-1',
     name: 'Alice Thompson',
     role: UserRole.STAFF,
-  } as User);
+  }) as User;
 
 const makeTimesheet = (overrides: Partial<Timesheet> = {}): Timesheet =>
   ({
@@ -60,7 +65,7 @@ const makeTimesheet = (overrides: Partial<Timesheet> = {}): Timesheet =>
     shiftId: null,
     assignmentId: null,
     ...overrides,
-  } as unknown as Timesheet);
+  }) as unknown as Timesheet;
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -91,7 +96,10 @@ describe('TimesheetsService', () => {
       providers: [
         TimesheetsService,
         { provide: getRepositoryToken(Timesheet), useValue: repo },
-        { provide: getRepositoryToken(ShiftAssignment), useValue: assignmentRepo },
+        {
+          provide: getRepositoryToken(ShiftAssignment),
+          useValue: assignmentRepo,
+        },
         { provide: SettingsService, useValue: settingsService },
         { provide: EventEmitter2, useValue: events },
         { provide: DataSource, useValue: dataSource },
@@ -104,7 +112,9 @@ describe('TimesheetsService', () => {
   // ---------------------------------------------------------------------------
   describe('clockIn', () => {
     it('throws BadRequestException if neither assignmentId nor shiftId is provided', async () => {
-      await expect(service.clockIn('staff-1', {} as any)).rejects.toThrow(BadRequestException);
+      await expect(service.clockIn('staff-1', {} as any)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws ConflictException when staff is already clocked in', async () => {
@@ -126,7 +136,10 @@ describe('TimesheetsService', () => {
     });
 
     it('creates a new PENDING timesheet when no open session exists', async () => {
-      const savedTimesheet = makeTimesheet({ clockOut: null, status: TimesheetStatus.PENDING });
+      const savedTimesheet = makeTimesheet({
+        clockOut: null,
+        status: TimesheetStatus.PENDING,
+      });
       const em = {
         findOne: jest.fn().mockResolvedValue(null), // no open session
         create: jest.fn().mockReturnValue(savedTimesheet),
@@ -139,7 +152,9 @@ describe('TimesheetsService', () => {
         shift: { locationId: 'loc-1' },
       });
 
-      const result = await service.clockIn('staff-1', { assignmentId: 'assign-1' });
+      const result = await service.clockIn('staff-1', {
+        assignmentId: 'assign-1',
+      });
       expect(em.save).toHaveBeenCalled();
       expect(result.status).toBe(TimesheetStatus.PENDING);
     });
@@ -149,7 +164,9 @@ describe('TimesheetsService', () => {
   describe('clockOut', () => {
     it('throws NotFoundException if no active clock-in session', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.clockOut('staff-1', { breakMinutes: 0 })).rejects.toThrow(NotFoundException);
+      await expect(
+        service.clockOut('staff-1', { breakMinutes: 0 }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('correctly calculates actualHours subtracting break minutes', async () => {
@@ -159,9 +176,11 @@ describe('TimesheetsService', () => {
 
       // Advance "now" to 17:00 UTC — 8 hours later
       const mockNow = new Date('2026-03-20T17:00:00Z');
-      jest.spyOn(global, 'Date').mockImplementation(
-        (arg?: any) => (arg === undefined ? mockNow : new Date(arg)) as any,
-      );
+      jest
+        .spyOn(global, 'Date')
+        .mockImplementation(
+          (arg?: any) => (arg === undefined ? mockNow : new Date(arg)) as any,
+        );
 
       repo.save.mockImplementation((t: Timesheet) => Promise.resolve(t));
       const result = await service.clockOut('staff-1', { breakMinutes: 30 });
@@ -178,23 +197,35 @@ describe('TimesheetsService', () => {
 
     it('throws NotFoundException when timesheet does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.review('ts-missing', dto, makeAdmin())).rejects.toThrow(NotFoundException);
+      await expect(
+        service.review('ts-missing', dto, makeAdmin()),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('throws BadRequestException when staff is still clocked in', async () => {
       repo.findOne.mockResolvedValue(makeTimesheet({ clockOut: null }));
-      await expect(service.review('ts-1', dto, makeAdmin())).rejects.toThrow(BadRequestException);
+      await expect(service.review('ts-1', dto, makeAdmin())).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws BadRequestException when timesheet is not PENDING', async () => {
-      repo.findOne.mockResolvedValue(makeTimesheet({ status: TimesheetStatus.APPROVED }));
-      await expect(service.review('ts-1', dto, makeAdmin())).rejects.toThrow(BadRequestException);
+      repo.findOne.mockResolvedValue(
+        makeTimesheet({ status: TimesheetStatus.APPROVED }),
+      );
+      await expect(service.review('ts-1', dto, makeAdmin())).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('throws ForbiddenException when manager does not manage the timesheet location', async () => {
-      repo.findOne.mockResolvedValue(makeTimesheet({ locationId: 'loc-other' }));
+      repo.findOne.mockResolvedValue(
+        makeTimesheet({ locationId: 'loc-other' }),
+      );
       const manager = makeManager(['loc-1']); // manages loc-1, not loc-other
-      await expect(service.review('ts-1', dto, manager)).rejects.toThrow(ForbiddenException);
+      await expect(service.review('ts-1', dto, manager)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('succeeds when manager manages the timesheet location', async () => {
@@ -209,7 +240,9 @@ describe('TimesheetsService', () => {
     });
 
     it('admin bypasses location check', async () => {
-      repo.findOne.mockResolvedValue(makeTimesheet({ locationId: 'any-location' }));
+      repo.findOne.mockResolvedValue(
+        makeTimesheet({ locationId: 'any-location' }),
+      );
       repo.save.mockImplementation((t: any) => Promise.resolve(t));
       const result = await service.review('ts-1', dto, makeAdmin());
       expect(result.status).toBe(TimesheetStatus.APPROVED);

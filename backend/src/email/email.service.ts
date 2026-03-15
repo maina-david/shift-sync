@@ -12,17 +12,28 @@ export class EmailService {
     private readonly mailer: MailerService,
     private readonly config: ConfigService,
   ) {
-    this.from    = this.config.get<string>('SMTP_FROM', 'ShiftSync <noreply@shiftsync.dev>');
+    this.from = this.config.get<string>(
+      'SMTP_FROM',
+      'ShiftSync <noreply@shiftsync.dev>',
+    );
     this.enabled = !!this.config.get<string>('SMTP_USER', '');
   }
 
-  async send(to: string, subject: string, html: string, text?: string): Promise<void> {
+  async send(
+    to: string,
+    subject: string,
+    html: string,
+    text?: string,
+  ): Promise<void> {
     if (!this.enabled) {
-      this.logger.debug(`[EMAIL SKIPPED — no SMTP_USER] To: ${to} | ${subject}`);
+      this.logger.debug(
+        `[EMAIL SKIPPED — no SMTP_USER] To: ${to} | ${subject}`,
+      );
       return;
     }
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const info = await this.mailer.sendMail({
         from: this.from,
         to,
@@ -30,9 +41,14 @@ export class EmailService {
         text: text ?? subject,
         html,
       });
-      this.logger.log(`Email sent → ${to} (messageId: ${info?.messageId ?? 'n/a'})`);
+      this.logger.log(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `Email sent → ${to} (messageId: ${info?.messageId ?? 'n/a'})`,
+      );
     } catch (err) {
-      this.logger.error(`Failed to send email to ${to}: ${(err as Error).message}`);
+      this.logger.error(
+        `Failed to send email to ${to}: ${(err as Error).message}`,
+      );
     }
   }
 

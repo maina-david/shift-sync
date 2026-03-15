@@ -6,7 +6,9 @@ export class AssignStaffDto {
   @IsUUID()
   staffId: string;
 
-  @ApiPropertyOptional({ description: 'Required when overriding 7th consecutive day rule' })
+  @ApiPropertyOptional({
+    description: 'Required when overriding 7th consecutive day rule',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(500)

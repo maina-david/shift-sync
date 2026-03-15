@@ -19,7 +19,10 @@ export class ReservationsService {
     try {
       this.events.emit(event, payload);
     } catch (err) {
-      this.logger.error(`Event emission failed for "${event}": ${(err as Error).message}`, (err as Error).stack);
+      this.logger.error(
+        `Event emission failed for "${event}": ${(err as Error).message}`,
+        (err as Error).stack,
+      );
     }
   }
 
@@ -49,21 +52,29 @@ export class ReservationsService {
   }
 
   findAll(filters: { date?: string; locationId?: string; status?: string }) {
-    const qb = this.repo.createQueryBuilder('r')
+    const qb = this.repo
+      .createQueryBuilder('r')
       .leftJoinAndSelect('r.location', 'location')
       .orderBy('r.date', 'ASC')
       .addOrderBy('r.time', 'ASC')
       .take(200);
 
-    if (filters.date)       qb.andWhere('r.date = :date',             { date: filters.date });
-    if (filters.locationId) qb.andWhere('r.locationId = :locationId', { locationId: filters.locationId });
-    if (filters.status)     qb.andWhere('r.status = :status',         { status: filters.status });
+    if (filters.date) qb.andWhere('r.date = :date', { date: filters.date });
+    if (filters.locationId)
+      qb.andWhere('r.locationId = :locationId', {
+        locationId: filters.locationId,
+      });
+    if (filters.status)
+      qb.andWhere('r.status = :status', { status: filters.status });
 
     return qb.getMany();
   }
 
   async findOne(id: string) {
-    const r = await this.repo.findOne({ where: { id }, relations: ['location'] });
+    const r = await this.repo.findOne({
+      where: { id },
+      relations: ['location'],
+    });
     if (!r) throw new NotFoundException('Reservation not found');
     return r;
   }

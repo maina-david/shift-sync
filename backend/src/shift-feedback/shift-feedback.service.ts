@@ -31,7 +31,10 @@ export class ShiftFeedbackService {
 
   // ─── Submit ──────────────────────────────────────────────────────────────────
 
-  async submit(staffId: string, dto: CreateFeedbackDto): Promise<ShiftFeedback> {
+  async submit(
+    staffId: string,
+    dto: CreateFeedbackDto,
+  ): Promise<ShiftFeedback> {
     // Validate that the assignment belongs to this staff member
     const assignment = await this.assignmentRepo.findOne({
       where: { id: dto.assignmentId },
@@ -43,7 +46,9 @@ export class ShiftFeedbackService {
     }
 
     if (assignment.staffId !== staffId) {
-      throw new ForbiddenException('You can only submit feedback for your own shift assignments');
+      throw new ForbiddenException(
+        'You can only submit feedback for your own shift assignments',
+      );
     }
 
     // Prevent duplicate feedback for the same assignment
@@ -52,7 +57,9 @@ export class ShiftFeedbackService {
     });
 
     if (existing) {
-      throw new ConflictException('You have already submitted feedback for this shift assignment');
+      throw new ConflictException(
+        'You have already submitted feedback for this shift assignment',
+      );
     }
 
     const feedback = this.repo.create({
@@ -95,7 +102,8 @@ export class ShiftFeedbackService {
     if (locationId) {
       qb.andWhere('shift.locationId = :locationId', { locationId });
     } else if (managedLocationIds) {
-      const ids = managedLocationIds.length > 0 ? managedLocationIds : ['__none__'];
+      const ids =
+        managedLocationIds.length > 0 ? managedLocationIds : ['__none__'];
       qb.andWhere('shift.locationId IN (:...managedIds)', { managedIds: ids });
     }
 

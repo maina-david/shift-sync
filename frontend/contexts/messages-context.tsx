@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, {
   createContext,
@@ -7,13 +7,13 @@ import React, {
   useCallback,
   useMemo,
   useEffect,
-} from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { messagesApi, usersApi } from '@/lib/api';
-import { Message } from '@/lib/types';
-import { useAuth } from './auth-context';
-import { getSocket } from '@/lib/socket';
-import { toast } from 'sonner';
+} from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { messagesApi, usersApi } from "@/lib/api";
+import { Message } from "@/lib/types";
+import { useAuth } from "./auth-context";
+import { getSocket } from "@/lib/socket";
+import { toast } from "sonner";
 
 export interface DmPartner {
   id: string;
@@ -57,7 +57,7 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     threads: Message[];
     announcements: Message[];
   }>({
-    queryKey: ['messages-inbox'],
+    queryKey: ["messages-inbox"],
     queryFn: () => messagesApi.getInbox() as any,
     // getInbox is typed as Promise<Message[]> but actually returns {threads,announcements}
     // We cast here and use the raw response.
@@ -74,8 +74,10 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
 
   // ── Staff directory ────────────────────────────────────────────────────────
 
-  const { data: staffList = [] } = useQuery<{ id: string; name: string; role: string }[]>({
-    queryKey: ['users-directory'],
+  const { data: staffList = [] } = useQuery<
+    { id: string; name: string; role: string }[]
+  >({
+    queryKey: ["users-directory"],
     queryFn: usersApi.directory,
     staleTime: 5 * 60_000,
     enabled: !!user,
@@ -87,22 +89,33 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     if (!user) return [];
     const map = new Map<string, DmPartner>();
     for (const m of inbox) {
-      if (m.type !== 'direct') continue;
+      if (m.type !== "direct") continue;
       const other = m.senderId === user.id ? m.recipient : m.sender;
       if (!other) continue;
       const existing = map.get(other.id);
-      if (!existing || new Date(m.createdAt) > new Date(existing.latest.createdAt)) {
+      if (
+        !existing ||
+        new Date(m.createdAt) > new Date(existing.latest.createdAt)
+      ) {
         map.set(other.id, {
           id: other.id,
-          name: other.name ?? (staffList.find((s) => s.id === other.id)?.name ?? 'Unknown'),
-          role: (other as any).role ?? (staffList.find((s) => s.id === other.id)?.role ?? ''),
+          name:
+            other.name ??
+            staffList.find((s) => s.id === other.id)?.name ??
+            "Unknown",
+          role:
+            (other as any).role ??
+            staffList.find((s) => s.id === other.id)?.role ??
+            "",
           latest: m,
           unread: !m.isRead && m.recipientId === user.id,
         });
       }
     }
     return Array.from(map.values()).sort(
-      (a, b) => new Date(b.latest.createdAt).getTime() - new Date(a.latest.createdAt).getTime(),
+      (a, b) =>
+        new Date(b.latest.createdAt).getTime() -
+        new Date(a.latest.createdAt).getTime(),
     );
   }, [inbox, user, staffList]);
 
@@ -111,7 +124,7 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   // ── Active thread ──────────────────────────────────────────────────────────
 
   const { data: thread = [], isLoading: threadLoading } = useQuery<Message[]>({
-    queryKey: ['thread', selectedUserId],
+    queryKey: ["thread", selectedUserId],
     queryFn: () => messagesApi.getThread(selectedUserId!),
     enabled: !!selectedUserId,
     refetchInterval: 15_000,
@@ -119,9 +132,11 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
 
   const selectedUser = useMemo(() => {
     if (!selectedUserId) return null;
-    return staffList.find((s) => s.id === selectedUserId)
-      ?? partners.find((p) => p.id === selectedUserId)
-      ?? null;
+    return (
+      staffList.find((s) => s.id === selectedUserId) ??
+      partners.find((p) => p.id === selectedUserId) ??
+      null
+    );
   }, [selectedUserId, staffList, partners]);
 
   // ── Mutations ──────────────────────────────────────────────────────────────
@@ -129,20 +144,20 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const sendMutation = useMutation({
     mutationFn: messagesApi.send,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages-inbox'] });
+      queryClient.invalidateQueries({ queryKey: ["messages-inbox"] });
       if (selectedUserId) {
-        queryClient.invalidateQueries({ queryKey: ['thread', selectedUserId] });
+        queryClient.invalidateQueries({ queryKey: ["thread", selectedUserId] });
       }
     },
-    onError: () => toast.error('Failed to send message'),
+    onError: () => toast.error("Failed to send message"),
   });
 
   const markReadMutation = useMutation({
     mutationFn: (id: string) => messagesApi.markRead(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages-inbox'] });
+      queryClient.invalidateQueries({ queryKey: ["messages-inbox"] });
       if (selectedUserId) {
-        queryClient.invalidateQueries({ queryKey: ['thread', selectedUserId] });
+        queryClient.invalidateQueries({ queryKey: ["thread", selectedUserId] });
       }
     },
   });
@@ -157,17 +172,20 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
       senderId: string;
       recipientId: string | null;
     }) => {
-      queryClient.invalidateQueries({ queryKey: ['messages-inbox'] });
+      queryClient.invalidateQueries({ queryKey: ["messages-inbox"] });
 
       // Refresh the open thread if this message belongs to it
-      const partner = payload.senderId === user.id ? payload.recipientId : payload.senderId;
+      const partner =
+        payload.senderId === user.id ? payload.recipientId : payload.senderId;
       if (partner && partner === selectedUserId) {
-        queryClient.invalidateQueries({ queryKey: ['thread', selectedUserId] });
+        queryClient.invalidateQueries({ queryKey: ["thread", selectedUserId] });
       }
     };
 
-    socket.on('message:new', onNewMessage);
-    return () => { socket.off('message:new', onNewMessage); };
+    socket.on("message:new", onNewMessage);
+    return () => {
+      socket.off("message:new", onNewMessage);
+    };
   }, [user, selectedUserId, queryClient]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -202,6 +220,6 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
 
 export function useMessages() {
   const ctx = useContext(MessagesContext);
-  if (!ctx) throw new Error('useMessages must be used within MessagesProvider');
+  if (!ctx) throw new Error("useMessages must be used within MessagesProvider");
   return ctx;
 }

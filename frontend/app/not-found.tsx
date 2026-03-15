@@ -1,6 +1,6 @@
-import Link from 'next/link';
-import { GalleryVerticalEnd } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import Link from "next/link";
+import { GalleryVerticalEnd } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
@@ -9,7 +9,9 @@ export default function NotFound() {
         <GalleryVerticalEnd className="h-5 w-5 text-primary" />
       </div>
 
-      <p className="text-xs font-mono text-muted-foreground mb-3 tracking-widest uppercase">404</p>
+      <p className="text-xs font-mono text-muted-foreground mb-3 tracking-widest uppercase">
+        404
+      </p>
       <h1 className="text-2xl font-bold tracking-tight mb-2">Page not found</h1>
       <p className="text-sm text-muted-foreground mb-8 max-w-xs">
         The page you&apos;re looking for doesn&apos;t exist or has been moved.

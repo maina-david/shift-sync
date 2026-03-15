@@ -53,14 +53,18 @@ export class FairWorkweekService {
     const rows = await qb.getMany();
 
     const totalPredictabilityPayOwed = rows.reduce(
-      (sum, r) => sum + (r.predictabilityPayAmount ? Number(r.predictabilityPayAmount) : 0),
+      (sum, r) =>
+        sum +
+        (r.predictabilityPayAmount ? Number(r.predictabilityPayAmount) : 0),
       0,
     );
 
     return {
       locationId: locationId ?? null,
       totalViolations: rows.length,
-      totalPredictabilityPayOwed: parseFloat(totalPredictabilityPayOwed.toFixed(2)),
+      totalPredictabilityPayOwed: parseFloat(
+        totalPredictabilityPayOwed.toFixed(2),
+      ),
     };
   }
 }

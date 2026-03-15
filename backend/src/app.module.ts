@@ -58,9 +58,9 @@ import { validationSchema } from './config/validation.schema';
       }),
     }),
     ThrottlerModule.forRoot([
-      { name: 'short',  ttl: 1_000,  limit: 10  },   // 10 req / second
-      { name: 'medium', ttl: 10_000, limit: 50  },   // 50 req / 10 s
-      { name: 'long',   ttl: 60_000, limit: 200 },   // 200 req / minute
+      { name: 'short', ttl: 1_000, limit: 10 }, // 10 req / second
+      { name: 'medium', ttl: 10_000, limit: 50 }, // 50 req / 10 s
+      { name: 'long', ttl: 60_000, limit: 200 }, // 200 req / minute
     ]),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),

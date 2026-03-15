@@ -1,30 +1,37 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { MapPin, Clock, HandHelping, ShieldAlert } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { dropRequestsApi, getErrorMessage } from '@/lib/api';
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import { DropRequest } from '@/lib/types';
-import { useAuth } from '@/contexts/auth-context';
-import { cn } from '@/lib/utils';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { MapPin, Clock, HandHelping, ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { dropRequestsApi, getErrorMessage } from "@/lib/api";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty";
+import { DropRequest } from "@/lib/types";
+import { useAuth } from "@/contexts/auth-context";
+import { cn } from "@/lib/utils";
 
 const SKILL_COLOR_SLOTS = [
-  'bg-chart-1/10 text-chart-1 border-chart-1/20',
-  'bg-chart-2/10 text-chart-2 border-chart-2/20',
-  'bg-chart-warning/10 text-chart-warning border-chart-warning/20',
-  'bg-chart-success/10 text-chart-success border-chart-success/20',
-  'bg-primary/10 text-primary border-primary/20',
-  'bg-chart-4/10 text-chart-4 border-chart-4/20',
+  "bg-chart-1/10 text-chart-1 border-chart-1/20",
+  "bg-chart-2/10 text-chart-2 border-chart-2/20",
+  "bg-chart-warning/10 text-chart-warning border-chart-warning/20",
+  "bg-chart-success/10 text-chart-success border-chart-success/20",
+  "bg-primary/10 text-primary border-primary/20",
+  "bg-chart-4/10 text-chart-4 border-chart-4/20",
 ];
 
 function skillColorClass(skillName: string): string {
   let hash = 0;
-  for (let i = 0; i < skillName.length; i++) hash = (hash * 31 + skillName.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < skillName.length; i++)
+    hash = (hash * 31 + skillName.charCodeAt(i)) >>> 0;
   return SKILL_COLOR_SLOTS[hash % SKILL_COLOR_SLOTS.length];
 }
 
@@ -33,13 +40,13 @@ export default function PickupPage() {
   const queryClient = useQueryClient();
 
   const { data: drops = [], isLoading } = useQuery<DropRequest[]>({
-    queryKey: ['drop-requests'],
+    queryKey: ["drop-requests"],
     queryFn: dropRequestsApi.list,
     refetchInterval: 30_000,
   });
 
   const openDrops = drops.filter(
-    (d) => d.status === 'open' && d.assignment?.staffId !== user?.id,
+    (d) => d.status === "open" && d.assignment?.staffId !== user?.id,
   );
 
   const [claimingId, setClaimingId] = useState<string | null>(null);
@@ -48,30 +55,34 @@ export default function PickupPage() {
     mutationFn: (id: string) => dropRequestsApi.claim(id),
     onMutate: (id) => setClaimingId(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['drop-requests'] });
-      toast.success('Shift claimed — pending manager approval');
+      queryClient.invalidateQueries({ queryKey: ["drop-requests"] });
+      toast.success("Shift claimed — pending manager approval");
     },
     onError: (err) => toast.error(getErrorMessage(err)),
     onSettled: () => setClaimingId(null),
   });
 
   if (user === null) return null;
-  if (user.role !== 'staff') return (
-    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
-      <ShieldAlert className="h-10 w-10 opacity-40" />
-      <div className="text-center">
-        <p className="font-semibold text-foreground">Access Restricted</p>
-        <p className="text-sm mt-1">Open shifts are only available to staff members.</p>
+  if (user.role !== "staff")
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+        <ShieldAlert className="h-10 w-10 opacity-40" />
+        <div className="text-center">
+          <p className="font-semibold text-foreground">Access Restricted</p>
+          <p className="text-sm mt-1">
+            Open shifts are only available to staff members.
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Open Shifts</h1>
         <p className="text-muted-foreground text-sm">
-          Shifts posted by colleagues — claim one and it goes to manager for approval
+          Shifts posted by colleagues — claim one and it goes to manager for
+          approval
         </p>
       </div>
 
@@ -84,9 +95,13 @@ export default function PickupPage() {
       ) : openDrops.length === 0 ? (
         <Empty className="border">
           <EmptyHeader>
-            <EmptyMedia variant="icon"><HandHelping /></EmptyMedia>
+            <EmptyMedia variant="icon">
+              <HandHelping />
+            </EmptyMedia>
             <EmptyTitle>No open shifts right now</EmptyTitle>
-            <EmptyDescription>Check back later or ask your manager to post available shifts.</EmptyDescription>
+            <EmptyDescription>
+              Check back later or ask your manager to post available shifts.
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
@@ -113,7 +128,7 @@ export default function PickupPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-semibold text-sm">
-                      {format(new Date(shift.date + 'T00:00:00'), 'EEE, MMM d')}
+                      {format(new Date(shift.date + "T00:00:00"), "EEE, MMM d")}
                     </p>
                     <p className="text-sm tabular-nums text-muted-foreground">
                       {shift.startTime}–{shift.endTime}
@@ -122,13 +137,13 @@ export default function PickupPage() {
                   {expiresAt && (
                     <span
                       className={cn(
-                        'text-[0.625rem] font-medium rounded-full px-2 py-0.5 border',
+                        "text-[0.625rem] font-medium rounded-full px-2 py-0.5 border",
                         isExpiringSoon
-                          ? 'bg-destructive/10 text-destructive border-destructive/20'
-                          : 'bg-muted/40 text-muted-foreground border-border/50',
+                          ? "bg-destructive/10 text-destructive border-destructive/20"
+                          : "bg-muted/40 text-muted-foreground border-border/50",
                       )}
                     >
-                      Expires {format(expiresAt, 'MMM d HH:mm')}
+                      Expires {format(expiresAt, "MMM d HH:mm")}
                     </span>
                   )}
                 </div>
@@ -148,7 +163,7 @@ export default function PickupPage() {
                       <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
                       <span
                         className={cn(
-                          'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
+                          "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
                           skillStyle,
                         )}
                       >
@@ -170,7 +185,7 @@ export default function PickupPage() {
                   onClick={() => claimMutation.mutate(drop.id)}
                   disabled={claimingId === drop.id}
                 >
-                  {claimingId === drop.id ? 'Claiming…' : 'Claim shift'}
+                  {claimingId === drop.id ? "Claiming…" : "Claim shift"}
                 </Button>
               </div>
             );

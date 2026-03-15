@@ -27,21 +27,37 @@ const makeChecklist = (overrides: any = {}): Checklist =>
     isCompleted: false,
     completedAt: null,
     items: [
-      { id: 'item-1', label: 'Turn on lights', required: true, completedAt: null, completedById: null },
-      { id: 'item-2', label: 'Check inventory', required: false, completedAt: null, completedById: null },
+      {
+        id: 'item-1',
+        label: 'Turn on lights',
+        required: true,
+        completedAt: null,
+        completedById: null,
+      },
+      {
+        id: 'item-2',
+        label: 'Check inventory',
+        required: false,
+        completedAt: null,
+        completedById: null,
+      },
     ],
     ...overrides,
-  } as unknown as Checklist);
+  }) as unknown as Checklist;
 
 const makeManager = (managedLocationIds: string[] = ['loc-1']): User =>
   ({
     id: 'manager-1',
     role: UserRole.MANAGER,
-    managedLocations: managedLocationIds.map((id) => ({ id } as Location)),
-  } as unknown as User);
+    managedLocations: managedLocationIds.map((id) => ({ id }) as Location),
+  }) as unknown as User;
 
 const makeAdmin = (): User =>
-  ({ id: 'admin-1', role: UserRole.ADMIN, managedLocations: [] } as unknown as User);
+  ({
+    id: 'admin-1',
+    role: UserRole.ADMIN,
+    managedLocations: [],
+  }) as unknown as User;
 
 describe('ChecklistsService', () => {
   let service: ChecklistsService;
@@ -93,7 +109,7 @@ describe('ChecklistsService', () => {
       expect(result).toHaveLength(1);
     });
 
-    it('scopes results to manager\'s managed locations', async () => {
+    it("scopes results to manager's managed locations", async () => {
       const qb = buildQb({ getMany: [makeChecklist()] });
       repo.createQueryBuilder.mockReturnValue(qb);
       const manager = makeManager(['loc-1']);
@@ -108,7 +124,9 @@ describe('ChecklistsService', () => {
       const qb = buildQb();
       repo.createQueryBuilder.mockReturnValue(qb);
       const manager = makeManager(['loc-other']);
-      await expect(service.findAll('loc-1', undefined, manager)).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.findAll('loc-1', undefined, manager),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('returns empty array when manager has no managed locations', async () => {
@@ -123,7 +141,9 @@ describe('ChecklistsService', () => {
   describe('findOne', () => {
     it('throws NotFoundException when checklist does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('returns checklist when found', async () => {
@@ -136,7 +156,9 @@ describe('ChecklistsService', () => {
   describe('completeItem', () => {
     it('throws NotFoundException when item does not exist in checklist', async () => {
       repo.findOne.mockResolvedValue(makeChecklist());
-      await expect(service.completeItem('cl-1', 'bad-item', 'user-1')).rejects.toThrow(NotFoundException);
+      await expect(
+        service.completeItem('cl-1', 'bad-item', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('marks item as completed with userId and timestamp', async () => {
@@ -153,7 +175,13 @@ describe('ChecklistsService', () => {
     it('marks checklist complete when the only item is ticked', async () => {
       const cl = makeChecklist({
         items: [
-          { id: 'item-1', label: 'Required', required: true, completedAt: null, completedById: null },
+          {
+            id: 'item-1',
+            label: 'Required',
+            required: true,
+            completedAt: null,
+            completedById: null,
+          },
         ],
       });
       repo.findOne.mockResolvedValue(cl);
@@ -167,8 +195,20 @@ describe('ChecklistsService', () => {
     it('marks checklist complete when the last remaining item is ticked', async () => {
       const cl = makeChecklist({
         items: [
-          { id: 'item-1', label: 'Item 1', required: true, completedAt: '2026-01-01T09:00:00.000Z', completedById: 'user-1' },
-          { id: 'item-2', label: 'Item 2', required: false, completedAt: null, completedById: null },
+          {
+            id: 'item-1',
+            label: 'Item 1',
+            required: true,
+            completedAt: '2026-01-01T09:00:00.000Z',
+            completedById: 'user-1',
+          },
+          {
+            id: 'item-2',
+            label: 'Item 2',
+            required: false,
+            completedAt: null,
+            completedById: null,
+          },
         ],
       });
       repo.findOne.mockResolvedValue(cl);
@@ -181,8 +221,20 @@ describe('ChecklistsService', () => {
     it('does not mark checklist complete when other items remain unchecked', async () => {
       const cl = makeChecklist({
         items: [
-          { id: 'item-1', label: 'Item 1', required: false, completedAt: null, completedById: null },
-          { id: 'item-2', label: 'Item 2', required: false, completedAt: null, completedById: null },
+          {
+            id: 'item-1',
+            label: 'Item 1',
+            required: false,
+            completedAt: null,
+            completedById: null,
+          },
+          {
+            id: 'item-2',
+            label: 'Item 2',
+            required: false,
+            completedAt: null,
+            completedById: null,
+          },
         ],
       });
       repo.findOne.mockResolvedValue(cl);
@@ -196,7 +248,9 @@ describe('ChecklistsService', () => {
   describe('remove', () => {
     it('throws NotFoundException when checklist does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('removes the checklist when found', async () => {

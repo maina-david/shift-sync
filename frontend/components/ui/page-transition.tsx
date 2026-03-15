@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { motion } from 'motion/react';
+import { motion } from "motion/react";
 
 interface Props {
   children: React.ReactNode;
@@ -13,7 +13,7 @@ export function PageTransition({ children, motionKey }: Props) {
       key={motionKey}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.25, ease: 'easeInOut' }}
+      transition={{ duration: 0.25, ease: "easeInOut" }}
     >
       {children}
     </motion.div>

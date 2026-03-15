@@ -23,18 +23,23 @@ const makeUser = (overrides: Partial<User> = {}): User =>
     role: UserRole.STAFF,
     certifiedLocations: [{ id: 'loc-1' } as Location],
     ...overrides,
-  } as unknown as User);
+  }) as unknown as User;
 
 const makeManager = (managedLocationIds: string[] = ['loc-1']): User =>
   ({
     id: 'manager-1',
     name: 'Marcus Johnson',
     role: UserRole.MANAGER,
-    managedLocations: managedLocationIds.map((id) => ({ id } as Location)),
-  } as unknown as User);
+    managedLocations: managedLocationIds.map((id) => ({ id }) as Location),
+  }) as unknown as User;
 
 const makeAdmin = (): User =>
-  ({ id: 'admin-1', name: 'Sarah Chen', role: UserRole.ADMIN, managedLocations: [] } as unknown as User);
+  ({
+    id: 'admin-1',
+    name: 'Sarah Chen',
+    role: UserRole.ADMIN,
+    managedLocations: [],
+  }) as unknown as User;
 
 const makeCert = (overrides: any = {}): Certification =>
   ({
@@ -46,7 +51,7 @@ const makeCert = (overrides: any = {}): Certification =>
     documentUrl: null,
     issuer: null,
     ...overrides,
-  } as unknown as Certification);
+  }) as unknown as Certification;
 
 describe('CertificationsService', () => {
   let service: CertificationsService;
@@ -84,8 +89,12 @@ describe('CertificationsService', () => {
     });
 
     it('throws ForbiddenException when manager has no overlap with staff locations', async () => {
-      userRepo.findOne.mockResolvedValue(makeUser({ certifiedLocations: [{ id: 'loc-1' } as Location] }));
-      await expect(service.findForUser('staff-1', ['loc-other'])).rejects.toThrow(ForbiddenException);
+      userRepo.findOne.mockResolvedValue(
+        makeUser({ certifiedLocations: [{ id: 'loc-1' } as Location] }),
+      );
+      await expect(
+        service.findForUser('staff-1', ['loc-other']),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('returns certs when manager manages a location the staff is certified at', async () => {
@@ -118,7 +127,11 @@ describe('CertificationsService', () => {
   });
 
   describe('create', () => {
-    const dto = { name: 'Food Handler', issuedDate: '2024-01-01', expiryDate: '2026-12-31' };
+    const dto = {
+      name: 'Food Handler',
+      issuedDate: '2024-01-01',
+      expiryDate: '2026-12-31',
+    };
 
     it('admin can create a cert for any user', async () => {
       const cert = makeCert();
@@ -129,9 +142,13 @@ describe('CertificationsService', () => {
     });
 
     it('throws ForbiddenException when manager creates cert for staff at unmanaged location', async () => {
-      userRepo.findOne.mockResolvedValue(makeUser({ certifiedLocations: [{ id: 'loc-other' } as Location] }));
+      userRepo.findOne.mockResolvedValue(
+        makeUser({ certifiedLocations: [{ id: 'loc-other' } as Location] }),
+      );
       const manager = makeManager(['loc-1']);
-      await expect(service.create('staff-1', dto, manager)).rejects.toThrow(ForbiddenException);
+      await expect(service.create('staff-1', dto, manager)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('allows manager to create cert for staff at managed location', async () => {
@@ -140,7 +157,11 @@ describe('CertificationsService', () => {
       repo.create.mockReturnValue(cert);
       repo.save.mockResolvedValue(cert);
 
-      const result = await service.create('staff-1', dto, makeManager(['loc-1']));
+      const result = await service.create(
+        'staff-1',
+        dto,
+        makeManager(['loc-1']),
+      );
       expect(repo.save).toHaveBeenCalled();
     });
   });
@@ -148,7 +169,9 @@ describe('CertificationsService', () => {
   describe('remove', () => {
     it('throws NotFoundException when cert does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.remove('cert-missing', 'user-1', UserRole.ADMIN)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.remove('cert-missing', 'user-1', UserRole.ADMIN),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('owner can remove their own cert', async () => {
@@ -170,7 +193,9 @@ describe('CertificationsService', () => {
     it('throws ForbiddenException when manager has no overlap with staff locations', async () => {
       const cert = makeCert({ userId: 'staff-1' });
       repo.findOne.mockResolvedValue(cert);
-      userRepo.findOne.mockResolvedValue(makeUser({ certifiedLocations: [{ id: 'loc-1' } as Location] }));
+      userRepo.findOne.mockResolvedValue(
+        makeUser({ certifiedLocations: [{ id: 'loc-1' } as Location] }),
+      );
       await expect(
         service.remove('cert-1', 'manager-1', UserRole.MANAGER, ['loc-other']),
       ).rejects.toThrow(ForbiddenException);

@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { format, parseISO, getDay } from 'date-fns';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { format, parseISO, getDay } from "date-fns";
 import {
   LayoutTemplate,
   Plus,
@@ -11,14 +11,26 @@ import {
   CalendarCheck,
   X,
   ShieldAlert,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePicker } from '@/components/ui/date-picker';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Sheet,
   SheetClose,
@@ -28,7 +40,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@/components/ui/sheet';
+} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +50,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -46,26 +58,44 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
-import { scheduleTemplatesApi, skillsApi, locationsApi, getErrorMessage } from '@/lib/api';
-import { Location, ScheduleTemplate, Skill, TemplateShift } from '@/lib/types';
-import { useAuth } from '@/contexts/auth-context';
+} from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  scheduleTemplatesApi,
+  skillsApi,
+  locationsApi,
+  getErrorMessage,
+} from "@/lib/api";
+import { Location, ScheduleTemplate, Skill, TemplateShift } from "@/lib/types";
+import { useAuth } from "@/contexts/auth-context";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DAYS_OF_WEEK = [
-  { value: '1', label: 'Monday' },
-  { value: '2', label: 'Tuesday' },
-  { value: '3', label: 'Wednesday' },
-  { value: '4', label: 'Thursday' },
-  { value: '5', label: 'Friday' },
-  { value: '6', label: 'Saturday' },
-  { value: '0', label: 'Sunday' },
+  { value: "1", label: "Monday" },
+  { value: "2", label: "Tuesday" },
+  { value: "3", label: "Wednesday" },
+  { value: "4", label: "Thursday" },
+  { value: "5", label: "Friday" },
+  { value: "6", label: "Saturday" },
+  { value: "0", label: "Sunday" },
 ];
 
 const DAY_LABELS: Record<number, string> = {
-  0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat',
+  0: "Sun",
+  1: "Mon",
+  2: "Tue",
+  3: "Wed",
+  4: "Thu",
+  5: "Fri",
+  6: "Sat",
 };
 
 // ─── Empty shift row ──────────────────────────────────────────────────────────
@@ -79,7 +109,13 @@ type ShiftDraft = {
 };
 
 function emptyShiftRow(): ShiftDraft {
-  return { dayOfWeek: '1', startTime: '09:00', endTime: '17:00', requiredSkillId: '', headcount: '1' };
+  return {
+    dayOfWeek: "1",
+    startTime: "09:00",
+    endTime: "17:00",
+    requiredSkillId: "",
+    headcount: "1",
+  };
 }
 
 // ─── Shift row editor ─────────────────────────────────────────────────────────
@@ -102,14 +138,16 @@ function ShiftRowEditor({
       {/* Day of week */}
       <Select
         value={shift.dayOfWeek}
-        onValueChange={(v) => onChange(index, 'dayOfWeek', v)}
+        onValueChange={(v) => onChange(index, "dayOfWeek", v)}
       >
         <SelectTrigger className="w-32 h-8 text-xs">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {DAYS_OF_WEEK.map((d) => (
-            <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
+            <SelectItem key={d.value} value={d.value} className="text-xs">
+              {d.label}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -118,7 +156,7 @@ function ShiftRowEditor({
       <Input
         type="time"
         value={shift.startTime}
-        onChange={(e) => onChange(index, 'startTime', e.target.value)}
+        onChange={(e) => onChange(index, "startTime", e.target.value)}
         className="h-8 text-xs"
       />
 
@@ -126,22 +164,28 @@ function ShiftRowEditor({
       <Input
         type="time"
         value={shift.endTime}
-        onChange={(e) => onChange(index, 'endTime', e.target.value)}
+        onChange={(e) => onChange(index, "endTime", e.target.value)}
         className="h-8 text-xs"
       />
 
       {/* Required skill */}
       <Select
-        value={shift.requiredSkillId || '__none__'}
-        onValueChange={(v) => onChange(index, 'requiredSkillId', v === '__none__' ? '' : v)}
+        value={shift.requiredSkillId || "__none__"}
+        onValueChange={(v) =>
+          onChange(index, "requiredSkillId", v === "__none__" ? "" : v)
+        }
       >
         <SelectTrigger className="h-8 text-xs">
           <SelectValue placeholder="Any skill" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="__none__" className="text-xs">Any skill</SelectItem>
+          <SelectItem value="__none__" className="text-xs">
+            Any skill
+          </SelectItem>
           {skills.map((s) => (
-            <SelectItem key={s.id} value={s.id} className="text-xs">{s.name}</SelectItem>
+            <SelectItem key={s.id} value={s.id} className="text-xs">
+              {s.name}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -152,7 +196,7 @@ function ShiftRowEditor({
         min="1"
         max="50"
         value={shift.headcount}
-        onChange={(e) => onChange(index, 'headcount', e.target.value)}
+        onChange={(e) => onChange(index, "headcount", e.target.value)}
         className="h-8 w-16 text-xs text-center"
       />
 
@@ -183,13 +227,13 @@ function NewTemplateSheet({
   skills: Skill[];
 }) {
   const queryClient = useQueryClient();
-  const [name, setName] = useState('');
-  const [locationId, setLocationId] = useState('');
+  const [name, setName] = useState("");
+  const [locationId, setLocationId] = useState("");
   const [shiftRows, setShiftRows] = useState<ShiftDraft[]>([emptyShiftRow()]);
 
   function resetForm() {
-    setName('');
-    setLocationId('');
+    setName("");
+    setLocationId("");
     setShiftRows([emptyShiftRow()]);
   }
 
@@ -206,16 +250,22 @@ function NewTemplateSheet({
       return scheduleTemplatesApi.create({ name, locationId, shifts });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['templates'] });
-      toast.success('Template created');
+      queryClient.invalidateQueries({ queryKey: ["templates"] });
+      toast.success("Template created");
       onOpenChange(false);
       resetForm();
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 
-  function handleShiftChange(index: number, field: keyof ShiftDraft, value: string) {
-    setShiftRows((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  function handleShiftChange(
+    index: number,
+    field: keyof ShiftDraft,
+    value: string,
+  ) {
+    setShiftRows((prev) =>
+      prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)),
+    );
   }
 
   function handleShiftRemove(index: number) {
@@ -225,7 +275,13 @@ function NewTemplateSheet({
   const canSave = name.trim() && locationId && shiftRows.length > 0;
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
+    <Sheet
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) resetForm();
+        onOpenChange(v);
+      }}
+    >
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle>New Schedule Template</SheetTitle>
@@ -254,7 +310,9 @@ function NewTemplateSheet({
               </SelectTrigger>
               <SelectContent>
                 {locations.map((l) => (
-                  <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                  <SelectItem key={l.id} value={l.id}>
+                    {l.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -269,7 +327,9 @@ function NewTemplateSheet({
                 size="sm"
                 variant="outline"
                 className="h-7 text-xs gap-1"
-                onClick={() => setShiftRows((prev) => [...prev, emptyShiftRow()])}
+                onClick={() =>
+                  setShiftRows((prev) => [...prev, emptyShiftRow()])
+                }
               >
                 <Plus className="h-3 w-3" /> Add shift
               </Button>
@@ -301,7 +361,9 @@ function NewTemplateSheet({
             </div>
 
             {shiftRows.length === 0 && (
-              <p className="text-xs text-muted-foreground italic">No shifts added yet.</p>
+              <p className="text-xs text-muted-foreground italic">
+                No shifts added yet.
+              </p>
             )}
           </div>
         </div>
@@ -311,7 +373,7 @@ function NewTemplateSheet({
             onClick={() => createMutation.mutate()}
             disabled={!canSave || createMutation.isPending}
           >
-            {createMutation.isPending ? 'Creating…' : 'Create template'}
+            {createMutation.isPending ? "Creating…" : "Create template"}
           </Button>
           <SheetClose asChild>
             <Button variant="outline">Cancel</Button>
@@ -332,7 +394,7 @@ function ApplyDialog({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
-  const [weekStart, setWeekStart] = useState('');
+  const [weekStart, setWeekStart] = useState("");
 
   // Only allow Mondays
   function isMonday(date: Date) {
@@ -342,9 +404,9 @@ function ApplyDialog({
   const applyMutation = useMutation({
     mutationFn: () => scheduleTemplatesApi.apply(template.id, weekStart),
     onSuccess: (data: { shiftsCreated?: number }) => {
-      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ["shifts"] });
       toast.success(
-        `Template applied — ${data?.shiftsCreated ?? 'some'} shift${data?.shiftsCreated !== 1 ? 's' : ''} created`,
+        `Template applied — ${data?.shiftsCreated ?? "some"} shift${data?.shiftsCreated !== 1 ? "s" : ""} created`,
       );
       onClose();
     },
@@ -357,7 +419,8 @@ function ApplyDialog({
         <DialogHeader>
           <DialogTitle>Apply to Week</DialogTitle>
           <DialogDescription>
-            Choose the Monday of the week to populate with &ldquo;{template.name}&rdquo; shifts.
+            Choose the Monday of the week to populate with &ldquo;
+            {template.name}&rdquo; shifts.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
@@ -372,7 +435,7 @@ function ApplyDialog({
                 // Enforce Monday selection
                 const d = parseISO(v);
                 if (getDay(d) !== 1) {
-                  toast.error('Please select a Monday');
+                  toast.error("Please select a Monday");
                   return;
                 }
                 setWeekStart(v);
@@ -380,7 +443,9 @@ function ApplyDialog({
               placeholder="Pick a Monday"
               className="w-full"
             />
-            <p className="text-[0.625rem] text-muted-foreground">Select the Monday of the target week</p>
+            <p className="text-[0.625rem] text-muted-foreground">
+              Select the Monday of the target week
+            </p>
           </div>
         </div>
         <DialogFooter>
@@ -390,9 +455,11 @@ function ApplyDialog({
             className="gap-2"
           >
             <CalendarCheck className="h-4 w-4" />
-            {applyMutation.isPending ? 'Applying…' : 'Apply Template'}
+            {applyMutation.isPending ? "Applying…" : "Apply Template"}
           </Button>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -415,8 +482,8 @@ function TemplateCard({
   const deleteMutation = useMutation({
     mutationFn: () => scheduleTemplatesApi.remove(template.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['templates'] });
-      toast.success('Template deleted');
+      queryClient.invalidateQueries({ queryKey: ["templates"] });
+      toast.success("Template deleted");
       setDeleteOpen(false);
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -426,14 +493,18 @@ function TemplateCard({
   const dayLabels = Array.from(new Set(template.shifts.map((s) => s.dayOfWeek)))
     .sort((a, b) => a - b)
     .map((d) => DAY_LABELS[d])
-    .join(', ');
+    .join(", ");
 
   return (
     <>
       <Card className="flex flex-col">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base leading-snug">{template.name}</CardTitle>
-          <p className="text-xs text-muted-foreground">{template.location?.name ?? 'Unknown location'}</p>
+          <CardTitle className="text-base leading-snug">
+            {template.name}
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            {template.location?.name ?? "Unknown location"}
+          </p>
         </CardHeader>
         <CardContent className="flex-1 pb-3 space-y-1.5">
           <div className="flex items-center gap-2 text-sm">
@@ -448,7 +519,9 @@ function TemplateCard({
           )}
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Created:</span>
-            <span className="text-xs">{format(parseISO(template.createdAt), 'MMM d, yyyy')}</span>
+            <span className="text-xs">
+              {format(parseISO(template.createdAt), "MMM d, yyyy")}
+            </span>
           </div>
         </CardContent>
         <CardFooter className="gap-2 pt-0">
@@ -482,10 +555,12 @@ function TemplateCard({
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete &ldquo;{template.name}&rdquo;?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Delete &ldquo;{template.name}&rdquo;?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove the template. Shifts already created from it will not be
-              affected.
+              This will permanently remove the template. Shifts already created
+              from it will not be affected.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -495,7 +570,7 @@ function TemplateCard({
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? 'Deleting…' : 'Delete template'}
+              {deleteMutation.isPending ? "Deleting…" : "Delete template"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -508,43 +583,51 @@ function TemplateCard({
 
 export default function ScheduleTemplatesPage() {
   const { user } = useAuth();
-  const [locationFilter, setLocationFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState("all");
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const canDelete = user?.role === 'admin' || user?.role === 'manager';
+  const canDelete = user?.role === "admin" || user?.role === "manager";
 
   const { data: locations = [] } = useQuery<Location[]>({
-    queryKey: ['locations'],
+    queryKey: ["locations"],
     queryFn: locationsApi.list,
   });
 
   const { data: skills = [] } = useQuery<Skill[]>({
-    queryKey: ['skills'],
+    queryKey: ["skills"],
     queryFn: skillsApi.list,
   });
 
   const { data: templates = [], isLoading } = useQuery<ScheduleTemplate[]>({
-    queryKey: ['templates', locationFilter],
-    queryFn: () => scheduleTemplatesApi.list(locationFilter === 'all' ? undefined : locationFilter),
+    queryKey: ["templates", locationFilter],
+    queryFn: () =>
+      scheduleTemplatesApi.list(
+        locationFilter === "all" ? undefined : locationFilter,
+      ),
   });
 
   if (user === null) return null;
-  if (user.role !== 'admin' && user.role !== 'manager') return (
-    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
-      <ShieldAlert className="h-10 w-10 opacity-40" />
-      <div className="text-center">
-        <p className="font-semibold text-foreground">Access Restricted</p>
-        <p className="text-sm mt-1">This page is only available to managers and administrators.</p>
+  if (user.role !== "admin" && user.role !== "manager")
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+        <ShieldAlert className="h-10 w-10 opacity-40" />
+        <div className="text-center">
+          <p className="font-semibold text-foreground">Access Restricted</p>
+          <p className="text-sm mt-1">
+            This page is only available to managers and administrators.
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Schedule Templates</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Schedule Templates
+          </h1>
           <p className="text-muted-foreground text-sm">
             Reusable shift patterns — apply to any week in one click
           </p>
@@ -566,7 +649,9 @@ export default function ScheduleTemplatesPage() {
             <SelectContent>
               <SelectItem value="all">All locations</SelectItem>
               {locations.map((l) => (
-                <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                <SelectItem key={l.id} value={l.id}>
+                  {l.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -576,15 +661,20 @@ export default function ScheduleTemplatesPage() {
       {/* Templates grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-48 w-full rounded-xl" />)}
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-48 w-full rounded-xl" />
+          ))}
         </div>
       ) : templates.length === 0 ? (
         <Empty className="border">
           <EmptyHeader>
-            <EmptyMedia variant="icon"><LayoutTemplate /></EmptyMedia>
+            <EmptyMedia variant="icon">
+              <LayoutTemplate />
+            </EmptyMedia>
             <EmptyTitle>No templates yet</EmptyTitle>
             <EmptyDescription>
-              Create a schedule template to define repeating shift patterns and apply them to any week.
+              Create a schedule template to define repeating shift patterns and
+              apply them to any week.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>

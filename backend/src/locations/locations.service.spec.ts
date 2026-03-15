@@ -11,7 +11,7 @@ const makeLocation = (overrides: any = {}): Location =>
     timezone: 'America/Los_Angeles',
     zones: [],
     ...overrides,
-  } as unknown as Location);
+  }) as unknown as Location;
 
 describe('LocationsService', () => {
   let service: LocationsService;
@@ -40,7 +40,9 @@ describe('LocationsService', () => {
     it('returns all locations ordered by name', async () => {
       repo.find.mockResolvedValue([makeLocation()]);
       const result = await service.findAll();
-      expect(repo.find).toHaveBeenCalledWith(expect.objectContaining({ order: { name: 'ASC' } }));
+      expect(repo.find).toHaveBeenCalledWith(
+        expect.objectContaining({ order: { name: 'ASC' } }),
+      );
       expect(result).toHaveLength(1);
     });
   });
@@ -48,7 +50,9 @@ describe('LocationsService', () => {
   describe('findOne', () => {
     it('throws NotFoundException when location does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('returns the location when found', async () => {
@@ -64,7 +68,10 @@ describe('LocationsService', () => {
       const loc = makeLocation();
       repo.create.mockReturnValue(loc);
       repo.save.mockResolvedValue(loc);
-      const result = await service.create({ name: 'North Beach', timezone: 'America/Los_Angeles' } as any);
+      const result = await service.create({
+        name: 'North Beach',
+        timezone: 'America/Los_Angeles',
+      } as any);
       expect(repo.save).toHaveBeenCalled();
       expect(result.name).toBe('North Beach');
     });
@@ -73,7 +80,9 @@ describe('LocationsService', () => {
   describe('update', () => {
     it('throws NotFoundException when location does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.update('missing', {})).rejects.toThrow(NotFoundException);
+      await expect(service.update('missing', {})).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('merges dto fields and saves', async () => {
@@ -88,7 +97,9 @@ describe('LocationsService', () => {
   describe('remove', () => {
     it('throws NotFoundException when location does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('removes the location when found', async () => {
@@ -106,7 +117,14 @@ describe('LocationsService', () => {
       repo.findOne.mockResolvedValue(loc);
       repo.save.mockImplementation((l: any) => Promise.resolve(l));
 
-      const zones = [{ id: 'zone-1', name: 'Bar', color: '#ff0000', position: { x: 0, y: 0, w: 2, h: 2 } }];
+      const zones = [
+        {
+          id: 'zone-1',
+          name: 'Bar',
+          color: '#ff0000',
+          position: { x: 0, y: 0, w: 2, h: 2 },
+        },
+      ];
       const result = await service.updateZones('loc-1', zones as any);
       expect(result.zones).toBe(zones);
     });

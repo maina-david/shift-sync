@@ -5,7 +5,12 @@ import { SystemSetting } from './entities/system-setting.entity';
 import { DEFAULT_SETTINGS } from './settings.defaults';
 
 const makeSetting = (key: string, value: unknown): SystemSetting =>
-  ({ id: `setting-${key}`, key, value, description: null } as unknown as SystemSetting);
+  ({
+    id: `setting-${key}`,
+    key,
+    value,
+    description: null,
+  }) as unknown as SystemSetting;
 
 describe('SettingsService', () => {
   let service: SettingsService;
@@ -45,23 +50,35 @@ describe('SettingsService', () => {
   describe('getScheduling', () => {
     it('returns scheduling defaults when cache is empty', () => {
       const result = service.getScheduling();
-      expect(result.minRestHours).toBe(DEFAULT_SETTINGS.scheduling.minRestHours);
-      expect(result.weeklyOvertimeHours).toBe(DEFAULT_SETTINGS.scheduling.weeklyOvertimeHours);
-      expect(result.maxConsecutiveDaysHard).toBe(DEFAULT_SETTINGS.scheduling.maxConsecutiveDaysHard);
+      expect(result.minRestHours).toBe(
+        DEFAULT_SETTINGS.scheduling.minRestHours,
+      );
+      expect(result.weeklyOvertimeHours).toBe(
+        DEFAULT_SETTINGS.scheduling.weeklyOvertimeHours,
+      );
+      expect(result.maxConsecutiveDaysHard).toBe(
+        DEFAULT_SETTINGS.scheduling.maxConsecutiveDaysHard,
+      );
     });
   });
 
   describe('getPayroll', () => {
     it('returns payroll defaults when cache is empty', () => {
       const result = service.getPayroll();
-      expect(result.overtimeMultiplier).toBe(DEFAULT_SETTINGS.payroll.overtimeMultiplier);
-      expect(result.weeklyOvertimeThresholdHours).toBe(DEFAULT_SETTINGS.payroll.weeklyOvertimeThresholdHours);
+      expect(result.overtimeMultiplier).toBe(
+        DEFAULT_SETTINGS.payroll.overtimeMultiplier,
+      );
+      expect(result.weeklyOvertimeThresholdHours).toBe(
+        DEFAULT_SETTINGS.payroll.weeklyOvertimeThresholdHours,
+      );
     });
   });
 
   describe('set', () => {
     it('updates existing setting and keeps cache in sync', async () => {
-      repo.findOne.mockResolvedValue(makeSetting('scheduling.minRestHours', 10));
+      repo.findOne.mockResolvedValue(
+        makeSetting('scheduling.minRestHours', 10),
+      );
       repo.save.mockImplementation((s: any) => Promise.resolve(s));
 
       await service.set('scheduling.minRestHours', { value: 8 });
@@ -81,12 +98,18 @@ describe('SettingsService', () => {
       repo.findOne.mockResolvedValue(existing);
       repo.save.mockImplementation((s: any) => Promise.resolve(s));
 
-      await service.set('scheduling.minRestHours', { value: 10, description: 'New description' });
+      await service.set('scheduling.minRestHours', {
+        value: 10,
+        description: 'New description',
+      });
       expect(existing.description).toBe('New description');
     });
 
     it('toggles isEnabled without changing value', async () => {
-      const existing = { ...makeSetting('scheduling.minRestHours', 10), isEnabled: true };
+      const existing = {
+        ...makeSetting('scheduling.minRestHours', 10),
+        isEnabled: true,
+      };
       repo.findOne.mockResolvedValue(existing);
       repo.save.mockImplementation((s: any) => Promise.resolve(s));
 
@@ -101,7 +124,9 @@ describe('SettingsService', () => {
     it('returns all settings ordered by key', async () => {
       repo.find.mockResolvedValue([makeSetting('a', 1), makeSetting('b', 2)]);
       const result = await service.findAll();
-      expect(repo.find).toHaveBeenCalledWith(expect.objectContaining({ order: { key: 'ASC' } }));
+      expect(repo.find).toHaveBeenCalledWith(
+        expect.objectContaining({ order: { key: 'ASC' } }),
+      );
       expect(result).toHaveLength(2);
     });
   });

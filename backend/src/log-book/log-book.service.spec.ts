@@ -23,21 +23,21 @@ const makeEntry = (overrides: any = {}): LogEntry =>
     note: 'All good',
     authorId: 'manager-1',
     ...overrides,
-  } as unknown as LogEntry);
+  }) as unknown as LogEntry;
 
 const makeManager = (managedLocationIds: string[] = ['loc-1']): User =>
   ({
     id: 'manager-1',
     name: 'Marcus Johnson',
     role: UserRole.MANAGER,
-    managedLocations: managedLocationIds.map((id) => ({ id } as Location)),
-  } as unknown as User);
+    managedLocations: managedLocationIds.map((id) => ({ id }) as Location),
+  }) as unknown as User;
 
 const makeAdmin = (): User =>
-  ({ id: 'admin-1', role: UserRole.ADMIN } as unknown as User);
+  ({ id: 'admin-1', role: UserRole.ADMIN }) as unknown as User;
 
 const makeStaff = (): User =>
-  ({ id: 'staff-1', role: UserRole.STAFF } as unknown as User);
+  ({ id: 'staff-1', role: UserRole.STAFF }) as unknown as User;
 
 describe('LogBookService', () => {
   let service: LogBookService;
@@ -77,7 +77,9 @@ describe('LogBookService', () => {
     it('scopes manager results to managed locations', async () => {
       const qb = buildQb({ getMany: [makeEntry()] });
       repo.createQueryBuilder.mockReturnValue(qb);
-      userRepo.findOne.mockResolvedValue({ managedLocations: [{ id: 'loc-1' }] });
+      userRepo.findOne.mockResolvedValue({
+        managedLocations: [{ id: 'loc-1' }],
+      });
 
       const result = await service.list('2026-03-15', undefined, makeManager());
       expect(qb.andWhere).toHaveBeenCalled();
@@ -88,14 +90,20 @@ describe('LogBookService', () => {
       repo.createQueryBuilder.mockReturnValue(qb);
       userRepo.findOne.mockResolvedValue({ managedLocations: [] });
 
-      const result = await service.list('2026-03-15', undefined, makeManager([]));
+      const result = await service.list(
+        '2026-03-15',
+        undefined,
+        makeManager([]),
+      );
       expect(result).toEqual([]);
     });
 
     it('scopes to specific location when manager provides it and it is in their managed list', async () => {
       const qb = buildQb({ getMany: [makeEntry()] });
       repo.createQueryBuilder.mockReturnValue(qb);
-      userRepo.findOne.mockResolvedValue({ managedLocations: [{ id: 'loc-1' }] });
+      userRepo.findOne.mockResolvedValue({
+        managedLocations: [{ id: 'loc-1' }],
+      });
 
       await service.list('2026-03-15', 'loc-1', makeManager(['loc-1']));
       expect(qb.andWhere).toHaveBeenCalledWith(
@@ -108,7 +116,10 @@ describe('LogBookService', () => {
   describe('create', () => {
     it('throws ForbiddenException when staff tries to create an entry', async () => {
       await expect(
-        service.create({ date: '2026-03-15', locationId: 'loc-1', note: 'Test' } as any, makeStaff()),
+        service.create(
+          { date: '2026-03-15', locationId: 'loc-1', note: 'Test' } as any,
+          makeStaff(),
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -128,12 +139,16 @@ describe('LogBookService', () => {
   describe('remove', () => {
     it('throws NotFoundException when entry does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.remove('missing', makeAdmin())).rejects.toThrow(NotFoundException);
+      await expect(service.remove('missing', makeAdmin())).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
-    it('throws ForbiddenException when non-admin tries to delete another user\'s entry', async () => {
+    it("throws ForbiddenException when non-admin tries to delete another user's entry", async () => {
       repo.findOne.mockResolvedValue(makeEntry({ authorId: 'manager-2' }));
-      await expect(service.remove('entry-1', makeManager())).rejects.toThrow(ForbiddenException);
+      await expect(service.remove('entry-1', makeManager())).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('allows admin to delete any entry', async () => {

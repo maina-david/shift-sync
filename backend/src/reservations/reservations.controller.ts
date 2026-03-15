@@ -1,6 +1,14 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Param, Body, Query, UseGuards, HttpCode,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+  HttpCode,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -20,32 +28,44 @@ export class ReservationsController {
   /** Public — customers book without logging in */
   @Post()
   @HttpCode(201)
-  @Throttle({ short: { ttl: 60_000, limit: 5 }, medium: { ttl: 60_000, limit: 5 }, long: { ttl: 60_000, limit: 10 } })
-  create(@Body() dto: CreateReservationDto) { return this.svc.create(dto); }
+  @Throttle({
+    short: { ttl: 60_000, limit: 5 },
+    medium: { ttl: 60_000, limit: 5 },
+    long: { ttl: 60_000, limit: 10 },
+  })
+  create(@Body() dto: CreateReservationDto) {
+    return this.svc.create(dto);
+  }
 
   /** Protected — staff portal */
   @Get()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiQuery({ name: 'date',       required: false })
+  @ApiQuery({ name: 'date', required: false })
   @ApiQuery({ name: 'locationId', required: false })
-  @ApiQuery({ name: 'status',     required: false })
+  @ApiQuery({ name: 'status', required: false })
   findAll(
-    @Query('date')       date?: string,
+    @Query('date') date?: string,
     @Query('locationId') locationId?: string,
-    @Query('status')     status?: string,
-  ) { return this.svc.findAll({ date, locationId, status }); }
+    @Query('status') status?: string,
+  ) {
+    return this.svc.findAll({ date, locationId, status });
+  }
 
   @Patch(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  update(@Param('id') id: string, @Body() dto: UpdateReservationDto) { return this.svc.update(id, dto); }
+  update(@Param('id') id: string, @Body() dto: UpdateReservationDto) {
+    return this.svc.update(id, dto);
+  }
 
   @Delete(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  remove(@Param('id') id: string) { return this.svc.remove(id); }
+  remove(@Param('id') id: string) {
+    return this.svc.remove(id);
+  }
 }

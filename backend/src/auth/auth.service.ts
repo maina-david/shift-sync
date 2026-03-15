@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -21,7 +25,9 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const existing = await this.userRepo.findOne({ where: { email: dto.email } });
+    const existing = await this.userRepo.findOne({
+      where: { email: dto.email },
+    });
     if (existing) throw new ConflictException('Email already registered');
 
     const hashed = await bcrypt.hash(dto.password, 12);
@@ -33,12 +39,14 @@ export class AuthService {
       notificationPreferences: { inApp: true, email: false },
     });
     const saved = await this.userRepo.save(user);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _p, ...safe } = saved as User & { password: string };
     return safe;
   }
 
-  async validateUser(email: string, password: string): Promise<Omit<User, 'password'> | null> {
+  async validateUser(
+    email: string,
+    password: string,
+  ): Promise<Omit<User, 'password'> | null> {
     const user = await this.userRepo
       .createQueryBuilder('u')
       .addSelect('u.password')
@@ -49,7 +57,6 @@ export class AuthService {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return null;
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _p, ...safe } = user as User & { password: string };
     return safe;
   }
@@ -57,12 +64,17 @@ export class AuthService {
   async login(user: Omit<User, 'password'>, res: Response) {
     const accessToken = this.signAccessToken(user);
     const refreshToken = this.signRefreshToken(user.id);
-    await this.userRepo.update(user.id, { refreshTokenHash: hashToken(refreshToken) });
+    await this.userRepo.update(user.id, {
+      refreshTokenHash: hashToken(refreshToken),
+    });
     this.setRefreshCookie(res, refreshToken);
     return { token: accessToken, user };
   }
 
-  async refresh(refreshToken: string, res: Response): Promise<{ token: string; user: User }> {
+  async refresh(
+    refreshToken: string,
+    res: Response,
+  ): Promise<{ token: string; user: User }> {
     let payload: { sub: string };
     try {
       payload = this.jwtService.verify<{ sub: string }>(refreshToken, {
@@ -82,12 +94,17 @@ export class AuthService {
       .getOne();
 
     if (!user) throw new UnauthorizedException('User not found');
-    if (!user.refreshTokenHash || user.refreshTokenHash !== hashToken(refreshToken)) {
+    if (
+      !user.refreshTokenHash ||
+      user.refreshTokenHash !== hashToken(refreshToken)
+    ) {
       throw new UnauthorizedException('Refresh token has been revoked');
     }
 
     const newRefreshToken = this.signRefreshToken(user.id);
-    await this.userRepo.update(user.id, { refreshTokenHash: hashToken(newRefreshToken) });
+    await this.userRepo.update(user.id, {
+      refreshTokenHash: hashToken(newRefreshToken),
+    });
     this.setRefreshCookie(res, newRefreshToken);
 
     const accessToken = this.signAccessToken(user);
@@ -98,7 +115,11 @@ export class AuthService {
     if (userId) {
       await this.userRepo.update(userId, { refreshTokenHash: null });
     }
-    res.clearCookie(REFRESH_COOKIE, { httpOnly: true, sameSite: 'strict', path: '/auth/refresh' });
+    res.clearCookie(REFRESH_COOKIE, {
+      httpOnly: true,
+      sameSite: 'strict',
+      path: '/auth/refresh',
+    });
   }
 
   async profile(userId: string) {

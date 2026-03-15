@@ -9,7 +9,15 @@ import { Availability } from './entities/availability.entity';
 import { AvailabilityException } from './entities/availability-exception.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Skill, Location, Availability, AvailabilityException])],
+  imports: [
+    TypeOrmModule.forFeature([
+      User,
+      Skill,
+      Location,
+      Availability,
+      AvailabilityException,
+    ]),
+  ],
   providers: [UsersService],
   controllers: [UsersController],
   exports: [UsersService],

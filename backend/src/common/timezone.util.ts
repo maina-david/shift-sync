@@ -16,7 +16,8 @@ export function localToUTC(date: string, time: string, timezone: string): Date {
   });
 
   const parts = fmt.formatToParts(naive);
-  const get = (type: string) => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10);
+  const get = (type: string) =>
+    parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10);
 
   const localYear = get('year');
   const localMonth = get('month');
@@ -26,7 +27,14 @@ export function localToUTC(date: string, time: string, timezone: string): Date {
 
   if (localHour === 24) localHour = 0;
 
-  const displayedLocal = Date.UTC(localYear, localMonth - 1, localDay, localHour, localMinute, 0);
+  const displayedLocal = Date.UTC(
+    localYear,
+    localMonth - 1,
+    localDay,
+    localHour,
+    localMinute,
+    0,
+  );
   const offset = naive.getTime() - displayedLocal;
 
   return new Date(naive.getTime() + offset);

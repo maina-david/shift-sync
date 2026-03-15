@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConstraintCheckerService } from './constraint-checker.service';
-import { ShiftAssignment, AssignmentStatus } from './entities/shift-assignment.entity';
+import {
+  ShiftAssignment,
+  AssignmentStatus,
+} from './entities/shift-assignment.entity';
 import { Availability } from '../users/entities/availability.entity';
 import { AvailabilityException } from '../users/entities/availability-exception.entity';
 import { SettingsService } from '../settings/settings.service';
@@ -35,9 +38,14 @@ const MOCK_SETTINGS = {
 };
 
 const makeLocation = (id = 'loc-1'): Location =>
-  ({ id, name: 'North Beach', timezone: 'America/Los_Angeles' } as Location);
+  ({ id, name: 'North Beach', timezone: 'America/Los_Angeles' }) as Location;
 
-const makeShift = (overrides: Omit<Partial<Shift>, 'requiredSkill' | 'requiredSkillId'> & { requiredSkill?: any; requiredSkillId?: string | null } = {}): Shift =>
+const makeShift = (
+  overrides: Omit<Partial<Shift>, 'requiredSkill' | 'requiredSkillId'> & {
+    requiredSkill?: any;
+    requiredSkillId?: string | null;
+  } = {},
+): Shift =>
   ({
     id: 'shift-1',
     date: '2026-03-20',
@@ -48,9 +56,14 @@ const makeShift = (overrides: Omit<Partial<Shift>, 'requiredSkill' | 'requiredSk
     requiredSkillId: null,
     requiredSkill: null,
     ...overrides,
-  } as unknown as Shift);
+  }) as unknown as Shift;
 
-const makeStaff = (overrides: Omit<Partial<User>, 'certifiedLocations' | 'skills'> & { certifiedLocations?: any[]; skills?: any[] } = {}): User =>
+const makeStaff = (
+  overrides: Omit<Partial<User>, 'certifiedLocations' | 'skills'> & {
+    certifiedLocations?: any[];
+    skills?: any[];
+  } = {},
+): User =>
   ({
     id: 'staff-1',
     name: 'Alice Thompson',
@@ -59,7 +72,7 @@ const makeStaff = (overrides: Omit<Partial<User>, 'certifiedLocations' | 'skills
     skills: [],
     desiredHoursPerWeek: 40,
     ...overrides,
-  } as unknown as User);
+  }) as unknown as User;
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -75,14 +88,19 @@ describe('ConstraintCheckerService', () => {
     assignRepo = { createQueryBuilder: jest.fn() };
     availRepo = { findOne: jest.fn() };
     exceptRepo = { findOne: jest.fn() };
-    settingsService = { getScheduling: jest.fn().mockReturnValue(MOCK_SETTINGS) };
+    settingsService = {
+      getScheduling: jest.fn().mockReturnValue(MOCK_SETTINGS),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ConstraintCheckerService,
         { provide: getRepositoryToken(ShiftAssignment), useValue: assignRepo },
         { provide: getRepositoryToken(Availability), useValue: availRepo },
-        { provide: getRepositoryToken(AvailabilityException), useValue: exceptRepo },
+        {
+          provide: getRepositoryToken(AvailabilityException),
+          useValue: exceptRepo,
+        },
         { provide: SettingsService, useValue: settingsService },
       ],
     }).compile();
@@ -100,7 +118,11 @@ describe('ConstraintCheckerService', () => {
     });
     exceptRepo.findOne.mockResolvedValue(null);
     // Available Thu 08:00–18:00; shift is 09:00–17:00 ✓
-    availRepo.findOne.mockResolvedValue({ dayOfWeek: 4, startTime: '08:00', endTime: '18:00' });
+    availRepo.findOne.mockResolvedValue({
+      dayOfWeek: 4,
+      startTime: '08:00',
+      endTime: '18:00',
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -121,15 +143,22 @@ describe('ConstraintCheckerService', () => {
       const result = await service.check(makeShift(), staff);
       expect(result.valid).toBe(false);
       expect(result.violations).toContainEqual(
-        expect.objectContaining({ rule: 'location_certification', severity: 'error' }),
+        expect.objectContaining({
+          rule: 'location_certification',
+          severity: 'error',
+        }),
       );
     });
 
     it('does NOT block when staff is certified for a different location but not this one', async () => {
       setupCleanSlate();
-      const staff = makeStaff({ certifiedLocations: [makeLocation('loc-other')] });
+      const staff = makeStaff({
+        certifiedLocations: [makeLocation('loc-other')],
+      });
       const result = await service.check(makeShift(), staff);
-      const v = result.violations.filter((x) => x.rule === 'location_certification');
+      const v = result.violations.filter(
+        (x) => x.rule === 'location_certification',
+      );
       expect(v).toHaveLength(1);
     });
   });
@@ -138,7 +167,10 @@ describe('ConstraintCheckerService', () => {
   describe('skill_match', () => {
     it('blocks when shift requires a skill the staff member lacks', async () => {
       setupCleanSlate();
-      const shift = makeShift({ requiredSkillId: 'skill-barista', requiredSkill: { name: 'Barista' } });
+      const shift = makeShift({
+        requiredSkillId: 'skill-barista',
+        requiredSkill: { name: 'Barista' },
+      });
       const staff = makeStaff({ skills: [] });
       const result = await service.check(shift, staff);
       expect(result.valid).toBe(false);
@@ -150,9 +182,13 @@ describe('ConstraintCheckerService', () => {
     it('passes when staff has the required skill', async () => {
       setupCleanSlate();
       const shift = makeShift({ requiredSkillId: 'skill-barista' });
-      const staff = makeStaff({ skills: [{ id: 'skill-barista', name: 'Barista' }] });
+      const staff = makeStaff({
+        skills: [{ id: 'skill-barista', name: 'Barista' }],
+      });
       const result = await service.check(shift, staff);
-      expect(result.violations.filter((v) => v.rule === 'skill_match')).toHaveLength(0);
+      expect(
+        result.violations.filter((v) => v.rule === 'skill_match'),
+      ).toHaveLength(0);
     });
 
     it('does not check skills when shift has no requiredSkillId', async () => {
@@ -160,14 +196,16 @@ describe('ConstraintCheckerService', () => {
       const shift = makeShift({ requiredSkillId: null });
       const staff = makeStaff({ skills: [] });
       const result = await service.check(shift, staff);
-      expect(result.violations.filter((v) => v.rule === 'skill_match')).toHaveLength(0);
+      expect(
+        result.violations.filter((v) => v.rule === 'skill_match'),
+      ).toHaveLength(0);
     });
   });
 
   // ---------------------------------------------------------------------------
   describe('availability', () => {
     it('blocks when staff has no availability record for that day of week', async () => {
-      let calls = 0;
+      const calls = 0;
       assignRepo.createQueryBuilder.mockImplementation(() => buildQb());
       exceptRepo.findOne.mockResolvedValue(null);
       availRepo.findOne.mockResolvedValue(null); // No record
@@ -181,7 +219,11 @@ describe('ConstraintCheckerService', () => {
     it('blocks when shift starts before staff availability window', async () => {
       assignRepo.createQueryBuilder.mockImplementation(() => buildQb());
       exceptRepo.findOne.mockResolvedValue(null);
-      availRepo.findOne.mockResolvedValue({ dayOfWeek: 4, startTime: '11:00', endTime: '18:00' });
+      availRepo.findOne.mockResolvedValue({
+        dayOfWeek: 4,
+        startTime: '11:00',
+        endTime: '18:00',
+      });
 
       const shift = makeShift({ startTime: '09:00', endTime: '17:00' }); // starts before 11:00
       const result = await service.check(shift, makeStaff());
@@ -192,7 +234,10 @@ describe('ConstraintCheckerService', () => {
 
     it('blocks when staff has a full-day unavailability exception', async () => {
       assignRepo.createQueryBuilder.mockImplementation(() => buildQb());
-      exceptRepo.findOne.mockResolvedValue({ date: '2026-03-20', isUnavailable: true });
+      exceptRepo.findOne.mockResolvedValue({
+        date: '2026-03-20',
+        isUnavailable: true,
+      });
 
       const result = await service.check(makeShift(), makeStaff());
       expect(result.violations).toContainEqual(
@@ -207,7 +252,11 @@ describe('ConstraintCheckerService', () => {
       // Thursday (shift day): no time restriction on the exception → fully available
       exceptRepo.findOne.mockImplementation(({ where }: any) => {
         if (where.date === '2026-03-19') {
-          return Promise.resolve({ isUnavailable: false, startTime: null, endTime: null });
+          return Promise.resolve({
+            isUnavailable: false,
+            startTime: null,
+            endTime: null,
+          });
         }
         return Promise.resolve(null);
       });
@@ -215,9 +264,15 @@ describe('ConstraintCheckerService', () => {
       // (no Friday availability) and add a violation. Staying silent = fix is working.
       availRepo.findOne.mockResolvedValue(null);
 
-      const shift = makeShift({ date: '2026-03-19', startTime: '22:00', endTime: '00:00' });
+      const shift = makeShift({
+        date: '2026-03-19',
+        startTime: '22:00',
+        endTime: '00:00',
+      });
       const result = await service.check(shift, makeStaff());
-      expect(result.violations.filter((v) => v.rule === 'availability')).toHaveLength(0);
+      expect(
+        result.violations.filter((v) => v.rule === 'availability'),
+      ).toHaveLength(0);
     });
 
     it('overnight shift extending into the next day (22:00–02:00) checks next-day availability', async () => {
@@ -227,16 +282,26 @@ describe('ConstraintCheckerService', () => {
       exceptRepo.findOne.mockImplementation(({ where }: any) => {
         if (where.date === '2026-03-19') {
           // Thursday shift day: fully available
-          return Promise.resolve({ isUnavailable: false, startTime: null, endTime: null });
+          return Promise.resolve({
+            isUnavailable: false,
+            startTime: null,
+            endTime: null,
+          });
         }
         return Promise.resolve(null); // no exception for Friday
       });
       // No availability record for any day → next-day check triggers violation
       availRepo.findOne.mockResolvedValue(null);
 
-      const shift = makeShift({ date: '2026-03-19', startTime: '22:00', endTime: '02:00' });
+      const shift = makeShift({
+        date: '2026-03-19',
+        startTime: '22:00',
+        endTime: '02:00',
+      });
       const result = await service.check(shift, makeStaff());
-      expect(result.violations.filter((v) => v.rule === 'availability')).toHaveLength(1);
+      expect(
+        result.violations.filter((v) => v.rule === 'availability'),
+      ).toHaveLength(1);
     });
   });
 
@@ -257,10 +322,16 @@ describe('ConstraintCheckerService', () => {
       assignRepo.createQueryBuilder.mockImplementation(() => {
         calls++;
         // First call: existing assignments (returns overlapping); second call: consecutive days
-        return calls === 1 ? buildQb({ getMany: [overlapping] }) : buildQb({ getRawMany: [] });
+        return calls === 1
+          ? buildQb({ getMany: [overlapping] })
+          : buildQb({ getRawMany: [] });
       });
       exceptRepo.findOne.mockResolvedValue(null);
-      availRepo.findOne.mockResolvedValue({ dayOfWeek: 4, startTime: '08:00', endTime: '18:00' });
+      availRepo.findOne.mockResolvedValue({
+        dayOfWeek: 4,
+        startTime: '08:00',
+        endTime: '18:00',
+      });
 
       const result = await service.check(makeShift(), makeStaff());
       expect(result.violations).toContainEqual(
@@ -282,13 +353,21 @@ describe('ConstraintCheckerService', () => {
       let calls = 0;
       assignRepo.createQueryBuilder.mockImplementation(() => {
         calls++;
-        return calls === 1 ? buildQb({ getMany: [nonOverlapping] }) : buildQb({ getRawMany: [] });
+        return calls === 1
+          ? buildQb({ getMany: [nonOverlapping] })
+          : buildQb({ getRawMany: [] });
       });
       exceptRepo.findOne.mockResolvedValue(null);
-      availRepo.findOne.mockResolvedValue({ dayOfWeek: 4, startTime: '08:00', endTime: '18:00' });
+      availRepo.findOne.mockResolvedValue({
+        dayOfWeek: 4,
+        startTime: '08:00',
+        endTime: '18:00',
+      });
 
       const result = await service.check(makeShift(), makeStaff());
-      expect(result.violations.filter((v) => v.rule === 'double_booking')).toHaveLength(0);
+      expect(
+        result.violations.filter((v) => v.rule === 'double_booking'),
+      ).toHaveLength(0);
     });
   });
 
@@ -296,8 +375,12 @@ describe('ConstraintCheckerService', () => {
   describe('consecutive_days', () => {
     // Build a 6-day run ending on 2026-03-19; adding 2026-03-20 makes 7 (hard limit)
     const sixDayRun = [
-      { date: '2026-03-14' }, { date: '2026-03-15' }, { date: '2026-03-16' },
-      { date: '2026-03-17' }, { date: '2026-03-18' }, { date: '2026-03-19' },
+      { date: '2026-03-14' },
+      { date: '2026-03-15' },
+      { date: '2026-03-16' },
+      { date: '2026-03-17' },
+      { date: '2026-03-18' },
+      { date: '2026-03-19' },
     ];
 
     function setupConsecutiveRun() {
@@ -305,18 +388,28 @@ describe('ConstraintCheckerService', () => {
       assignRepo.createQueryBuilder.mockImplementation(() => {
         calls++;
         return calls === 1
-          ? buildQb({ getMany: [] })              // existing assignments (no conflicts)
-          : buildQb({ getRawMany: sixDayRun });   // consecutive day window
+          ? buildQb({ getMany: [] }) // existing assignments (no conflicts)
+          : buildQb({ getRawMany: sixDayRun }); // consecutive day window
       });
       exceptRepo.findOne.mockResolvedValue(null);
-      availRepo.findOne.mockResolvedValue({ dayOfWeek: 4, startTime: '08:00', endTime: '18:00' });
+      availRepo.findOne.mockResolvedValue({
+        dayOfWeek: 4,
+        startTime: '08:00',
+        endTime: '18:00',
+      });
     }
 
     it('returns a hard error when adding this shift would exceed maxConsecutiveDaysHard', async () => {
       setupConsecutiveRun();
-      const result = await service.check(makeShift({ date: '2026-03-20' }), makeStaff());
+      const result = await service.check(
+        makeShift({ date: '2026-03-20' }),
+        makeStaff(),
+      );
       expect(result.violations).toContainEqual(
-        expect.objectContaining({ rule: 'consecutive_days', severity: 'error' }),
+        expect.objectContaining({
+          rule: 'consecutive_days',
+          severity: 'error',
+        }),
       );
     });
 
@@ -327,9 +420,14 @@ describe('ConstraintCheckerService', () => {
         makeStaff(),
         'Emergency staffing — called in sick',
       );
-      expect(result.violations.filter((v) => v.rule === 'consecutive_days')).toHaveLength(0);
+      expect(
+        result.violations.filter((v) => v.rule === 'consecutive_days'),
+      ).toHaveLength(0);
       expect(result.warnings).toContainEqual(
-        expect.objectContaining({ rule: 'consecutive_days', severity: 'warning' }),
+        expect.objectContaining({
+          rule: 'consecutive_days',
+          severity: 'warning',
+        }),
       );
     });
   });
@@ -363,12 +461,18 @@ describe('ConstraintCheckerService', () => {
           : buildQb({ getRawMany: [] });
       });
       exceptRepo.findOne.mockResolvedValue(null);
-      availRepo.findOne.mockResolvedValue({ dayOfWeek: 4, startTime: '08:00', endTime: '18:00' });
+      availRepo.findOne.mockResolvedValue({
+        dayOfWeek: 4,
+        startTime: '08:00',
+        endTime: '18:00',
+      });
 
       const result = await service.check(makeShift(), makeStaff());
       // May have weekly hour warning but should still be valid (no errors besides location)
       // Staff IS certified so no location error; warnings don't invalidate
-      expect(result.violations.filter((v) => v.severity === 'error')).toHaveLength(0);
+      expect(
+        result.violations.filter((v) => v.severity === 'error'),
+      ).toHaveLength(0);
       expect(result.valid).toBe(true);
     });
   });

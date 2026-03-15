@@ -4,7 +4,9 @@ import { BadRequestException } from '@nestjs/common';
 import { AuditService } from './audit.service';
 import { AuditLog } from './entities/audit-log.entity';
 
-function buildQb(opts: { getManyAndCount?: [any[], number]; getMany?: any[] } = {}) {
+function buildQb(
+  opts: { getManyAndCount?: [any[], number]; getMany?: any[] } = {},
+) {
   return {
     leftJoinAndSelect: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
@@ -12,7 +14,9 @@ function buildQb(opts: { getManyAndCount?: [any[], number]; getMany?: any[] } = 
     take: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
-    getManyAndCount: jest.fn().mockResolvedValue(opts.getManyAndCount ?? [[], 0]),
+    getManyAndCount: jest
+      .fn()
+      .mockResolvedValue(opts.getManyAndCount ?? [[], 0]),
     getMany: jest.fn().mockResolvedValue(opts.getMany ?? []),
   };
 }
@@ -31,7 +35,7 @@ const makeLog = (overrides: any = {}): AuditLog =>
     note: null,
     timestamp: new Date('2026-03-15T10:00:00Z'),
     ...overrides,
-  } as unknown as AuditLog);
+  }) as unknown as AuditLog;
 
 describe('AuditService', () => {
   let service: AuditService;
@@ -74,13 +78,27 @@ describe('AuditService', () => {
     });
 
     it('stores null for optional fields when not provided', async () => {
-      const entry = makeLog({ before: null, after: null, note: null, locationId: null });
+      const entry = makeLog({
+        before: null,
+        after: null,
+        note: null,
+        locationId: null,
+      });
       auditRepo.create.mockReturnValue(entry);
       auditRepo.save.mockResolvedValue(entry);
 
-      await service.log({ entity: 'shift', entityId: 'shift-1', action: 'created' });
+      await service.log({
+        entity: 'shift',
+        entityId: 'shift-1',
+        action: 'created',
+      });
       expect(auditRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ locationId: null, before: null, after: null, note: null }),
+        expect.objectContaining({
+          locationId: null,
+          before: null,
+          after: null,
+          note: null,
+        }),
       );
     });
   });
@@ -153,7 +171,10 @@ describe('AuditService', () => {
         expect.objectContaining({
           where: expect.arrayContaining([
             expect.objectContaining({ entity: 'shift', entityId: 'shift-1' }),
-            expect.objectContaining({ entity: 'shift_assignment', entityId: 'shift-1' }),
+            expect.objectContaining({
+              entity: 'shift_assignment',
+              entityId: 'shift-1',
+            }),
           ]),
         }),
       );
@@ -174,7 +195,9 @@ describe('AuditService', () => {
     });
 
     it('generates CSV rows with quoted fields for each log entry', async () => {
-      const qb = buildQb({ getMany: [makeLog({ after: { status: 'APPROVED' }, note: 'test' })] });
+      const qb = buildQb({
+        getMany: [makeLog({ after: { status: 'APPROVED' }, note: 'test' })],
+      });
       auditRepo.createQueryBuilder.mockReturnValue(qb);
 
       const csv = await service.exportCsv({});

@@ -36,7 +36,10 @@ export class ChecklistsController {
   @Post()
   @HttpCode(201)
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Create a new opening, closing, or custom checklist (admin/manager)' })
+  @ApiOperation({
+    summary:
+      'Create a new opening, closing, or custom checklist (admin/manager)',
+  })
   create(@Body() dto: CreateChecklistDto, @CurrentUser() user: User) {
     return this.svc.create(dto, user.id);
   }
@@ -53,9 +56,19 @@ export class ChecklistsController {
 
   @Get()
   @Roles(UserRole.STAFF, UserRole.MANAGER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'List checklists with optional location and date filters' })
-  @ApiQuery({ name: 'locationId', required: false, description: 'Filter by location UUID' })
-  @ApiQuery({ name: 'date', required: false, description: 'Filter by shift date (YYYY-MM-DD)' })
+  @ApiOperation({
+    summary: 'List checklists with optional location and date filters',
+  })
+  @ApiQuery({
+    name: 'locationId',
+    required: false,
+    description: 'Filter by location UUID',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    description: 'Filter by shift date (YYYY-MM-DD)',
+  })
   findAll(
     @Query('locationId') locationId?: string,
     @Query('date') date?: string,
@@ -73,7 +86,9 @@ export class ChecklistsController {
 
   @Patch(':id/items/:itemId/complete')
   @Roles(UserRole.STAFF, UserRole.MANAGER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Mark a checklist item as completed by the current user' })
+  @ApiOperation({
+    summary: 'Mark a checklist item as completed by the current user',
+  })
   completeItem(
     @Param('id') id: string,
     @Param('itemId') itemId: string,

@@ -8,7 +8,9 @@ import { CreateSkillDto } from './dto/create-skill.dto';
 export class SkillsService {
   constructor(@InjectRepository(Skill) private skillRepo: Repository<Skill>) {}
 
-  findAll() { return this.skillRepo.find({ order: { name: 'ASC' } }); }
+  findAll() {
+    return this.skillRepo.find({ order: { name: 'ASC' } });
+  }
 
   async findOne(id: string) {
     const skill = await this.skillRepo.findOne({ where: { id } });
@@ -16,7 +18,9 @@ export class SkillsService {
     return skill;
   }
 
-  create(dto: CreateSkillDto) { return this.skillRepo.save(this.skillRepo.create(dto)); }
+  create(dto: CreateSkillDto) {
+    return this.skillRepo.save(this.skillRepo.create(dto));
+  }
 
   async remove(id: string) {
     const skill = await this.findOne(id);
