@@ -37,7 +37,7 @@ const MOCK_SETTINGS = {
 const makeLocation = (id = 'loc-1'): Location =>
   ({ id, name: 'North Beach', timezone: 'America/Los_Angeles' } as Location);
 
-const makeShift = (overrides: Partial<Shift> & { requiredSkill?: any } = {}): Shift =>
+const makeShift = (overrides: Omit<Partial<Shift>, 'requiredSkill' | 'requiredSkillId'> & { requiredSkill?: any; requiredSkillId?: string | null } = {}): Shift =>
   ({
     id: 'shift-1',
     date: '2026-03-20',
@@ -50,7 +50,7 @@ const makeShift = (overrides: Partial<Shift> & { requiredSkill?: any } = {}): Sh
     ...overrides,
   } as unknown as Shift);
 
-const makeStaff = (overrides: Partial<User> & { certifiedLocations?: any[]; skills?: any[] } = {}): User =>
+const makeStaff = (overrides: Omit<Partial<User>, 'certifiedLocations' | 'skills'> & { certifiedLocations?: any[]; skills?: any[] } = {}): User =>
   ({
     id: 'staff-1',
     name: 'Alice Thompson',

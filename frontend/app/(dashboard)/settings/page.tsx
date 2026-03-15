@@ -20,7 +20,7 @@ import { usersApi, getErrorMessage } from '@/lib/api';
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  desiredHoursPerWeek: z.coerce.number().min(0).max(168),
+  desiredHoursPerWeek: z.number().min(0).max(168),
 });
 
 function passwordStrength(pw: string): { score: number; label: string; color: string } {

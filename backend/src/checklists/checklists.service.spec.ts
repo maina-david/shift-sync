@@ -146,8 +146,8 @@ describe('ChecklistsService', () => {
 
       const result = await service.completeItem('cl-1', 'item-1', 'user-1');
       const completedItem = result.items.find((i: any) => i.id === 'item-1');
-      expect(completedItem.completedAt).toBeDefined();
-      expect(completedItem.completedById).toBe('user-1');
+      expect(completedItem!.completedAt).toBeDefined();
+      expect(completedItem!.completedById).toBe('user-1');
     });
 
     it('marks checklist as complete when all required items are done', async () => {

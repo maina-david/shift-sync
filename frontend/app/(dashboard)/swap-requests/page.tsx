@@ -68,6 +68,7 @@ export default function SwapRequestsPage() {
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const twoWeeksOut = format(addDays(new Date(), 14), 'yyyy-MM-dd');
+  const isManager = user?.role === 'admin' || user?.role === 'manager';
 
   const { data: myShifts = [] } = useQuery<Shift[]>({
     queryKey: ['shifts', 'upcoming', today, twoWeeksOut],
@@ -163,8 +164,6 @@ export default function SwapRequestsPage() {
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
-
-  const isManager = user?.role === 'admin' || user?.role === 'manager';
 
   const myPendingSwaps = swaps.filter(
     (s) => s.status === 'pending' && s.fromAssignment?.staffId === user?.id,
@@ -504,7 +503,7 @@ export default function SwapRequestsPage() {
                 if (confirm.action === 'drop-cancel') {
                   dropMutation.mutate({ id: confirm.id, action: 'cancel' });
                 } else {
-                  swapMutation.mutate({ id: confirm.id, action: confirm.action });
+                  swapMutation.mutate({ id: confirm.id, action: confirm.action as 'accept' | 'approve' | 'deny' | 'reject' });
                 }
                 setConfirm(null);
               }}

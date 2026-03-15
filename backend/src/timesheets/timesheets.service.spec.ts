@@ -38,7 +38,7 @@ const makeAdmin = (): User =>
     name: 'Sarah Chen',
     role: UserRole.ADMIN,
     managedLocations: [],
-  } as User);
+  } as unknown as User);
 
 const makeStaff = (): User =>
   ({

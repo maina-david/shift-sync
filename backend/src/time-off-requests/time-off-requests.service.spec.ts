@@ -59,7 +59,7 @@ const makeAdmin = (): User =>
     name: 'Sarah Chen',
     role: UserRole.ADMIN,
     managedLocations: [],
-  } as User);
+  } as unknown as User);
 
 const makeRequest = (overrides: Partial<TimeOffRequest> = {}): TimeOffRequest =>
   ({
@@ -114,7 +114,7 @@ describe('TimeOffRequestsService', () => {
 
   // ---------------------------------------------------------------------------
   describe('create', () => {
-    const dto = { startDate: FUTURE, endDate: FUTURE_END, reason: null };
+    const dto = { startDate: FUTURE, endDate: FUTURE_END, reason: undefined };
 
     it('throws BadRequestException when endDate is before startDate', async () => {
       await expect(
