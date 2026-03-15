@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { Providers } from "./providers";
 
 const roboto = Roboto({
@@ -42,6 +43,7 @@ export default function RootLayout({
           </TooltipProvider>
         </Providers>
         <Toaster richColors position="top-right" />
+        <ScrollToTop />
       </body>
     </html>
   );

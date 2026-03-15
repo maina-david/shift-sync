@@ -19,7 +19,7 @@ export default function LoginPage() {
           src="/login-bg.jpg"
           alt="Restaurant interior"
           fill
-          priority
+          unoptimized
           className="object-cover"
           sizes="50vw"
         />

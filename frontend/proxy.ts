@@ -2,17 +2,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 const PUBLIC_PATHS = ['/login'];
-// Static asset prefixes that must never be gated by auth
-const STATIC_PREFIXES = ['/models/', '/images/', '/_next/', '/favicon'];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (
-    pathname === '/' ||
-    STATIC_PREFIXES.some((p) => pathname.startsWith(p)) ||
-    PUBLIC_PATHS.some((p) => pathname.startsWith(p))
-  ) {
+  if (pathname === '/' || PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
@@ -28,5 +22,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|models).*)'],
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon\\.ico|sitemap\\.xml|robots\\.txt|.*\\.(?:jpg|jpeg|png|gif|webp|svg|ico|woff2?|ttf|otf|eot)).*)',
+  ],
 };
