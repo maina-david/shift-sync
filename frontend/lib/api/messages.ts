@@ -8,7 +8,11 @@ export const messagesApi = {
     locationId?: string;
     body: string;
   }) => api.post('/messages', data).then((r) => r.data),
-  getInbox: (): Promise<Message[]> => api.get('/messages/inbox').then((r) => r.data),
+  getInbox: (): Promise<{ threads: Message[]; announcements: Message[] }> =>
+    api.get('/messages/inbox').then((r) => ({
+      threads: r.data.threads ?? (Array.isArray(r.data) ? r.data : []),
+      announcements: r.data.announcements ?? [],
+    })),
   getThread: (userId: string): Promise<Message[]> =>
     api.get(`/messages/thread/${userId}`).then((r) => r.data),
   getAnnouncements: (locationId?: string): Promise<Message[]> =>

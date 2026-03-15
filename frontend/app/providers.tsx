@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/contexts/auth-context';
 import { NotificationsProvider } from '@/contexts/notifications-context';
+import { MessagesProvider } from '@/contexts/messages-context';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -24,7 +25,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="light" storageKey="shiftsync-theme" enableSystem={false}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <NotificationsProvider>{children}</NotificationsProvider>
+          <NotificationsProvider>
+            <MessagesProvider>{children}</MessagesProvider>
+          </NotificationsProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>

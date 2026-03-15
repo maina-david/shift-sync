@@ -56,6 +56,8 @@ export class MessagesService {
   getDirectThread(userA: string, userB: string): Promise<Message[]> {
     return this.repo
       .createQueryBuilder('msg')
+      .leftJoinAndSelect('msg.sender', 'sender')
+      .leftJoinAndSelect('msg.recipient', 'recipient')
       .where('msg.type = :type', { type: MessageType.DIRECT })
       .andWhere(
         '(msg.senderId = :a AND msg.recipientId = :b) OR (msg.senderId = :b AND msg.recipientId = :a)',
@@ -68,6 +70,7 @@ export class MessagesService {
   getAnnouncements(locationId?: string): Promise<Message[]> {
     const qb = this.repo
       .createQueryBuilder('msg')
+      .leftJoinAndSelect('msg.sender', 'sender')
       .where('msg.type = :type', { type: MessageType.ANNOUNCEMENT });
 
     if (locationId) {
@@ -87,6 +90,8 @@ export class MessagesService {
     // For each direct thread, get the latest message involving this user
     const threads = await this.repo
       .createQueryBuilder('msg')
+      .leftJoinAndSelect('msg.sender', 'sender')
+      .leftJoinAndSelect('msg.recipient', 'recipient')
       .where('msg.type = :type', { type: MessageType.DIRECT })
       .andWhere(
         '(msg.senderId = :userId OR msg.recipientId = :userId)',
@@ -110,6 +115,7 @@ export class MessagesService {
     // Announcements relevant to user's location (or global)
     const announcementsQb = this.repo
       .createQueryBuilder('msg')
+      .leftJoinAndSelect('msg.sender', 'sender')
       .where('msg.type = :type', { type: MessageType.ANNOUNCEMENT });
 
     if (userLocationId) {
@@ -133,7 +139,9 @@ export class MessagesService {
     const msg = await this.repo.findOne({ where: { id } });
     if (!msg) throw new NotFoundException('Message not found');
 
-    if (msg.recipientId !== userId) {
+    // Announcements have no specific recipient — any authenticated user can mark them read.
+    // Direct messages may only be marked read by the intended recipient.
+    if (msg.type === MessageType.DIRECT && msg.recipientId !== userId) {
       throw new ForbiddenException(
         'You can only mark messages addressed to you as read',
       );

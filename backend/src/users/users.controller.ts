@@ -31,6 +31,12 @@ import { ChangePasswordDto, ResetPasswordDto } from './dto/change-password.dto';
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
+  @Get('directory')
+  @ApiOperation({ summary: 'Lightweight user list for messaging (any authenticated user)' })
+  directory() {
+    return this.usersService.directory();
+  }
+
   @Get()
   @ApiOperation({ summary: 'List all users (admin/manager, paginated)' })
   @Roles(UserRole.ADMIN, UserRole.MANAGER)

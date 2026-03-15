@@ -1,6 +1,9 @@
 import { api } from './client';
 
 export const usersApi = {
+  /** Lightweight directory (id, name, role) — available to all roles. */
+  directory: (): Promise<{ id: string; name: string; role: string }[]> =>
+    api.get('/users/directory').then((r) => r.data),
   list: (locationId?: string) =>
     api.get('/users', { params: { locationId, limit: 200 } }).then((r) => r.data.data ?? r.data),
   get: (id: string) => api.get(`/users/${id}`).then((r) => r.data),

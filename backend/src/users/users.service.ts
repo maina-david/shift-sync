@@ -26,6 +26,16 @@ export class UsersService {
     private dataSource: DataSource,
   ) { }
 
+  /** Lightweight list of active users for messaging / mentions — any authenticated user. */
+  async directory(): Promise<Pick<User, 'id' | 'name' | 'role'>[]> {
+    return this.userRepo
+      .createQueryBuilder('u')
+      .select(['u.id', 'u.name', 'u.role'])
+      .where('u.isActive = :active', { active: true })
+      .orderBy('u.name', 'ASC')
+      .getMany();
+  }
+
   async findAll(requestingUser: User, locationId?: string, page = 1, limit = 50) {
     const take = Math.min(limit, 200);
     const skip = (Math.max(1, page) - 1) * take;

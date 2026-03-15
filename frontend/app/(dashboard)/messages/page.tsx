@@ -11,14 +11,16 @@ import {
   PenSquare,
   ChevronDown,
   ChevronUp,
-  Loader2,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
@@ -72,23 +74,22 @@ export default function MessagesPage() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeRecipient, setComposeRecipient] = useState('');
   const [composeBody, setComposeBody] = useState('');
+  const [recipientOpen, setRecipientOpen] = useState(false);
   const [replyBody, setReplyBody] = useState('');
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // ── Queries ──
 
-  const { data: inbox = [], isLoading: inboxLoading } = useQuery<Message[]>({
+  const { data: inboxData, isLoading: inboxLoading } = useQuery({
     queryKey: ['messages-inbox'],
     queryFn: messagesApi.getInbox,
     refetchInterval: 30_000,
   });
 
-  const { data: announcements = [], isLoading: annLoading } = useQuery<Message[]>({
-    queryKey: ['announcements'],
-    queryFn: () => messagesApi.getAnnouncements(),
-    refetchInterval: 30_000,
-  });
+  const inbox: Message[] = inboxData?.threads ?? [];
+  const announcements: Message[] = inboxData?.announcements ?? [];
+  const annLoading = inboxLoading;
 
   const selectedUserId = selection?.kind === 'dm' ? selection.userId : undefined;
 
@@ -99,9 +100,10 @@ export default function MessagesPage() {
     refetchInterval: 30_000,
   });
 
-  const { data: staffList = [] } = useQuery<User[]>({
-    queryKey: ['users'],
-    queryFn: () => usersApi.list(),
+  const { data: staffList = [] } = useQuery<{ id: string; name: string; role: string }[]>({
+    queryKey: ['users-directory'],
+    queryFn: usersApi.directory,
+    staleTime: 5 * 60_000,
   });
 
   // ── Mutations ──
@@ -197,13 +199,14 @@ export default function MessagesPage() {
                 const isSelected = selection?.kind === 'announcement' && selection.message.id === a.id;
                 return (
                   <div key={a.id}>
-                    <button
+                    {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+                    <div
                       onClick={() => {
                         setSelection({ kind: 'announcement', message: a });
                         if (!a.isRead) markReadMutation.mutate(a.id);
                       }}
                       className={cn(
-                        'w-full text-left px-2 py-1.5 rounded-md text-xs transition-colors',
+                        'w-full text-left px-2 py-1.5 rounded-md text-xs transition-colors cursor-pointer select-none',
                         isSelected ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50',
                         !a.isRead && 'font-medium',
                       )}
@@ -211,17 +214,18 @@ export default function MessagesPage() {
                       <div className="flex items-start justify-between gap-1">
                         <span className="truncate flex-1">{a.body.slice(0, 40)}{a.body.length > 40 ? '…' : ''}</span>
                         <button
+                          type="button"
                           onClick={(e) => { e.stopPropagation(); toggleAnnouncementExpand(a.id); }}
                           className="shrink-0 text-muted-foreground hover:text-foreground"
                         >
                           {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                         </button>
                       </div>
-                      <p className="text-muted-foreground text-[0.6rem] mt-0.5">{a.sender.name} · {timeLabel(a.createdAt)}</p>
+                      <p className="text-muted-foreground text-[0.6rem] mt-0.5">{a.sender?.name ?? 'Unknown'} · {timeLabel(a.createdAt)}</p>
                       {isExpanded && (
                         <p className="mt-1 text-xs text-foreground whitespace-pre-wrap">{a.body}</p>
                       )}
-                    </button>
+                    </div>
                   </div>
                 );
               })}
@@ -305,7 +309,7 @@ export default function MessagesPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-indigo-900 dark:text-indigo-100 text-sm">
-                      {selection.message.sender.name}
+                      {selection.message.sender?.name ?? 'Unknown'}
                     </p>
                     <p className="text-xs text-indigo-600 dark:text-indigo-400">
                       {timeLabel(selection.message.createdAt)}
@@ -409,20 +413,45 @@ export default function MessagesPage() {
           <div className="grid gap-4 py-2">
             <div className="grid gap-2">
               <Label>Recipient</Label>
-              <Select value={composeRecipient} onValueChange={setComposeRecipient}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a team member…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {staffList
-                    .filter((s) => s.id !== user?.id)
-                    .map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <Popover open={recipientOpen} onOpenChange={setRecipientOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className={composeRecipient ? '' : 'text-muted-foreground'}>
+                      {composeRecipient
+                        ? staffList.find((s) => s.id === composeRecipient)?.name
+                        : 'Select a team member…'}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search…" />
+                    <CommandList>
+                      <CommandEmpty>No team members found</CommandEmpty>
+                      <CommandGroup>
+                        {staffList
+                          .filter((s) => s.id !== user?.id)
+                          .map((s) => (
+                            <CommandItem
+                              key={s.id}
+                              value={s.name}
+                              onSelect={() => {
+                                setComposeRecipient(s.id);
+                                setRecipientOpen(false);
+                              }}
+                            >
+                              {s.name}
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="grid gap-2">
