@@ -11,7 +11,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
-      include: ['hooks/**', 'contexts/**', 'lib/utils.ts', 'components/ui/time-picker.tsx'],
+      include: ['hooks/**', 'contexts/**', 'lib/utils.ts', 'components/ui/time-picker.tsx', 'proxy.ts'],
     },
   },
   resolve: {
