@@ -1,15 +1,10 @@
 'use client';
 
 import { Suspense } from 'react';
-import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { GalleryVerticalEnd } from 'lucide-react';
 import { motion } from 'motion/react';
 import { LoginForm } from '@/components/login-form';
-
-const LoginCanvas = dynamic(
-  () => import('@/components/welcome/login-scene').then((m) => m.LoginCanvas),
-  { ssr: false, loading: () => <div className="absolute inset-0 bg-muted" /> },
-);
 
 export default function LoginPage() {
   return (
@@ -20,9 +15,15 @@ export default function LoginPage() {
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
       >
-        <div className="absolute inset-0">
-          <LoginCanvas />
-        </div>
+        <Image
+          src="/login-bg.jpg"
+          alt="Restaurant interior"
+          fill
+          priority
+          className="object-cover"
+          sizes="50vw"
+        />
+        <div className="absolute inset-0 bg-black/30" />
       </motion.div>
 
       <motion.div
