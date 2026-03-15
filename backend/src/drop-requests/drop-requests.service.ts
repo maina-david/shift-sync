@@ -300,15 +300,32 @@ export class DropRequestsService {
   async cancel(dropId: string, user: User) {
     const drop = await this.findOneOr404(dropId);
     if (drop.assignment.staffId !== user.id) throw new ForbiddenException();
-    if (drop.status !== DropRequestStatus.OPEN) {
-      throw new BadRequestException('Can only cancel open drop requests.');
+    if (![DropRequestStatus.OPEN, DropRequestStatus.CLAIMED].includes(drop.status)) {
+      throw new BadRequestException('Can only cancel open or claimed drop requests.');
     }
 
-    return this.dataSource.transaction(async (em) => {
+    const claimedById = drop.claimedById;
+
+    await this.dataSource.transaction(async (em) => {
       drop.status = DropRequestStatus.CANCELLED;
+      drop.claimedById = null;
       await em.update(ShiftAssignment, drop.assignmentId, { status: AssignmentStatus.ASSIGNED });
-      return em.save(DropRequest, drop);
+      await em.save(DropRequest, drop);
     });
+
+    // Notify the claimer their pickup was withdrawn
+    if (claimedById) {
+      this.safeEmit('notification.send', {
+        userId: claimedById,
+        type: NotificationType.DROP_REQUEST_CANCELLED,
+        title: 'Pickup Withdrawn',
+        message: `The drop request you claimed for the shift on ${drop.assignment.shift.date} was cancelled by the original staff member.`,
+        entityType: 'drop_request',
+        entityId: dropId,
+      });
+    }
+
+    return drop;
   }
 
   @Cron('*/5 * * * *') // every 5 minutes

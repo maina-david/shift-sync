@@ -667,7 +667,7 @@ export class ShiftsService {
       .innerJoin('u.certifiedLocations', 'loc', 'loc.id = :locationId', { locationId })
       .leftJoinAndSelect('u.availabilities', 'avail')
       .where('u.isActive = :active', { active: true })
-      .andWhere('u.role = :role', { role: 'staff' })
+      .andWhere('u.role = :role', { role: UserRole.STAFF })
       .getMany();
 
     // Pre-fetch all existing assignments in the target week for these staff members

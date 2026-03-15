@@ -61,7 +61,7 @@ export default function SettingsPage() {
     handleSubmit: handleProfile,
     formState: { errors: profileErrors },
   } = useForm<ProfileForm>({
-    resolver: zodResolver(profileSchema) as any,
+    resolver: zodResolver(profileSchema),
     defaultValues: {
       name: user?.name ?? '',
       email: user?.email ?? '',

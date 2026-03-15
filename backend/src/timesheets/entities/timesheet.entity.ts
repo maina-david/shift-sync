@@ -51,7 +51,7 @@ export class Timesheet {
   @Column({ type: 'datetime', nullable: true }) reviewedAt: Date | null;
 
   /** Location ID for scoping */
-  @Column({ type: 'varchar', nullable: true }) locationId: string | null;
+  @Index() @Column({ type: 'varchar', nullable: true }) locationId: string | null;
 
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
