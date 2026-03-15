@@ -247,10 +247,8 @@ export default function TimeOffPage() {
             <SheetTitle>Request Time Off</SheetTitle>
             <SheetDescription>Select the dates you need off and optionally explain why.</SheetDescription>
           </SheetHeader>
-          <form
-            onSubmit={handleSubmit((d) => createMutation.mutate(d))}
-            className="grid flex-1 auto-rows-min gap-6 px-4"
-          >
+          <form id="time-off-form" onSubmit={handleSubmit((d) => createMutation.mutate(d))} />
+          <div className="grid flex-1 auto-rows-min gap-6 px-4">
             <div className="grid gap-3">
               <Label>Start date</Label>
               <DatePicker
@@ -273,15 +271,15 @@ export default function TimeOffPage() {
               <Label>Reason (optional)</Label>
               <Textarea {...register('reason')} placeholder="Vacation, personal, medical…" rows={3} />
             </div>
-            <SheetFooter>
-              <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? 'Submitting…' : 'Submit request'}
-              </Button>
-              <SheetClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
-              </SheetClose>
-            </SheetFooter>
-          </form>
+          </div>
+          <SheetFooter>
+            <Button type="submit" form="time-off-form" disabled={createMutation.isPending}>
+              {createMutation.isPending ? 'Submitting…' : 'Submit request'}
+            </Button>
+            <SheetClose asChild>
+              <Button type="button" variant="outline">Cancel</Button>
+            </SheetClose>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
 

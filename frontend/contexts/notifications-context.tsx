@@ -41,7 +41,23 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     const handler = (notif: Notification) => {
       setNotifications((prev) => [notif, ...prev]);
       setUnreadCount((c) => c + 1);
-      toast(notif.title, { description: notif.message });
+
+      const type = notif.type?.toUpperCase() ?? '';
+      const isCritical = [
+        'SHIFT_UNCOVERED', 'UNCOVERED_SHIFT', 'SHIFT_CANCELLED',
+        'SCHEDULE_UNPUBLISHED', 'CERT_EXPIRY_WARNING',
+      ].some((t) => type.includes(t));
+      const isInfo = [
+        'WEEKLY_SUMMARY', 'REPORT_READY',
+      ].some((t) => type.includes(t));
+
+      if (isCritical) {
+        toast.error(notif.title, { description: notif.message, duration: Infinity });
+      } else if (isInfo) {
+        // info-only: badge only, no toast
+      } else {
+        toast(notif.title, { description: notif.message, duration: 6000 });
+      }
     };
 
     socket.on('notification', handler);
@@ -52,11 +68,19 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   }, [user, refresh]);
 
   const markRead = useCallback(async (id: string) => {
-    await notificationsApi.markRead(id);
+    // Optimistic: mark as read instantly, revert on error
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
     );
     setUnreadCount((c) => Math.max(0, c - 1));
+    try {
+      await notificationsApi.markRead(id);
+    } catch {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: false } : n)),
+      );
+      setUnreadCount((c) => c + 1);
+    }
   }, []);
 
   const markAllRead = useCallback(async () => {

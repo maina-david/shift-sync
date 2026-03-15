@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetFooter,
@@ -350,6 +351,9 @@ export default function StaffPage() {
             >
               {createMutation.isPending ? 'Creating…' : 'Create account'}
             </Button>
+            <SheetClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </SheetClose>
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -447,6 +451,9 @@ export default function StaffPage() {
             >
               {updateMutation.isPending ? 'Saving…' : 'Save changes'}
             </Button>
+            <SheetClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </SheetClose>
           </SheetFooter>
         </SheetContent>
       </Sheet>

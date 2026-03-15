@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, addWeeks, subWeeks, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 import { toast } from 'sonner';
@@ -31,6 +31,27 @@ import { cn } from '@/lib/utils';
 import { WeatherWidget } from '@/components/weather-widget';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+function CoverageIndicator({ shifts }: { shifts: Shift[] }) {
+  const total = shifts.reduce((acc, s) => acc + s.headcount, 0);
+  const assigned = shifts.reduce(
+    (acc, s) => acc + s.assignments.filter((a) => a.status === 'assigned').length,
+    0,
+  );
+  if (total === 0) return <div className="h-5 rounded border border-dashed border-border/30 flex items-center justify-center"><span className="text-[0.6rem] text-muted-foreground/40">—</span></div>;
+  const ratio = assigned / total;
+  const [cls, label] =
+    ratio >= 0.9
+      ? ['bg-chart-success/15 text-chart-success border-chart-success/25', `${assigned}/${total}`]
+      : ratio >= 0.5
+      ? ['bg-chart-warning/15 text-chart-warning border-chart-warning/25', `${assigned}/${total}`]
+      : ['bg-destructive/15 text-destructive border-destructive/25', `${assigned}/${total}`];
+  return (
+    <div className={cn('h-5 rounded border flex items-center justify-center', cls)}>
+      <span className="text-[0.6rem] font-semibold tabular-nums">{label}</span>
+    </div>
+  );
+}
 
 export default function SchedulePage() {
   const { user } = useAuth();
@@ -86,11 +107,23 @@ export default function SchedulePage() {
 
   const publishWeekMutation = useMutation({
     mutationFn: () => shiftsApi.publishWeek(firstLocationId, format(weekStart, 'yyyy-MM-dd')),
+    onMutate: () => {
+      // Optimistic: flip all draft shifts for this week to published immediately
+      const key = ['shifts', firstLocationId, format(weekStart, 'yyyy-MM-dd')];
+      const prev = queryClient.getQueryData<typeof shifts>(key);
+      queryClient.setQueryData(key, (old: typeof shifts = []) =>
+        old.map((s) => s.status === 'draft' ? { ...s, status: 'published' as const } : s),
+      );
+      return { prev, key };
+    },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
       toast.success(`Published ${res.published} shifts`);
     },
-    onError: (err) => toast.error(getErrorMessage(err)),
+    onError: (err, _v, ctx) => {
+      if (ctx) queryClient.setQueryData(ctx.key, ctx.prev);
+      toast.error(getErrorMessage(err));
+    },
   });
 
   const copyWeekMutation = useMutation({
@@ -132,6 +165,34 @@ export default function SchedulePage() {
   const isManager = user?.role === 'admin' || user?.role === 'manager';
   const draftCount = shifts.filter((s) => s.status === 'draft').length;
   const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+  const [focusedCol, setFocusedCol] = useState<number | null>(null);
+  const cellRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const handleGridKeyDown = (e: React.KeyboardEvent, colIndex: number) => {
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const next = Math.min(colIndex + 1, 6);
+      setFocusedCol(next);
+      cellRefs.current[next]?.focus();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const prev = Math.max(colIndex - 1, 0);
+      setFocusedCol(prev);
+      cellRefs.current[prev]?.focus();
+    } else if ((e.key === 'Enter' || e.key === ' ') && isManager && firstLocationId) {
+      e.preventDefault();
+      setForm({
+        date: format(weekDays[colIndex], 'yyyy-MM-dd'),
+        startTime: '09:00',
+        endTime: '17:00',
+        requiredSkillId: 'none',
+        headcount: '1',
+        notes: '',
+      });
+      setCreateOpen(true);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -223,7 +284,7 @@ export default function SchedulePage() {
       </div>
 
       <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-      <div className="grid grid-cols-7 gap-2 min-w-160">
+      <div role="grid" aria-label="Week schedule" className="grid grid-cols-7 gap-2 min-w-160">
         {weekDays.map((day, i) => (
           <div key={i} className="text-center">
             <p className={cn('text-sm font-medium', format(day, 'yyyy-MM-dd') === todayStr && 'text-primary')}>
@@ -235,13 +296,24 @@ export default function SchedulePage() {
           </div>
         ))}
 
+        {/* Coverage heatmap row — only for managers once data is loaded */}
+        {isManager && weekDays.map((day, i) => (
+          <CoverageIndicator key={`cov-${i}`} shifts={isLoading ? [] : getShiftsForDay(day)} />
+        ))}
+
         {weekDays.map((day, i) => {
           const dayShifts = getShiftsForDay(day);
           return (
             <div
               key={i}
+              ref={(el) => { cellRefs.current[i] = el; }}
+              role="gridcell"
+              tabIndex={focusedCol === i ? 0 : focusedCol === null && i === 0 ? 0 : -1}
+              onFocus={() => setFocusedCol(i)}
+              onKeyDown={(e) => handleGridKeyDown(e, i)}
+              aria-label={`${DAYS[i]} ${format(day, 'MMM d')} — ${dayShifts.length} shift${dayShifts.length !== 1 ? 's' : ''}${isManager ? ', press Enter to add' : ''}`}
               className={cn(
-                'min-h-32 space-y-1.5 p-1 rounded-lg',
+                'min-h-32 space-y-1.5 p-1 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1',
                 format(day, 'yyyy-MM-dd') === todayStr && 'bg-primary/5 ring-1 ring-primary/20',
               )}
             >

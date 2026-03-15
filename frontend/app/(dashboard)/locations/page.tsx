@@ -309,7 +309,7 @@ export default function LocationsPage() {
             <SheetDescription>Update the location details and timezone.</SheetDescription>
           </SheetHeader>
           <LocationFormFields />
-          <SheetFooter className="px-4">
+          <SheetFooter>
             <Button
               onClick={() => updateMutation.mutate()}
               disabled={!form.name.trim() || updateMutation.isPending}

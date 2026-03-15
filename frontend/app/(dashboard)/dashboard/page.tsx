@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
 import { shiftsApi, swapRequestsApi, dropRequestsApi, analyticsApi, timeOffApi, getErrorMessage } from '@/lib/api';
+import { SetupChecklist } from '@/components/ui/setup-checklist';
 import { getSocket } from '@/lib/socket';
 import { Shift, SwapRequest, DropRequest, OvertimeEntry, TimeOffRequest } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -123,6 +124,8 @@ export default function DashboardPage() {
     (s) => s.assignments.filter((a) => a.status === 'assigned').length < s.headcount,
   ).length;
 
+  const todayShift = isStaff ? myUpcoming.find((s) => s.date === today) : null;
+
   return (
     <div className="space-y-6">
       <div>
@@ -133,6 +136,43 @@ export default function DashboardPage() {
           {format(new Date(), 'EEEE, MMMM d, yyyy')}
         </p>
       </div>
+
+      {/* Today-first card — mobile only, staff only */}
+      {isStaff && (
+        <div className="md:hidden">
+          {(shiftsLoading || upcomingLoading) ? (
+            <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-2">
+              <div className="h-3 w-28 bg-muted animate-pulse rounded" />
+              <div className="h-14 w-full bg-muted animate-pulse rounded-lg" />
+            </div>
+          ) : todayShift ? (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <p className="text-[0.625rem] font-semibold uppercase tracking-widest text-primary/70 mb-2">Today's Shift</p>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-base font-semibold">{todayShift.location.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {todayShift.startTime}–{todayShift.endTime}
+                    {todayShift.requiredSkill && ` · ${todayShift.requiredSkill.name}`}
+                  </p>
+                </div>
+                <div className="shrink-0 text-center bg-primary/10 border border-primary/20 rounded-lg px-3 py-2">
+                  <p className="text-[0.625rem] text-primary/70 font-medium">Today</p>
+                  <p className="text-xl font-bold text-primary">{format(new Date(), 'd')}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border/50 bg-muted/10 p-4 text-center">
+              <p className="text-sm font-medium text-muted-foreground">No shift today</p>
+              <p className="text-xs text-muted-foreground/60 mt-0.5">Enjoy your day off</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Setup checklist — admin only, collapses once all steps done */}
+      {user?.role === 'admin' && <SetupChecklist />}
 
       {isStaff ? (
         <StaffDashboard

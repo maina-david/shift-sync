@@ -31,8 +31,11 @@ import {
   AbsenteeismReport,
   TurnoverReport,
 } from '@/lib/types';
+import { AlertTriangle, TrendingUp, Users } from 'lucide-react';
+import Link from 'next/link';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
+import { DateRangePresets } from '@/components/ui/date-range-presets';
 import {
   Table,
   TableBody,
@@ -112,28 +115,31 @@ function LaborCostTab({ locations }: { locations: Location[] }) {
   return (
     <div className="space-y-5">
       {/* Date + location filters */}
-      <div className="flex items-end gap-3 flex-wrap">
-        <div className="space-y-1">
-          <Label className="text-xs">From</Label>
-          <DatePicker value={startDate} onChange={setStartDate} placeholder="Start date" className="w-40" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">To</Label>
-          <DatePicker value={endDate} onChange={setEndDate} placeholder="End date" className="w-40" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Location</Label>
-          <Select value={locationId} onValueChange={setLocationId}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="All locations" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All locations</SelectItem>
-              {locations.map((l) => (
-                <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="flex flex-col gap-2">
+        <DateRangePresets startDate={startDate} endDate={endDate} onSelect={(s, e) => { setStartDate(s); setEndDate(e); }} />
+        <div className="flex items-end gap-3 flex-wrap">
+          <div className="space-y-1">
+            <Label className="text-xs">From</Label>
+            <DatePicker value={startDate} onChange={setStartDate} placeholder="Start date" className="w-40" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">To</Label>
+            <DatePicker value={endDate} onChange={setEndDate} placeholder="End date" className="w-40" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Location</Label>
+            <Select value={locationId} onValueChange={setLocationId}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="All locations" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All locations</SelectItem>
+                {locations.map((l) => (
+                  <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -273,14 +279,17 @@ function KpiDashboardTab() {
   return (
     <div className="space-y-6">
       {/* Date range filters */}
-      <div className="flex items-end gap-3 flex-wrap">
-        <div className="space-y-1">
-          <Label className="text-xs">From</Label>
-          <DatePicker value={startDate} onChange={setStartDate} placeholder="Start date" className="w-40" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">To</Label>
-          <DatePicker value={endDate} onChange={setEndDate} placeholder="End date" className="w-40" />
+      <div className="flex flex-col gap-2">
+        <DateRangePresets startDate={startDate} endDate={endDate} onSelect={(s, e) => { setStartDate(s); setEndDate(e); }} />
+        <div className="flex items-end gap-3 flex-wrap">
+          <div className="space-y-1">
+            <Label className="text-xs">From</Label>
+            <DatePicker value={startDate} onChange={setStartDate} placeholder="Start date" className="w-40" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">To</Label>
+            <DatePicker value={endDate} onChange={setEndDate} placeholder="End date" className="w-40" />
+          </div>
         </div>
       </div>
 
@@ -599,6 +608,40 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* Exception-based alert banner */}
+      {!overtimeLoading && overtime.length > 0 && (() => {
+        const atRisk = (overtime as OvertimeEntry[]).filter((o) => o.isAtRisk || o.isOvertime);
+        if (atRisk.length === 0) return null;
+        return (
+          <div className="flex items-start gap-3 rounded-lg border border-chart-warning/30 bg-chart-warning/8 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 text-chart-warning shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-chart-warning">
+                {atRisk.length} employee{atRisk.length > 1 ? 's are' : ' is'} projected to hit overtime this week
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {atRisk.map((o) => o.name).join(', ')}
+              </p>
+            </div>
+            <Link href="#overtime" onClick={() => {}} className="shrink-0 text-xs text-chart-warning underline underline-offset-2">
+              Review schedule
+            </Link>
+          </div>
+        );
+      })()}
+
+      {!overtimeLoading && (overtime as OvertimeEntry[]).filter((o) => o.isOvertime).length > 0 && (() => {
+        const over = (overtime as OvertimeEntry[]).filter((o) => o.isOvertime);
+        return (
+          <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/8 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+            <p className="text-sm font-medium text-destructive">
+              {over.length} employee{over.length > 1 ? 's are' : ' is'} already in overtime — {over.map((o) => `${o.name} (${o.overtimeHours}h over)`).join(', ')}
+            </p>
+          </div>
+        );
+      })()}
+
       <Tabs defaultValue="hours">
         <TabsList>
           <TabsTrigger value="hours">Hours Distribution</TabsTrigger>
@@ -609,14 +652,17 @@ export default function AnalyticsPage() {
         </TabsList>
 
         <TabsContent value="hours" className="space-y-4 mt-4">
-          <div className="flex gap-3 flex-wrap">
-            <div className="space-y-1">
-              <Label className="text-xs">From</Label>
-              <DatePicker value={startDate} onChange={setStartDate} placeholder="Start date" className="w-40" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">To</Label>
-              <DatePicker value={endDate} onChange={setEndDate} placeholder="End date" className="w-40" />
+          <div className="flex flex-col gap-2">
+            <DateRangePresets startDate={startDate} endDate={endDate} onSelect={(s, e) => { setStartDate(s); setEndDate(e); }} />
+            <div className="flex gap-3 flex-wrap">
+              <div className="space-y-1">
+                <Label className="text-xs">From</Label>
+                <DatePicker value={startDate} onChange={setStartDate} placeholder="Start date" className="w-40" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">To</Label>
+                <DatePicker value={endDate} onChange={setEndDate} placeholder="End date" className="w-40" />
+              </div>
             </div>
           </div>
 

@@ -378,7 +378,7 @@ export default function MenuPage() {
             <SheetDescription>Update item details and availability.</SheetDescription>
           </SheetHeader>
           <FormFields />
-          <SheetFooter className="px-4">
+          <SheetFooter>
             <Button onClick={() => updateMutation.mutate()} disabled={!form.name.trim() || !form.price || updateMutation.isPending}>
               {updateMutation.isPending ? 'Saving…' : 'Save changes'}
             </Button>

@@ -18,8 +18,11 @@ import { toast } from 'sonner';
 import {
   Bell, BellOff, CheckCheck, Zap, LayoutPanelLeft,
   Bookmark as BookmarkIcon, BookmarkCheck, Trash2, ExternalLink,
-  Sun, Moon,
+  Sun, Moon, LayoutDashboard, CalendarDays, CalendarRange,
+  ArrowLeftRight, HandHelping, Users, MessageSquare,
+  AlertTriangle, Info, RefreshCw,
 } from 'lucide-react';
+import { isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { PageTransition } from '@/components/ui/page-transition';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
@@ -179,16 +182,56 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) return null;
 
-  const recentNotifs = notifications.slice(0, 6);
+  const recentNotifs = notifications.slice(0, 12);
+
+  function notifIcon(type: string) {
+    const t = type?.toUpperCase() ?? '';
+    if (['SHIFT_UNCOVERED', 'UNCOVERED_SHIFT', 'SHIFT_CANCELLED', 'CERT_EXPIRY_WARNING'].some((k) => t.includes(k)))
+      return <AlertTriangle className="h-3 w-3 text-destructive" />;
+    if (['WEEKLY_SUMMARY', 'REPORT_READY'].some((k) => t.includes(k)))
+      return <Info className="h-3 w-3 text-muted-foreground" />;
+    return <RefreshCw className="h-3 w-3 text-primary" />;
+  }
+
+  function groupLabel(dateStr: string) {
+    const d = new Date(dateStr);
+    if (isToday(d)) return 'Today';
+    if (isYesterday(d)) return 'Yesterday';
+    return format(d, 'MMM d');
+  }
+
+  const groupedNotifs = recentNotifs.reduce<Record<string, typeof recentNotifs>>((acc, n) => {
+    const key = groupLabel(n.createdAt);
+    (acc[key] = acc[key] ?? []).push(n);
+    return acc;
+  }, {});
+
+  const mobileNavItems = user?.role === 'staff'
+    ? [
+        { href: '/dashboard', icon: LayoutDashboard, label: 'Home' },
+        { href: '/my-schedule', icon: CalendarRange, label: 'Schedule' },
+        { href: '/pickup', icon: HandHelping, label: 'Open Shifts' },
+        { href: '/swap-requests', icon: ArrowLeftRight, label: 'Requests' },
+        { href: '/messages', icon: MessageSquare, label: 'Messages' },
+      ]
+    : [
+        { href: '/dashboard', icon: LayoutDashboard, label: 'Home' },
+        { href: '/schedule', icon: CalendarDays, label: 'Schedule' },
+        { href: '/staff', icon: Users, label: 'Staff' },
+        { href: '/swap-requests', icon: ArrowLeftRight, label: 'Requests' },
+        { href: '/messages', icon: MessageSquare, label: 'Messages' },
+      ];
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
+      {/* Sidebar — hidden on mobile */}
+      <div className="hidden md:flex h-full">
       <AppSidebar
         selectedGroupId={selectedGroupId}
         onSelectGroup={handleSelectGroup}
         secondaryOpen={secondaryOpen}
       />
+      </div>
 
       {/* Main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -341,44 +384,48 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 )}
               </div>
 
-              <div className="max-h-80 overflow-y-auto">
+              <div className="max-h-96 overflow-y-auto">
                 {recentNotifs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
                     <BellOff className="h-8 w-8 opacity-30" />
                     <p className="text-sm">No notifications yet</p>
                   </div>
                 ) : (
-                  recentNotifs.map((notif, i) => (
-                    <div key={notif.id}>
-                      <div
-                        className={cn(
-                          'flex gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-muted/30',
-                          !notif.isRead && 'bg-primary/5',
-                        )}
-                        onClick={() => { if (!notif.isRead) markRead(notif.id); }}
-                      >
-                        <div className="shrink-0 mt-1.5">
-                          {!notif.isRead ? (
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                          ) : (
-                            <div className="w-1.5 h-1.5" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className={cn('text-xs font-medium leading-snug', !notif.isRead ? 'text-foreground' : 'text-muted-foreground')}>
-                              {notif.title}
-                            </p>
-                            <span className="text-[0.625rem] text-muted-foreground shrink-0 mt-0.5">
-                              {format(new Date(notif.createdAt), 'HH:mm')}
-                            </span>
+                  Object.entries(groupedNotifs).map(([group, items]) => (
+                    <div key={group}>
+                      <p className="px-4 py-1.5 text-[0.625rem] font-semibold uppercase tracking-widest text-muted-foreground/60 bg-muted/20 sticky top-0">
+                        {group}
+                      </p>
+                      {items.map((notif, i) => (
+                        <div key={notif.id}>
+                          <div
+                            className={cn(
+                              'flex gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-muted/30',
+                              !notif.isRead && 'bg-primary/5',
+                            )}
+                            onClick={() => { if (!notif.isRead) markRead(notif.id); }}
+                          >
+                            <div className="shrink-0 mt-1 flex flex-col items-center gap-1">
+                              {notifIcon(notif.type)}
+                              {!notif.isRead && <div className="w-1 h-1 rounded-full bg-primary" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className={cn('text-xs font-medium leading-snug', !notif.isRead ? 'text-foreground' : 'text-muted-foreground')}>
+                                  {notif.title}
+                                </p>
+                                <span className="text-[0.625rem] text-muted-foreground shrink-0 mt-0.5">
+                                  {format(new Date(notif.createdAt), 'HH:mm')}
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5 leading-snug line-clamp-2">
+                                {notif.message}
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5 leading-snug line-clamp-2">
-                            {notif.message}
-                          </p>
+                          {i < items.length - 1 && <Separator />}
                         </div>
-                      </div>
-                      {i < recentNotifs.length - 1 && <Separator />}
+                      ))}
                     </div>
                   ))
                 )}
@@ -397,12 +444,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Popover>
         </header>
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6 pb-20 md:pb-6">
           <ErrorBoundary>
             <PageTransition motionKey={pathname}>{children}</PageTransition>
           </ErrorBoundary>
         </main>
       </div>
+
+      {/* Mobile bottom navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border/60 bg-background/95 backdrop-blur-md">
+        <div className="flex items-center justify-around px-1 py-1.5">
+          {mobileNavItems.map((item) => {
+            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-13',
+                  isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <item.icon className={cn('h-5 w-5', isActive && 'fill-primary/10')} />
+                <span className="text-[0.6rem] font-medium leading-tight">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

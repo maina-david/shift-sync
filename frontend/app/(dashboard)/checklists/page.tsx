@@ -14,6 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetFooter,
@@ -401,6 +402,9 @@ export default function ChecklistsPage() {
             <Button onClick={() => createMutation.mutate()} disabled={!canCreate}>
               {createMutation.isPending ? 'Creating…' : 'Create checklist'}
             </Button>
+            <SheetClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </SheetClose>
           </SheetFooter>
         </SheetContent>
       </Sheet>

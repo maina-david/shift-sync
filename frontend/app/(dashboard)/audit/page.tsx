@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ColumnDef } from '@tanstack/react-table';
 import { ChevronDown, ChevronRight, Download, ClipboardList } from 'lucide-react';
+import { DateRangePresets } from '@/components/ui/date-range-presets';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -134,6 +135,12 @@ export default function AuditPage() {
           Export CSV
         </Button>
       </div>
+
+      <DateRangePresets
+        startDate={startDate}
+        endDate={endDate}
+        onSelect={(s, e) => { setStartDate(s); setEndDate(e); }}
+      />
 
       <div className="flex gap-3 flex-wrap">
         <div className="space-y-1">
