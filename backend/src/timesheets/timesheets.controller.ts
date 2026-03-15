@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   Patch,
@@ -35,8 +36,6 @@ import { TimesheetStatus } from './entities/timesheet.entity';
 export class TimesheetsController {
   constructor(private readonly svc: TimesheetsService) {}
 
-  // ─── Staff endpoints ────────────────────────────────────────────────────────
-
   @Post('clock-in')
   @HttpCode(201)
   @Roles(UserRole.STAFF)
@@ -62,12 +61,10 @@ export class TimesheetsController {
 
   @Get('open')
   @Roles(UserRole.STAFF)
-  @ApiOperation({ summary: 'Get the currently open (clocked-in) timesheet for the current staff member, or null' })
+  @ApiOperation({ summary: 'Get the currently open (clocked-in) timesheet, or null' })
   getOpen(@CurrentUser() user: User) {
     return this.svc.getOpenTimesheet(user.id);
   }
-
-  // ─── Payroll Export — must be declared BEFORE /:id to avoid route conflict ──
 
   @Get('export')
   @Roles(UserRole.MANAGER, UserRole.ADMIN)
@@ -80,28 +77,30 @@ export class TimesheetsController {
     @Query('startDate')  startDate: string,
     @Query('endDate')    endDate: string,
     @Res() res: Response,
+    @CurrentUser() user: User,
     @Query('locationId') locationId?: string,
     @Query('status')     status?: TimesheetStatus,
   ) {
-    const query: PayrollExportQuery = {
-      locationId,
-      startDate,
-      endDate,
-      status,
-    };
+    const query: PayrollExportQuery = { locationId, startDate, endDate, status };
+
+    if (user.role === UserRole.MANAGER) {
+      const managedIds = user.managedLocations?.map((l) => l.id) ?? [];
+      if (locationId) {
+        if (!managedIds.includes(locationId)) {
+          throw new ForbiddenException('You do not manage this location');
+        }
+      } else {
+        query.allowedLocationIds = managedIds;
+      }
+    }
 
     const csv = await this.svc.export(query);
 
     res
       .set('Content-Type', 'text/csv')
-      .set(
-        'Content-Disposition',
-        `attachment; filename="payroll-${startDate}-${endDate}.csv"`,
-      )
+      .set('Content-Disposition', `attachment; filename="payroll-${startDate}-${endDate}.csv"`)
       .send(csv);
   }
-
-  // ─── Manager / Admin endpoints ──────────────────────────────────────────────
 
   @Get()
   @Roles(UserRole.MANAGER, UserRole.ADMIN)

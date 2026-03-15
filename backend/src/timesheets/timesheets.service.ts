@@ -27,6 +27,7 @@ export interface TimesheetQuery {
 
 export interface PayrollExportQuery {
   locationId?: string;
+  allowedLocationIds?: string[];
   startDate: string;
   endDate: string;
   status?: TimesheetStatus;
@@ -243,6 +244,9 @@ export class TimesheetsService {
 
     if (query.locationId) {
       qb.andWhere('ts.locationId = :locationId', { locationId: query.locationId });
+    } else if (query.allowedLocationIds) {
+      const ids = query.allowedLocationIds.length > 0 ? query.allowedLocationIds : ['__none__'];
+      qb.andWhere('ts.locationId IN (:...allowedLocationIds)', { allowedLocationIds: ids });
     }
 
     const timesheets = await qb.getMany();

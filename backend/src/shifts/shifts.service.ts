@@ -205,6 +205,9 @@ export class ShiftsService {
   async publish(id: string, manager: User) {
     const shift = await this.findOne(id);
     this.assertCanManage(shift, manager);
+    if (shift.status === ShiftStatus.PUBLISHED) {
+      return this.findOne(id);
+    }
     shift.status = ShiftStatus.PUBLISHED;
     shift.publishedAt = new Date();
     shift.publishedById = manager.id;
@@ -325,6 +328,9 @@ export class ShiftsService {
   async unpublish(id: string, manager: User) {
     const shift = await this.findOne(id);
     this.assertCanManage(shift, manager);
+    if (shift.status !== ShiftStatus.PUBLISHED) {
+      throw new BadRequestException('Only published shifts can be unpublished');
+    }
 
     const CUTOFF_HOURS = 48;
     const shiftStart = new Date(`${shift.date}T${shift.startTime}:00`);

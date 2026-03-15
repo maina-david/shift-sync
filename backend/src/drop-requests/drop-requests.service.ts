@@ -78,6 +78,9 @@ export class DropRequestsService {
       relations: ['shift', 'shift.location'],
     });
     if (!assignment) throw new NotFoundException('Assignment not found or not yours');
+    if (!assignment.shift?.location?.timezone) {
+      throw new BadRequestException('Shift location data is unavailable');
+    }
 
     const { startUTC } = shiftToUTCRange(
       assignment.shift.date,
@@ -120,14 +123,9 @@ export class DropRequestsService {
   }
 
   async claim(dropId: string, claimer: User) {
+    // Load relations needed for constraint check — outside the lock to avoid holding it during expensive checks
     const drop = await this.findOneOr404(dropId);
 
-    if (drop.status !== DropRequestStatus.OPEN) {
-      throw new BadRequestException('This shift is no longer available for pickup.');
-    }
-    if (drop.expiresAt <= new Date()) {
-      throw new BadRequestException('This drop request has expired.');
-    }
     if (drop.assignment.staffId === claimer.id) {
       throw new BadRequestException('You cannot claim your own shift.');
     }
@@ -144,9 +142,22 @@ export class DropRequestsService {
       });
     }
 
-    drop.claimedById = claimer.id;
-    drop.status = DropRequestStatus.CLAIMED;
-    const saved = await this.dropRepo.save(drop);
+    // Pessimistic lock to prevent two users claiming simultaneously
+    const saved = await this.dataSource.transaction(async (em) => {
+      const locked = await em.findOne(DropRequest, {
+        where: { id: dropId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!locked || locked.status !== DropRequestStatus.OPEN) {
+        throw new BadRequestException('This shift is no longer available for pickup.');
+      }
+      if (locked.expiresAt <= new Date()) {
+        throw new BadRequestException('This drop request has expired.');
+      }
+      locked.claimedById = claimer.id;
+      locked.status = DropRequestStatus.CLAIMED;
+      return em.save(DropRequest, locked);
+    });
 
     this.safeEmit('notification.sendToManagers', {
       locationId: drop.assignment.shift.locationId,
