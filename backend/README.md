@@ -6,7 +6,7 @@ NestJS REST API for the ShiftSync multi-location restaurant scheduling platform.
 
 | Layer | Technology |
 | --- | --- |
-| Framework | NestJS 10 |
+| Framework | NestJS 11 |
 | Language | TypeScript 5 |
 | ORM | TypeORM 0.3 |
 | Database | MySQL 8 |
