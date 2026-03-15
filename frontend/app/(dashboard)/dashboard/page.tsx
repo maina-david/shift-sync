@@ -145,8 +145,8 @@ export default function DashboardPage() {
         <div className="md:hidden">
           {(shiftsLoading || upcomingLoading) ? (
             <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-2">
-              <div className="h-3 w-28 bg-muted animate-pulse rounded" />
-              <div className="h-14 w-full bg-muted animate-pulse rounded-lg" />
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-14 w-full rounded-lg" />
             </div>
           ) : todayShift ? (
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">

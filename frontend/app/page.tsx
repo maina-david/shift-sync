@@ -13,6 +13,7 @@ import {
   Mail, Clock, ChevronDown, Star, Waves, UtensilsCrossed, Wine,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -82,14 +83,14 @@ function SectionLabel({ color, icon: Icon, children }: {
 
 function MenuCardSkeleton() {
   return (
-    <div className="rounded-2xl border border-border/50 bg-muted/20 p-6 space-y-3 animate-pulse">
+    <div className="rounded-2xl border border-border/50 bg-muted/20 p-6 space-y-3">
       <div className="flex justify-between">
-        <div className="h-5 w-20 rounded-full bg-muted/60" />
-        <div className="h-5 w-12 rounded bg-muted/60" />
+        <Skeleton className="h-5 w-20 rounded-full" />
+        <Skeleton className="h-5 w-12" />
       </div>
-      <div className="h-5 w-40 rounded bg-muted/60" />
-      <div className="h-4 w-full rounded bg-muted/40" />
-      <div className="h-4 w-3/4 rounded bg-muted/40" />
+      <Skeleton className="h-5 w-40" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-3/4" />
     </div>
   );
 }
