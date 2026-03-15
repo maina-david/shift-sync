@@ -36,8 +36,9 @@ Swagger UI available at `http://localhost:3001/api`.
 | `npm run start:dev` | Watch mode with hot reload |
 | `npm run start:prod` | Production (compiled) |
 | `npm run build` | Compile to `dist/` |
-| `npm run test` | Unit tests (Jest) |
+| `npm run test` | Unit tests (Jest) — 329 tests, all passing |
 | `npm run test:cov` | Coverage report |
+| `npm run lint` | ESLint check |
 | `npm run seed` | Reset DB and seed demo data |
 
 ## Module Overview
@@ -58,9 +59,17 @@ Swagger UI available at `http://localhost:3001/api`.
 | `scheduler` | All cron jobs and scheduled intervals |
 | `analytics` | Hours distribution, fairness score, overtime (SSE stream) |
 | `audit` | Append-only audit log with CSV export |
-| `locations` | Location CRUD with timezone + 2D floor plan |
+| `locations` | Location CRUD with timezone + floor-plan zone management |
 | `settings` | Key-value system settings (payroll, scheduling defaults) |
 | `fair-workweek` | Predictive scheduling compliance tracking |
+| `menu` | Digital menu items, categories, tags, today's highlights |
+| `reservations` | Guest reservations with automatic no-show detection |
+| `schedule-templates` | Save, load, and apply reusable weekly schedule templates |
+| `log-book` | Operational shift log entries per location |
+| `shift-feedback` | Post-shift staff feedback collection |
+| `skills` | Skill taxonomy CRUD used for constraint checking |
+| `bookmarks` | Staff personal item bookmarks |
+| `email` | SMTP email service with styled HTML templates |
 
 ## Auth Flow
 

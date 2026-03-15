@@ -111,7 +111,9 @@ cd frontend && npm run dev
 
 ## Testing
 
-Backend unit tests use **Jest + `@nestjs/testing`** with mocked repositories and event emitters — no database required.
+### Backend
+
+Unit tests use **Jest + `@nestjs/testing`** with mocked repositories and event emitters — no database required.
 
 ```bash
 cd backend
@@ -119,37 +121,64 @@ npm test              # run all tests
 npm test -- --watch   # watch mode
 ```
 
-**317 tests across 27 service spec files — all passing.**
+**329 tests across 27 spec files — all passing.**
 
 | Area | Spec file | Tests |
 | --- | --- | --- |
-| Constraint checker | `shifts/constraint-checker.service.spec.ts` | 13 |
-| Timesheets | `timesheets/timesheets.service.spec.ts` | 13 |
-| Time-off requests | `time-off-requests/time-off-requests.service.spec.ts` | 17 |
-| Drop requests | `drop-requests/drop-requests.service.spec.ts` | 18 |
-| Swap requests | `swap-requests/swap-requests.service.spec.ts` | 26 |
-| Auth | `auth/auth.service.spec.ts` | 13 |
-| Shifts & assignments | `shifts/shifts.service.spec.ts` | 17 |
-| Notifications routing | `notifications/notifications.service.spec.ts` | 13 |
-| Users & availability | `users/users.service.spec.ts` | 14 |
-| Analytics | `analytics/analytics.service.spec.ts` | 12 |
-| Certifications | `certifications/certifications.service.spec.ts` | 12 |
-| Audit log | `audit/audit.service.spec.ts` | 13 |
-| Scheduler crons | `scheduler/scheduler.service.spec.ts` | 16 |
-| Checklists | `checklists/checklists.service.spec.ts` | 11 |
-| Shift feedback | `shift-feedback/shift-feedback.service.spec.ts` | 10 |
-| Messages | `messages/messages.service.spec.ts` | 10 |
-| Schedule templates | `schedule-templates/schedule-templates.service.spec.ts` | 9 |
-| Reservations | `reservations/reservations.service.spec.ts` | 9 |
+| Shifts & assignments | `shifts/shifts.service.spec.ts` | 27 |
+| Constraint checker | `shifts/constraint-checker.service.spec.ts` | 17 |
+| Swap requests | `swap-requests/swap-requests.service.spec.ts` | 19 |
+| Time-off requests | `time-off-requests/time-off-requests.service.spec.ts` | 20 |
+| Drop requests | `drop-requests/drop-requests.service.spec.ts` | 17 |
+| Timesheets | `timesheets/timesheets.service.spec.ts` | 16 |
+| Auth | `auth/auth.service.spec.ts` | 14 |
+| Users & availability | `users/users.service.spec.ts` | 16 |
+| Checklists | `checklists/checklists.service.spec.ts` | 14 |
+| Scheduler crons | `scheduler/scheduler.service.spec.ts` | 17 |
+| Certifications | `certifications/certifications.service.spec.ts` | 13 |
+| Notifications routing | `notifications/notifications.service.spec.ts` | 12 |
+| Audit log | `audit/audit.service.spec.ts` | 12 |
+| Analytics | `analytics/analytics.service.spec.ts` | 10 |
 | Locations | `locations/locations.service.spec.ts` | 10 |
-| Settings | `settings/settings.service.spec.ts` | 8 |
-| Log book | `log-book/log-book.service.spec.ts` | 8 |
+| Log book | `log-book/log-book.service.spec.ts` | 10 |
+| Menu | `menu/menu.service.spec.ts` | 11 |
+| Messages | `messages/messages.service.spec.ts` | 11 |
+| Reservations | `reservations/reservations.service.spec.ts` | 10 |
+| Schedule templates | `schedule-templates/schedule-templates.service.spec.ts` | 10 |
+| Shift feedback | `shift-feedback/shift-feedback.service.spec.ts` | 10 |
+| Settings | `settings/settings.service.spec.ts` | 9 |
 | Fair workweek | `fair-workweek/fair-workweek.service.spec.ts` | 7 |
-| Email | `email/email.service.spec.ts` | 6 |
 | Skills | `skills/skills.service.spec.ts` | 6 |
-| Menu | `menu/menu.service.spec.ts` | 10 |
+| Email | `email/email.service.spec.ts` | 5 |
 | Bookmarks | `bookmarks/bookmarks.service.spec.ts` | 5 |
 | App controller | `app.controller.spec.ts` | 1 |
+
+### Frontend
+
+Unit and integration tests use **Vitest + React Testing Library** with jsdom — no browser or running server required.
+
+```bash
+cd frontend
+npm run test:run       # single run
+npm run test           # watch mode
+npm run test:coverage  # coverage report
+```
+
+**167 tests across 11 test files — all passing.**
+
+| Area | Test file | Tests |
+| --- | --- | --- |
+| Auth context | `contexts/auth-context.test.tsx` | 13 |
+| Notifications context | `contexts/notifications-context.test.tsx` | 19 |
+| Messages context | `contexts/messages-context.test.tsx` | 16 |
+| Network status hook | `hooks/use-network-status.test.ts` | 17 |
+| Typing indicator hook | `hooks/use-typing-indicator.test.ts` | 18 |
+| Live stats hooks | `hooks/use-live-stats.test.ts` | 13 |
+| SSE hook | `hooks/use-sse.test.ts` | 11 |
+| Mobile breakpoint hook | `hooks/use-mobile.test.ts` | 7 |
+| TimePicker component | `components/ui/time-picker.test.tsx` | 22 |
+| Utility functions | `lib/utils.test.ts` | 17 |
+| Proxy middleware | `proxy.test.ts` | 9 |
 
 ---
 
@@ -324,9 +353,114 @@ The system allows shift edits after a swap is approved. Both parties receive an 
 
 Each location has a single IANA timezone identifier. If a restaurant straddles a state line, the operator chooses the timezone for the side where the majority of operations occur. All shift times and rest-period gap calculations are resolved via UTC conversion using each location's timezone.
 
+### 6. Concurrent assignment attempts (race condition)
+
+When two managers attempt to assign the same staff member to conflicting shifts simultaneously, a pessimistic lock (`SELECT ... FOR UPDATE`) is held for the duration of the assignment transaction. The first request to acquire the lock completes successfully; the second reads the now-committed assignment and the constraint checker immediately surfaces a double-booking error — the second manager sees an explicit conflict message rather than a silent failure or corrupt state.
+
+### 7. Swap cancellation before manager approval
+
+Staff A can cancel their own swap request at any time while it is still in `PENDING` state (i.e., before a manager approves it). Because no assignment transfer has occurred yet, the cancellation is fully clean — both parties retain their original shifts and both receive an in-app notification. Once a manager has approved the swap (assignments have been exchanged), cancellation is no longer available through the swap workflow; any further change requires the manager to manually re-assign.
+
 ---
 
-## Project Structure
+## Evaluation Scenarios
+
+### 1. The Sunday Night Chaos
+
+*A staff member calls out at 6pm Sunday for a 7pm shift. What is the fastest path to finding coverage?*
+
+Drop requests enforce a 24-hour minimum notice window, so the normal self-service drop flow is unavailable. The fastest manager path:
+
+1. **Schedule page** → navigate to today's date → open the affected shift.
+2. **Remove the absent staff member's assignment** — this cancels their assignment and emits an in-app notification to them.
+3. **Assign a replacement** — the assignment dialog shows all staff. The constraint checker runs instantly and surfaces any conflicts (double-booking, skill mismatch, availability gap). If a marginal violation exists (e.g., availability ends at 6:30pm), the manager can **override with a reason** and proceed.
+4. The replacement receives an **instant Socket.IO push notification** and, if email is enabled in their settings, an email as well.
+5. Optionally, **direct-message the replacement** via the Messages page before assigning to confirm verbally — the typing indicator shows when they're responding in real time.
+
+Total UI steps from login: ~5 clicks.
+
+---
+
+### 2. The Overtime Trap
+
+*A manager builds a schedule without realising one employee would hit 52 hours. How does the system help?*
+
+The constraint checker fires on every assignment attempt and compares the staff member's projected weekly hours (existing assignments + new shift duration) against their `desiredHours` setting. Exceeding the threshold produces a **`warning`-level violation** — not a hard block — so the manager sees a yellow flag with the projected total and can proceed with an override reason.
+
+After the schedule is built, two additional surfaces expose the problem:
+
+- **Analytics → Overtime Projection** — lists every staff member projected to exceed 40 hours that week, their total projected hours, and the overtime amount at the configured multiplier (set in Settings → Payroll).
+- **Payroll CSV export** — breaks down regular vs overtime hours per staff member, so the cost is visible before payroll runs.
+
+The design choice here is intentional: the constraint checker warns but does not block overtime, because a short-staffed Sunday night may genuinely require it. The manager must consciously override and the decision is recorded in the audit log.
+
+---
+
+### 3. The Timezone Tangle
+
+*A staff member is certified at a Pacific-time location and an Eastern-time location. They set availability as "9am–5pm". What happens?*
+
+Availability windows are stored as plain `HH:MM` strings tied to the day of week — they are **not** UTC-anchored to a timezone, because availability represents when the person is physically free, not a UTC moment.
+
+All shift times are stored in UTC. When the constraint checker evaluates an assignment, it:
+
+1. Converts the shift's UTC start/end into the **location's IANA timezone** to get the local shift time.
+2. Compares that local time against the staff member's availability window for that day.
+
+So "9am–5pm" availability means:
+
+- A 9am Pacific shift (17:00 UTC) → local time is 09:00 PT → **within availability** ✓
+- A 9am Eastern shift (14:00 UTC) → local time is 09:00 ET → **within availability** ✓
+- A 7am Eastern shift (12:00 UTC) → local time is 07:00 ET → **outside availability**, constraint checker blocks ✗
+
+The staff member's availability is interpreted in the timezone of whichever location the shift belongs to. This matches how employees intuitively think — "I'm free 9 to 5" means 9 to 5 wherever I'm working, not 9 to 5 in a fixed reference timezone.
+
+---
+
+### 4. The Simultaneous Assignment
+
+*Two managers both try to assign the same bartender to different locations at the same time. What happens?*
+
+The assignment service acquires a **pessimistic lock** (`SELECT ... FOR UPDATE`) on the staff member's existing assignments for the overlapping time window before committing. This means:
+
+- Manager A's request acquires the lock, passes the constraint check (no conflict yet), and commits the assignment.
+- Manager B's request acquires the lock *after* A's transaction commits, re-reads the now-committed assignment, and the constraint checker immediately detects a double-booking → returns `400 Bad Request: Staff member is already assigned to another shift at this time`.
+
+Manager B sees a clear error message in the assignment dialog. No silent data corruption, no partial state. The audit log records Manager A's successful assignment with a timestamp; Manager B's attempt is rejected cleanly at the API layer.
+
+---
+
+### 5. The Fairness Complaint
+
+*An employee claims they never get Saturday night shifts. How does a manager verify or refute this?*
+
+**Analytics → Fairness Report** is the primary tool. It shows each staff member's *premium shift ratio* — the proportion of their total shifts that qualify as premium (Friday or Saturday, starting at or after 17:00). Columns include:
+
+- Total shifts assigned
+- Premium shifts assigned
+- Premium ratio (%)
+- Fairness score contribution
+
+The **fairness score** (0–1 scale) is derived from the standard deviation of premium ratios across all staff at the location. A score near 1.0 means distribution is even; near 0.0 means heavily skewed.
+
+If the complaining employee's premium ratio is materially below the average, the data supports the claim. If their ratio matches or exceeds peers, the complaint is refuted with objective numbers. The `crossLocation=true` flag aggregates premium shifts across all locations for multi-site staff, preventing the edge case where a manager's view is incomplete.
+
+---
+
+### 6. The Regret Swap
+
+*Staff A and B request a swap. The manager hasn't approved it yet. Staff A changes their mind. What are the implications?*
+
+While the swap is in `PENDING` state, **no assignment transfer has occurred** — both parties still hold their original shifts. Staff A can navigate to **Swap Requests → cancel** their pending request at any point before manager approval.
+
+On cancellation:
+
+- The swap moves to `CANCELLED` state.
+- Staff A retains their original shift; Staff B retains theirs.
+- Both receive an **in-app notification** of the cancellation.
+- No manager action is required; the manager's approval queue is cleared of this item.
+
+If the manager had already **approved** the swap (assignments exchanged), Staff A cannot use the swap workflow to reverse it — that window has closed. At that point, the only remedies are a new swap request in the opposite direction, or the manager manually re-assigning via the Schedule page. This is by design: once a manager has reviewed and approved a transfer, unilateral reversal by staff should require another manager decision.
 
 ```text
 shift-sync/
@@ -398,16 +532,23 @@ shift-sync/
     │       ├── time-off/                           # Time-off request management
     │       └── timesheets/                         # Clock in/out + timesheet review
     ├── components/
+    │   ├── floor-plan/                             # 2D floor-plan canvas + zone editor
+    │   ├── layout/                                 # AppSidebar and nav group definitions
+    │   ├── login-form.tsx                          # Login form component
     │   ├── schedule/                               # Shift cards + assignment dialog
-    │   └── ui/                                     # shadcn/ui primitives + custom TimePicker
+    │   ├── ui/                                     # shadcn/ui primitives + custom TimePicker, DatePicker
+    │   └── weather-widget.tsx                      # Location weather widget
     ├── contexts/
     │   ├── auth-context.tsx                        # JWT in-memory token + silent refresh
     │   ├── messages-context.tsx                    # Active chat state + WS message:new listener
     │   └── notifications-context.tsx               # Socket.IO real-time notification feed
     ├── hooks/
-    │   ├── use-live-stats.ts                       # SSE analytics stream hook
+    │   ├── use-live-stats.ts                       # SSE analytics / schedule / notification stream hooks
+    │   ├── use-mobile.ts                           # Mobile breakpoint detection
+    │   ├── use-network-status.ts                   # Online/offline + socket quality + reconnect state
     │   ├── use-sse.ts                              # Generic SSE subscription hook
     │   └── use-typing-indicator.ts                 # Emit typing:start/stop; track partner typing state
+    ├── proxy.ts                                    # Next.js middleware — auth-session cookie guard
     └── lib/
         ├── api/                                    # Per-resource Axios API modules
         ├── socket.ts                               # Socket.IO client singleton
