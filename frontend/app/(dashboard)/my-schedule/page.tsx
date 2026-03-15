@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format, startOfWeek, addWeeks } from 'date-fns';
-import { CalendarDays, MapPin, Clock, Star, CheckCheck } from 'lucide-react';
+import { CalendarDays, MapPin, Clock, Star, CheckCheck, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { shiftsApi, getErrorMessage } from '@/lib/api';
@@ -77,6 +77,17 @@ export default function MySchedulePage() {
     const minutes = (eh * 60 + em) - (sh * 60 + sm);
     return acc + (minutes > 0 ? minutes : minutes + 1440) / 60;
   }, 0);
+
+  if (user === null) return null;
+  if (user.role !== 'staff') return (
+    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+      <ShieldAlert className="h-10 w-10 opacity-40" />
+      <div className="text-center">
+        <p className="font-semibold text-foreground">Access Restricted</p>
+        <p className="text-sm mt-1">My Schedule is only available to staff members.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

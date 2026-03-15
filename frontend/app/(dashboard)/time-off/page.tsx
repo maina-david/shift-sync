@@ -266,6 +266,7 @@ export default function TimeOffPage() {
                 value={watch('startDate') || undefined}
                 onChange={(v) => setValue('startDate', v, { shouldValidate: true })}
                 placeholder="Pick start date"
+                fromDate={new Date()}
               />
               {errors.startDate && <p className="text-xs text-destructive">{errors.startDate.message}</p>}
             </div>
@@ -275,6 +276,7 @@ export default function TimeOffPage() {
                 value={watch('endDate') || undefined}
                 onChange={(v) => setValue('endDate', v, { shouldValidate: true })}
                 placeholder="Pick end date"
+                fromDate={new Date()}
               />
               {errors.endDate && <p className="text-xs text-destructive">{errors.endDate.message}</p>}
             </div>

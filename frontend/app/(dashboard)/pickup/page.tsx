@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { MapPin, Clock, HandHelping } from 'lucide-react';
+import { MapPin, Clock, HandHelping, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { dropRequestsApi, getErrorMessage } from '@/lib/api';
@@ -54,6 +54,17 @@ export default function PickupPage() {
     onError: (err) => toast.error(getErrorMessage(err)),
     onSettled: () => setClaimingId(null),
   });
+
+  if (user === null) return null;
+  if (user.role !== 'staff') return (
+    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+      <ShieldAlert className="h-10 w-10 opacity-40" />
+      <div className="text-center">
+        <p className="font-semibold text-foreground">Access Restricted</p>
+        <p className="text-sm mt-1">Open shifts are only available to staff members.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -157,7 +168,7 @@ export default function PickupPage() {
                   size="sm"
                   className="w-full"
                   onClick={() => claimMutation.mutate(drop.id)}
-                  disabled={claimingId !== null}
+                  disabled={claimingId === drop.id}
                 >
                   {claimingId === drop.id ? 'Claiming…' : 'Claim shift'}
                 </Button>

@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ColumnDef } from '@tanstack/react-table';
-import { Plus, MoreHorizontal, Star, StarOff, UtensilsCrossed } from 'lucide-react';
+import { Plus, MoreHorizontal, Star, StarOff, UtensilsCrossed, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { DataTable } from '@/components/ui/data-table';
 import { menuApi, locationsApi, getErrorMessage } from '@/lib/api';
+import { useAuth } from '@/contexts/auth-context';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '@/components/ui/empty';
 import type { MenuItem } from '@/lib/types';
 
@@ -47,6 +48,7 @@ const emptyForm = {
 type Form = typeof emptyForm;
 
 export default function MenuPage() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen]   = useState(false);
   const [editItem, setEditItem]       = useState<MenuItem | null>(null);
@@ -302,6 +304,17 @@ export default function MenuPage() {
       ),
     },
   ];
+
+  if (user === null) return null;
+  if (user.role !== 'admin' && user.role !== 'manager') return (
+    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+      <ShieldAlert className="h-10 w-10 opacity-40" />
+      <div className="text-center">
+        <p className="font-semibold text-foreground">Access Restricted</p>
+        <p className="text-sm mt-1">This page is only available to managers and administrators.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-4">

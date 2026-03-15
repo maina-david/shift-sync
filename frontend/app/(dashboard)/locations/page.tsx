@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ColumnDef } from '@tanstack/react-table';
-import { Plus, MoreHorizontal, LayoutTemplate, MapPin } from 'lucide-react';
+import { Plus, MoreHorizontal, LayoutTemplate, MapPin, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/sheet';
 import { DataTable } from '@/components/ui/data-table';
 import { locationsApi, getErrorMessage } from '@/lib/api';
+import { useAuth } from '@/contexts/auth-context';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '@/components/ui/empty';
 import { Location } from '@/lib/types';
 
@@ -113,6 +114,7 @@ const TIMEZONES = [
 const emptyForm = { name: '', timezone: 'America/New_York', address: '' };
 
 export default function LocationsPage() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [editLoc, setEditLoc] = useState<Location | null>(null);
@@ -245,6 +247,17 @@ export default function LocationsPage() {
       ),
     },
   ];
+
+  if (user === null) return null;
+  if (user.role !== 'admin') return (
+    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+      <ShieldAlert className="h-10 w-10 opacity-40" />
+      <div className="text-center">
+        <p className="font-semibold text-foreground">Access Restricted</p>
+        <p className="text-sm mt-1">Only administrators can manage locations.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-4">

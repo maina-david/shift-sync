@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Trash2, Wrench } from 'lucide-react';
+import { Plus, Trash2, Wrench, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,10 +30,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { skillsApi, getErrorMessage } from '@/lib/api';
+import { useAuth } from '@/contexts/auth-context';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '@/components/ui/empty';
 import { Skill } from '@/lib/types';
 
 export default function SkillsPage() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [form, setForm] = useState({ name: '', description: '' });
@@ -64,6 +66,17 @@ export default function SkillsPage() {
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
+
+  if (user === null) return null;
+  if (user.role !== 'admin') return (
+    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+      <ShieldAlert className="h-10 w-10 opacity-40" />
+      <div className="text-center">
+        <p className="font-semibold text-foreground">Access Restricted</p>
+        <p className="text-sm mt-1">Only administrators can manage skills.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ColumnDef } from '@tanstack/react-table';
-import { ChevronDown, ChevronRight, Download, ClipboardList } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, ClipboardList, ShieldAlert } from 'lucide-react';
 import { DateRangePresets } from '@/components/ui/date-range-presets';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DataTable } from '@/components/ui/data-table';
 import { auditApi, locationsApi } from '@/lib/api';
+import { useAuth } from '@/contexts/auth-context';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
 import { AuditLog, Location } from '@/lib/types';
 
@@ -29,6 +30,7 @@ const ACTION_COLORS: Record<string, string> = {
 };
 
 export default function AuditPage() {
+  const { user } = useAuth();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [entity, setEntity] = useState('all');
@@ -68,6 +70,8 @@ export default function AuditPage() {
           variant="ghost"
           size="icon"
           className="h-6 w-6"
+          aria-expanded={expanded === row.original.id}
+          aria-label="Toggle details"
           onClick={() => setExpanded(expanded === row.original.id ? null : row.original.id)}
         >
           {expanded === row.original.id ? (
@@ -122,6 +126,17 @@ export default function AuditPage() {
       ) : null,
     },
   ];
+
+  if (user === null) return null;
+  if (user.role !== 'admin' && user.role !== 'manager') return (
+    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+      <ShieldAlert className="h-10 w-10 opacity-40" />
+      <div className="text-center">
+        <p className="font-semibold text-foreground">Access Restricted</p>
+        <p className="text-sm mt-1">This page is only available to managers and administrators.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-4">

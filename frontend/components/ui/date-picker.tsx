@@ -14,6 +14,7 @@ interface DatePickerProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  fromDate?: Date;
 }
 
 export function DatePicker({
@@ -22,6 +23,7 @@ export function DatePicker({
   placeholder = 'Pick a date',
   className,
   disabled,
+  fromDate,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -53,6 +55,7 @@ export function DatePicker({
               setOpen(false);
             }
           }}
+          fromDate={fromDate}
           initialFocus
         />
       </PopoverContent>

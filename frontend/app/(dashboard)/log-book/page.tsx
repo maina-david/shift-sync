@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format, subDays, addDays } from 'date-fns';
-import { ChevronLeft, ChevronRight, Trash2, BookOpen } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trash2, BookOpen, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -79,6 +79,17 @@ export default function LogBookPage() {
   });
 
   const isToday = dateStr === format(new Date(), 'yyyy-MM-dd');
+
+  if (user === null) return null;
+  if (user.role !== 'admin' && user.role !== 'manager') return (
+    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+      <ShieldAlert className="h-10 w-10 opacity-40" />
+      <div className="text-center">
+        <p className="font-semibold text-foreground">Access Restricted</p>
+        <p className="text-sm mt-1">This page is only available to managers and administrators.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

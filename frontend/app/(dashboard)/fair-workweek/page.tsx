@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
-import { Download, Scale } from 'lucide-react';
+import { Download, Scale, ShieldAlert } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { fairWorkweekApi, locationsApi } from '@/lib/api';
+import { useAuth } from '@/contexts/auth-context';
 import { Location, ScheduleChangeLog, ScheduleChangeType } from '@/lib/types';
 
 function changeTypeBadge(type: ScheduleChangeType) {
@@ -59,6 +60,7 @@ function exportCsv(violations: ScheduleChangeLog[]) {
 }
 
 export default function FairWorkweekPage() {
+  const { user } = useAuth();
   const today = format(new Date(), 'yyyy-MM-dd');
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
 
@@ -91,6 +93,17 @@ export default function FairWorkweekPage() {
   const totalPayOwed: number =
     summary?.totalPredictabilityPayOwed ??
     violations.reduce((sum, v) => sum + (v.predictabilityPayAmount ?? 0), 0);
+
+  if (user === null) return null;
+  if (user.role !== 'admin' && user.role !== 'manager') return (
+    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+      <ShieldAlert className="h-10 w-10 opacity-40" />
+      <div className="text-center">
+        <p className="font-semibold text-foreground">Access Restricted</p>
+        <p className="text-sm mt-1">This page is only available to managers and administrators.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

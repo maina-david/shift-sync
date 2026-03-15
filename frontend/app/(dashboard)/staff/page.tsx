@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, UserPlus, ArrowUpDown, Eye, EyeOff } from 'lucide-react';
+import { MoreHorizontal, UserPlus, ArrowUpDown, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -247,6 +247,17 @@ export default function StaffPage() {
     },
   ];
 
+  if (user === null) return null;
+  if (user.role !== 'admin' && user.role !== 'manager') return (
+    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+      <ShieldAlert className="h-10 w-10 opacity-40" />
+      <div className="text-center">
+        <p className="font-semibold text-foreground">Access Restricted</p>
+        <p className="text-sm mt-1">This page is only available to managers and administrators.</p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -325,6 +336,7 @@ export default function StaffPage() {
                   className="pr-10"
                   autoComplete="new-password"
                 />
+
                 <button
                   type="button"
                   onClick={() => setShowCreatePassword((v) => !v)}
@@ -334,6 +346,7 @@ export default function StaffPage() {
                   {showCreatePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              <p className="text-xs text-muted-foreground">Minimum 12 characters</p>
             </div>
 
             <div className="grid gap-3">

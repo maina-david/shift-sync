@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { analyticsApi, locationsApi } from '@/lib/api';
+import { useAuth } from '@/contexts/auth-context';
 import {
   Location,
   HoursDistributionEntry,
@@ -31,7 +32,7 @@ import {
   AbsenteeismReport,
   TurnoverReport,
 } from '@/lib/types';
-import { AlertTriangle, TrendingUp, Users } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Users, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -537,6 +538,7 @@ function KpiDashboardTab() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AnalyticsPage() {
+  const { user } = useAuth();
   const today = format(new Date(), 'yyyy-MM-dd');
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
   const thisWeekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
@@ -588,6 +590,17 @@ export default function AnalyticsPage() {
     if (score >= 0.4) return 'Fair';
     return 'Poor';
   }
+
+  if (user === null) return null;
+  if (user.role !== 'admin' && user.role !== 'manager') return (
+    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+      <ShieldAlert className="h-10 w-10 opacity-40" />
+      <div className="text-center">
+        <p className="font-semibold text-foreground">Access Restricted</p>
+        <p className="text-sm mt-1">This page is only available to managers and administrators.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

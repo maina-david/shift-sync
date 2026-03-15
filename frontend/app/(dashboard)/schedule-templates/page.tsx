@@ -10,6 +10,7 @@ import {
   Trash2,
   CalendarCheck,
   X,
+  ShieldAlert,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -526,6 +527,17 @@ export default function ScheduleTemplatesPage() {
     queryKey: ['templates', locationFilter],
     queryFn: () => scheduleTemplatesApi.list(locationFilter === 'all' ? undefined : locationFilter),
   });
+
+  if (user === null) return null;
+  if (user.role !== 'admin' && user.role !== 'manager') return (
+    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+      <ShieldAlert className="h-10 w-10 opacity-40" />
+      <div className="text-center">
+        <p className="font-semibold text-foreground">Access Restricted</p>
+        <p className="text-sm mt-1">This page is only available to managers and administrators.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-4">
