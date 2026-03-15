@@ -55,7 +55,7 @@ describe('NotificationsService', () => {
         { provide: NotificationsGateway, useValue: gateway },
         { provide: EmailService, useValue: email },
       ],
-    }).compile();
+    }).setLogger({ log: () => {}, error: () => {}, warn: () => {}, debug: () => {}, verbose: () => {}, fatal: () => {} }).compile();
 
     service = module.get<NotificationsService>(NotificationsService);
   });

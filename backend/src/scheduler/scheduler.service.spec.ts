@@ -41,6 +41,8 @@ const makeManager = (): User =>
   ({ id: 'manager-1', role: UserRole.MANAGER, isActive: true } as unknown as User);
 
 describe('SchedulerService', () => {
+  beforeAll(() => jest.useFakeTimers());
+  afterAll(() => jest.useRealTimers());
   let service: SchedulerService;
   let assignRepo: jest.Mocked<any>;
   let shiftRepo: jest.Mocked<any>;

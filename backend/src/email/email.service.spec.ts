@@ -23,7 +23,7 @@ describe('EmailService', () => {
         { provide: MailerService, useValue: mailer },
         { provide: ConfigService, useValue: config },
       ],
-    }).compile();
+    }).setLogger({ log: () => {}, error: () => {}, warn: () => {}, debug: () => {}, verbose: () => {}, fatal: () => {} }).compile();
 
     return module.get<EmailService>(EmailService);
   };
