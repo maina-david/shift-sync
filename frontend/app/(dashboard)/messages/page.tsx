@@ -33,6 +33,7 @@ import {
 import { messagesApi, usersApi, getErrorMessage } from '@/lib/api';
 import { Message, User } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
+import { useMessages } from '@/contexts/messages-context';
 import { cn } from '@/lib/utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -68,6 +69,7 @@ type Selection =
 export default function MessagesPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { selectedUserId: sheetUserId } = useMessages();
 
   const [selection, setSelection] = useState<Selection | null>(null);
   const [expandedAnnouncements, setExpandedAnnouncements] = useState<Set<string>>(new Set());
@@ -132,6 +134,14 @@ export default function MessagesPage() {
       }
     },
   });
+
+  // Pre-select chat from context when arriving via "Full view" in the messages sheet
+  useEffect(() => {
+    if (!sheetUserId || !staffList.length || selection) return;
+    const found = staffList.find((s) => s.id === sheetUserId);
+    if (found) setSelection({ kind: 'dm', userId: found.id, user: found as User });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staffList]);
 
   // Auto-scroll to bottom when thread changes
   useEffect(() => {
