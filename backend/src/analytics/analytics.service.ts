@@ -228,7 +228,7 @@ export class AnalyticsService {
       name: string;
       hourlyRate: number | null;
       weeklyMinutes: number;
-      assignments: Array<{ shiftId: string; date: string; startTime: string; endTime: string; minutes: number }>;
+      assignments: Array<{ assignmentId: string; shiftId: string; date: string; startTime: string; endTime: string; minutes: number }>;
     }>();
 
     for (const a of assignments) {
@@ -240,6 +240,7 @@ export class AnalyticsService {
       }
       entry.weeklyMinutes += mins;
       entry.assignments.push({
+        assignmentId: a.id,
         shiftId: a.shiftId,
         date: a.shift.date,
         startTime: a.shift.startTime,

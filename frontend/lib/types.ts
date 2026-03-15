@@ -280,6 +280,7 @@ export interface OvertimeEntry {
   isAtRisk: boolean;
   isOvertime: boolean;
   assignments: Array<{
+    assignmentId: string;
     shiftId: string;
     date: string;
     startTime: string;

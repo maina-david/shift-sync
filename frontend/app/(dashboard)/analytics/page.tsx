@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, subDays, startOfWeek } from 'date-fns';
+import { useRouter } from 'next/navigation';
 import {
   BarChart,
   Bar,
@@ -15,12 +16,24 @@ import {
   Pie,
   Legend,
 } from 'recharts';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { analyticsApi, locationsApi } from '@/lib/api';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { analyticsApi, locationsApi, shiftsApi, getErrorMessage } from '@/lib/api';
 import { useAuth } from '@/contexts/auth-context';
 import {
   Location,
@@ -32,7 +45,7 @@ import {
   AbsenteeismReport,
   TurnoverReport,
 } from '@/lib/types';
-import { AlertTriangle, TrendingUp, Users, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Users, ShieldAlert, Download, Calendar, UserCheck, X, Send } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { DateRangePresets } from '@/components/ui/date-range-presets';
@@ -44,6 +57,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+
+// ─── CSV Export ───────────────────────────────────────────────────────────────
+
+function exportCsv(filename: string, headers: string[], rows: (string | number | null | undefined)[][]) {
+  const escape = (v: string | number | null | undefined) =>
+    `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = [headers.map(escape).join(','), ...rows.map((r) => r.map(escape).join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filename}-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── Chart helpers ────────────────────────────────────────────────────────────
 
 function cssVar(name: string): string {
   if (typeof window === 'undefined') return '';
@@ -92,6 +122,7 @@ function LaborCostTooltip({ active, payload, label }: any) {
 // ─── Labor Cost Tab ───────────────────────────────────────────────────────────
 
 function LaborCostTab({ locations }: { locations: Location[] }) {
+  const router = useRouter();
   const today = format(new Date(), 'yyyy-MM-dd');
   const thisWeekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
@@ -112,9 +143,18 @@ function LaborCostTab({ locations }: { locations: Location[] }) {
       ? Number(report.totalLaborCost) / Number(report.totalScheduledHours)
       : 0;
 
+  function handleExport() {
+    if (!report) return;
+    exportCsv(
+      'labor-cost',
+      ['Date', 'Labor Cost ($)', 'Scheduled Hours'],
+      report.byDate.map((r) => [r.date, Number(r.laborCost).toFixed(2), Number(r.scheduledHours).toFixed(2)]),
+    );
+  }
+
   return (
     <div className="space-y-5">
-      {/* Date + location filters */}
+      {/* Filters + Export */}
       <div className="flex flex-col gap-2">
         <DateRangePresets startDate={startDate} endDate={endDate} onSelect={(s, e) => { setStartDate(s); setEndDate(e); }} />
         <div className="flex items-end gap-3 flex-wrap">
@@ -140,6 +180,16 @@ function LaborCostTab({ locations }: { locations: Location[] }) {
               </SelectContent>
             </Select>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 self-end"
+            disabled={!report || report.byDate.length === 0}
+            onClick={handleExport}
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export CSV
+          </Button>
         </div>
       </div>
 
@@ -223,6 +273,7 @@ function LaborCostTab({ locations }: { locations: Location[] }) {
                   <TableHead className="text-right">Scheduled Hours</TableHead>
                   <TableHead className="text-right">Labor Cost</TableHead>
                   <TableHead className="text-right">Shifts</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -232,6 +283,17 @@ function LaborCostTab({ locations }: { locations: Location[] }) {
                     <TableCell className="text-right tabular-nums">{Number(row.scheduledHours).toFixed(1)}h</TableCell>
                     <TableCell className="text-right tabular-nums">${Number(row.laborCost).toFixed(2)}</TableCell>
                     <TableCell className="text-right tabular-nums">{row.shiftCount}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1.5 h-7 text-xs"
+                        onClick={() => router.push(`/schedule?locationId=${row.locationId}`)}
+                      >
+                        <Calendar className="h-3 w-3" />
+                        Schedule
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -246,7 +308,10 @@ function LaborCostTab({ locations }: { locations: Location[] }) {
 // ─── KPI Dashboard Tab ────────────────────────────────────────────────────────
 
 function KpiDashboardTab() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
+  const thisWeekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
 
   const [startDate, setStartDate] = useState(thirtyDaysAgo);
@@ -269,12 +334,32 @@ function KpiDashboardTab() {
     queryFn: analyticsApi.turnover,
   });
 
+  const publishDraftsMutation = useMutation({
+    mutationFn: ({ locationId, weekStart }: { locationId: string; weekStart: string }) =>
+      shiftsApi.publishWeek(locationId, weekStart),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['analytics', 'kpi-rollup'] });
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      toast.success('Draft shifts published');
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
   const donutData = turnover
     ? [
         { name: 'Active', value: turnover.totalActive, fill: `var(--chart-1)` },
         { name: 'Inactive', value: turnover.totalInactive, fill: `var(--destructive)` },
       ]
     : [];
+
+  function exportAbsenteeism() {
+    if (!absenteeism) return;
+    exportCsv(
+      'absenteeism',
+      ['Staff Member', 'No-Show Count'],
+      absenteeism.byStaff.map((r) => [r.name, r.noShowCount]),
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -315,7 +400,13 @@ function KpiDashboardTab() {
                     <span className="text-muted-foreground">Published</span>
                     <span className="font-medium tabular-nums text-right">{kpi.publishedShifts}</span>
                     <span className="text-muted-foreground">Draft</span>
-                    <span className="font-medium tabular-nums text-right">{kpi.draftShifts}</span>
+                    <span className="font-medium tabular-nums text-right">
+                      {kpi.draftShifts > 0 ? (
+                        <Badge variant="outline" className="border-amber-500/40 text-amber-600 bg-amber-500/10 tabular-nums">
+                          {kpi.draftShifts}
+                        </Badge>
+                      ) : kpi.draftShifts}
+                    </span>
                     <span className="text-muted-foreground">Total Hours</span>
                     <span className="font-medium tabular-nums text-right">{Number(kpi.totalScheduledHours).toFixed(1)}h</span>
                     <span className="text-muted-foreground">Est. Labor Cost</span>
@@ -343,6 +434,33 @@ function KpiDashboardTab() {
                     </div>
                   </div>
                 </CardContent>
+                <CardFooter className="flex gap-2 pt-0 pb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 h-7 text-xs flex-1"
+                    onClick={() => router.push(`/schedule?locationId=${kpi.locationId}`)}
+                  >
+                    <Calendar className="h-3 w-3" />
+                    View Schedule
+                  </Button>
+                  {kpi.draftShifts > 0 && (
+                    <Button
+                      size="sm"
+                      className="gap-1.5 h-7 text-xs flex-1"
+                      disabled={publishDraftsMutation.isPending}
+                      onClick={() =>
+                        publishDraftsMutation.mutate({
+                          locationId: kpi.locationId,
+                          weekStart: thisWeekStart,
+                        })
+                      }
+                    >
+                      <Send className="h-3 w-3" />
+                      Publish {kpi.draftShifts} draft{kpi.draftShifts > 1 ? 's' : ''}
+                    </Button>
+                  )}
+                </CardFooter>
               </Card>
             );
           })}
@@ -351,7 +469,15 @@ function KpiDashboardTab() {
 
       {/* Workforce Health — Absenteeism */}
       <div>
-        <h2 className="text-base font-semibold mb-3">Workforce Health</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold">Workforce Health</h2>
+          {absenteeism && absenteeism.byStaff.length > 0 && (
+            <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs" onClick={exportAbsenteeism}>
+              <Download className="h-3 w-3" />
+              Export
+            </Button>
+          )}
+        </div>
         {absenteeismLoading ? (
           <Skeleton className="h-44 w-full" />
         ) : !absenteeism ? null : (
@@ -388,6 +514,7 @@ function KpiDashboardTab() {
                       <TableRow>
                         <TableHead>Staff Member</TableHead>
                         <TableHead className="text-right">No-Show Count</TableHead>
+                        <TableHead className="w-10" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -402,6 +529,17 @@ function KpiDashboardTab() {
                               {entry.noShowCount}
                             </Badge>
                           </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1.5 h-7 text-xs"
+                              onClick={() => router.push(`/staff?search=${encodeURIComponent(entry.name)}`)}
+                            >
+                              <UserCheck className="h-3 w-3" />
+                              Profile
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -415,7 +553,18 @@ function KpiDashboardTab() {
 
       {/* Turnover Section */}
       <div>
-        <h2 className="text-base font-semibold mb-3">Turnover</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold">Turnover</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 h-7 text-xs"
+            onClick={() => router.push('/staff')}
+          >
+            <Users className="h-3 w-3" />
+            Manage Staff
+          </Button>
+        </div>
         {turnoverLoading ? (
           <Skeleton className="h-56 w-full" />
         ) : !turnover ? null : (
@@ -511,6 +660,7 @@ function KpiDashboardTab() {
                       <TableRow>
                         <TableHead>Location</TableHead>
                         <TableHead className="text-right">Active Staff</TableHead>
+                        <TableHead className="w-10" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -519,6 +669,17 @@ function KpiDashboardTab() {
                           <TableCell className="font-medium">{row.name}</TableCell>
                           <TableCell className="text-right tabular-nums font-semibold">
                             {row.staffCount}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1.5 h-7 text-xs"
+                              onClick={() => router.push(`/schedule?locationId=${row.locationId}`)}
+                            >
+                              <Calendar className="h-3 w-3" />
+                              Schedule
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -538,6 +699,7 @@ function KpiDashboardTab() {
 
 export default function AnalyticsPage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
   const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
   const thisWeekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
@@ -547,6 +709,14 @@ export default function AnalyticsPage() {
   const [endDate, setEndDate] = useState(today);
   const [weekStart, setWeekStart] = useState(thisWeekStart);
   const [locationId, setLocationId] = useState('all');
+
+  // Confirmation dialog for unassign
+  const [unassignTarget, setUnassignTarget] = useState<{
+    staffName: string;
+    shiftId: string;
+    assignmentId: string;
+    label: string;
+  } | null>(null);
 
   const colors = useChartColors();
 
@@ -570,6 +740,21 @@ export default function AnalyticsPage() {
     queryFn: () => analyticsApi.overtime(weekStart, locationId === 'all' ? undefined : locationId),
   });
 
+  const unassignMutation = useMutation({
+    mutationFn: ({ shiftId, assignmentId }: { shiftId: string; assignmentId: string }) =>
+      shiftsApi.removeAssignment(shiftId, assignmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['analytics', 'overtime'] });
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      toast.success('Shift unassigned');
+      setUnassignTarget(null);
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err));
+      setUnassignTarget(null);
+    },
+  });
+
   function barColor(totalHours: number) {
     if (totalHours > 40) return colors.danger;
     if (totalHours >= 35) return colors.warning;
@@ -589,6 +774,43 @@ export default function AnalyticsPage() {
     if (score >= 0.6) return 'Good';
     if (score >= 0.4) return 'Fair';
     return 'Poor';
+  }
+
+  function exportHours() {
+    exportCsv(
+      'hours-distribution',
+      ['Staff Member', 'Total Hours', 'Desired Hours/Week'],
+      (hours as HoursDistributionEntry[]).map((e) => [e.name, e.totalHours, e.desiredHoursPerWeek]),
+    );
+  }
+
+  function exportFairness() {
+    if (!fairness) return;
+    exportCsv(
+      'fairness',
+      ['Staff Member', 'Total Shifts', 'Premium Shifts', 'Premium Ratio (%)', 'Total Hours'],
+      fairness.staff.map((e) => [
+        e.name,
+        e.totalShifts,
+        e.premiumShifts,
+        (e.premiumRatio * 100).toFixed(1),
+        e.totalHours,
+      ]),
+    );
+  }
+
+  function exportOvertime() {
+    exportCsv(
+      'overtime',
+      ['Staff Member', 'Weekly Hours', 'Overtime Hours', 'Overtime Cost ($)', 'Status'],
+      (overtime as OvertimeEntry[]).map((e) => [
+        e.name,
+        e.weeklyHours,
+        e.overtimeHours,
+        e.overtimeCost ?? '',
+        e.isOvertime ? 'Overtime' : e.isAtRisk ? 'At Risk' : 'Normal',
+      ]),
+    );
   }
 
   if (user === null) return null;
@@ -625,7 +847,7 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Exception-based alert banner */}
+      {/* Exception-based alert banners */}
       {!overtimeLoading && overtime.length > 0 && (() => {
         const atRisk = (overtime as OvertimeEntry[]).filter((o) => o.isAtRisk || o.isOvertime);
         if (atRisk.length === 0) return null;
@@ -671,10 +893,11 @@ export default function AnalyticsPage() {
           <TabsTrigger value="kpi">KPI Dashboard</TabsTrigger>
         </TabsList>
 
+        {/* ── Hours Distribution ── */}
         <TabsContent value="hours" className="space-y-4 mt-4">
           <div className="flex flex-col gap-2">
             <DateRangePresets startDate={startDate} endDate={endDate} onSelect={(s, e) => { setStartDate(s); setEndDate(e); }} />
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex items-end gap-3 flex-wrap">
               <div className="space-y-1">
                 <Label className="text-xs">From</Label>
                 <DatePicker value={startDate} onChange={setStartDate} placeholder="Start date" className="w-40" />
@@ -683,6 +906,16 @@ export default function AnalyticsPage() {
                 <Label className="text-xs">To</Label>
                 <DatePicker value={endDate} onChange={setEndDate} placeholder="End date" className="w-40" />
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 self-end"
+                disabled={hours.length === 0}
+                onClick={exportHours}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export CSV
+              </Button>
             </div>
           </div>
 
@@ -739,28 +972,36 @@ export default function AnalyticsPage() {
                   </ResponsiveContainer>
 
                   <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {hours.map((entry) => (
-                      <div key={entry.staffId} className="flex items-center justify-between text-sm">
-                        <span className="truncate max-w-32">{entry.name}</span>
-                        <div className="flex items-center gap-2">
-                          {entry.desiredHoursPerWeek > 0 && (
-                            <span className="text-xs text-muted-foreground tabular-nums">
-                              target: {entry.desiredHoursPerWeek}h/wk
-                            </span>
-                          )}
-                          <Badge
-                            style={{
-                              background: `color-mix(in oklch, ${barColor(entry.totalHours)} 15%, transparent)`,
-                              color: barColor(entry.totalHours),
-                              borderColor: `color-mix(in oklch, ${barColor(entry.totalHours)} 30%, transparent)`,
-                            }}
-                            className="border tabular-nums"
-                          >
-                            {entry.totalHours}h
-                          </Badge>
+                    {hours.map((entry) => {
+                      const isUnder = entry.desiredHoursPerWeek > 0 && entry.totalHours < entry.desiredHoursPerWeek * 0.7;
+                      return (
+                        <div key={entry.staffId} className="flex items-center justify-between text-sm">
+                          <span className="truncate max-w-32">{entry.name}</span>
+                          <div className="flex items-center gap-2">
+                            {isUnder && (
+                              <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground text-xs">
+                                Under hours
+                              </Badge>
+                            )}
+                            {entry.desiredHoursPerWeek > 0 && (
+                              <span className="text-xs text-muted-foreground tabular-nums">
+                                target: {entry.desiredHoursPerWeek}h/wk
+                              </span>
+                            )}
+                            <Badge
+                              style={{
+                                background: `color-mix(in oklch, ${barColor(entry.totalHours)} 15%, transparent)`,
+                                color: barColor(entry.totalHours),
+                                borderColor: `color-mix(in oklch, ${barColor(entry.totalHours)} 30%, transparent)`,
+                              }}
+                              className="border tabular-nums"
+                            >
+                              {entry.totalHours}h
+                            </Badge>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -768,7 +1009,20 @@ export default function AnalyticsPage() {
           </Card>
         </TabsContent>
 
+        {/* ── Fairness ── */}
         <TabsContent value="fairness" className="space-y-4 mt-4">
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={!fairness || fairness.staff.length === 0}
+              onClick={exportFairness}
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </Button>
+          </div>
           {fairnessLoading ? (
             <Skeleton className="h-64 w-full" />
           ) : !fairness ? null : (
@@ -809,6 +1063,12 @@ export default function AnalyticsPage() {
                       }}
                     />
                   </div>
+                  {fairness.fairnessScore !== null && fairness.fairnessScore < 0.6 && (
+                    <p className="text-xs text-muted-foreground mt-3">
+                      <AlertTriangle className="inline h-3 w-3 mr-1 text-chart-warning" />
+                      Low fairness score — some staff are receiving disproportionately more or fewer premium shifts. Consider rebalancing the schedule.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -846,10 +1106,23 @@ export default function AnalyticsPage() {
           )}
         </TabsContent>
 
+        {/* ── Overtime ── */}
         <TabsContent value="overtime" className="space-y-4 mt-4">
-          <div className="space-y-1">
-            <Label className="text-xs">Week start (Monday)</Label>
-            <DatePicker value={weekStart} onChange={setWeekStart} placeholder="Pick week" className="w-40" />
+          <div className="flex items-end gap-3 flex-wrap">
+            <div className="space-y-1">
+              <Label className="text-xs">Week start (Monday)</Label>
+              <DatePicker value={weekStart} onChange={setWeekStart} placeholder="Pick week" className="w-40" />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 self-end"
+              disabled={overtime.length === 0}
+              onClick={exportOvertime}
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </Button>
           </div>
 
           {overtimeLoading ? (
@@ -897,7 +1170,7 @@ export default function AnalyticsPage() {
                               style={{
                                 background: `color-mix(in oklch, var(--chart-warning) 15%, transparent)`,
                                 color: 'var(--chart-warning)',
-                                borderColor: `color-mix(in oklch, var(--chart-warning) 30%, transparent)`,
+                                borderColor: `color-mix(in oklch, var(--chart-warning) 25%, transparent)`,
                               }}
                               className="border"
                             >
@@ -907,7 +1180,7 @@ export default function AnalyticsPage() {
                           <span className="text-sm font-semibold tabular-nums">{entry.weeklyHours}h</span>
                         </div>
                       </div>
-                      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden mb-2">
+                      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden mb-3">
                         <div
                           className="h-full rounded-full transition-all"
                           style={{
@@ -916,31 +1189,51 @@ export default function AnalyticsPage() {
                           }}
                         />
                       </div>
-                      <div className="flex flex-wrap gap-1">
-                        {entry.assignments.map((a, i) => (
-                          <Badge
-                            key={i}
-                            style={
-                              a.isInOvertime
-                                ? {
-                                    background: `color-mix(in oklch, var(--destructive) 10%, transparent)`,
-                                    color: 'var(--destructive)',
-                                    borderColor: `color-mix(in oklch, var(--destructive) 25%, transparent)`,
+                      <div className="flex flex-wrap gap-1.5">
+                        {entry.assignments.map((a, i) => {
+                          const isActionable = a.isInOvertime || a.isOvertimePusher;
+                          return (
+                            <div key={i} className="flex items-center gap-0.5">
+                              <Badge
+                                style={
+                                  a.isInOvertime
+                                    ? {
+                                        background: `color-mix(in oklch, var(--destructive) 10%, transparent)`,
+                                        color: 'var(--destructive)',
+                                        borderColor: `color-mix(in oklch, var(--destructive) 25%, transparent)`,
+                                      }
+                                    : a.isOvertimePusher
+                                    ? {
+                                        background: `color-mix(in oklch, var(--chart-warning) 10%, transparent)`,
+                                        color: 'var(--chart-warning)',
+                                        borderColor: `color-mix(in oklch, var(--chart-warning) 25%, transparent)`,
+                                      }
+                                    : {}
+                                }
+                                variant={!a.isInOvertime && !a.isOvertimePusher ? 'outline' : undefined}
+                                className="border text-xs"
+                              >
+                                {a.date} {a.startTime}–{a.endTime}
+                              </Badge>
+                              {isActionable && (
+                                <button
+                                  title="Unassign this shift"
+                                  className="flex items-center justify-center h-4 w-4 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
+                                  onClick={() =>
+                                    setUnassignTarget({
+                                      staffName: entry.name,
+                                      shiftId: a.shiftId,
+                                      assignmentId: a.assignmentId,
+                                      label: `${a.date} ${a.startTime}–${a.endTime}`,
+                                    })
                                   }
-                                : a.isOvertimePusher
-                                ? {
-                                    background: `color-mix(in oklch, var(--chart-warning) 10%, transparent)`,
-                                    color: 'var(--chart-warning)',
-                                    borderColor: `color-mix(in oklch, var(--chart-warning) 25%, transparent)`,
-                                  }
-                                : {}
-                            }
-                            variant={!a.isInOvertime && !a.isOvertimePusher ? 'outline' : undefined}
-                            className="border text-xs"
-                          >
-                            {a.date} {a.startTime}–{a.endTime}
-                          </Badge>
-                        ))}
+                                >
+                                  <X className="h-2.5 w-2.5" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </CardContent>
                   </Card>
@@ -950,16 +1243,46 @@ export default function AnalyticsPage() {
           )}
         </TabsContent>
 
-        {/* ── NEW: Labor Cost Tab ── */}
+        {/* ── Labor Cost Tab ── */}
         <TabsContent value="labor-cost" className="mt-4">
           <LaborCostTab locations={locations} />
         </TabsContent>
 
-        {/* ── NEW: KPI Dashboard Tab ── */}
+        {/* ── KPI Dashboard Tab ── */}
         <TabsContent value="kpi" className="mt-4">
           <KpiDashboardTab />
         </TabsContent>
       </Tabs>
+
+      {/* Unassign confirmation */}
+      <AlertDialog open={!!unassignTarget} onOpenChange={(open) => !open && setUnassignTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unassign shift?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove <strong>{unassignTarget?.staffName}</strong> from the shift on{' '}
+              <strong>{unassignTarget?.label}</strong>. This will cancel any related drop or swap requests.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (unassignTarget) {
+                  unassignMutation.mutate({
+                    shiftId: unassignTarget.shiftId,
+                    assignmentId: unassignTarget.assignmentId,
+                  });
+                }
+              }}
+              disabled={unassignMutation.isPending}
+            >
+              {unassignMutation.isPending ? 'Removing…' : 'Unassign'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
