@@ -199,6 +199,45 @@ describe('ConstraintCheckerService', () => {
         expect.objectContaining({ rule: 'availability', severity: 'error' }),
       );
     });
+
+    it('overnight shift ending exactly at 00:00 does not trigger a false next-day availability violation', async () => {
+      // Shift: Thu 22:00–00:00. endMinutes===0 means the shift ends at midnight
+      // and does NOT extend into Friday — the next-day check must be skipped.
+      assignRepo.createQueryBuilder.mockImplementation(() => buildQb());
+      // Thursday (shift day): no time restriction on the exception → fully available
+      exceptRepo.findOne.mockImplementation(({ where }: any) => {
+        if (where.date === '2026-03-19') {
+          return Promise.resolve({ isUnavailable: false, startTime: null, endTime: null });
+        }
+        return Promise.resolve(null);
+      });
+      // If the next-day check were incorrectly invoked, availRepo would return null
+      // (no Friday availability) and add a violation. Staying silent = fix is working.
+      availRepo.findOne.mockResolvedValue(null);
+
+      const shift = makeShift({ date: '2026-03-19', startTime: '22:00', endTime: '00:00' });
+      const result = await service.check(shift, makeStaff());
+      expect(result.violations.filter((v) => v.rule === 'availability')).toHaveLength(0);
+    });
+
+    it('overnight shift extending into the next day (22:00–02:00) checks next-day availability', async () => {
+      // endMinutes===120 > 0, so the next-day check MUST fire.
+      // Staff has no Friday availability → expect one availability violation.
+      assignRepo.createQueryBuilder.mockImplementation(() => buildQb());
+      exceptRepo.findOne.mockImplementation(({ where }: any) => {
+        if (where.date === '2026-03-19') {
+          // Thursday shift day: fully available
+          return Promise.resolve({ isUnavailable: false, startTime: null, endTime: null });
+        }
+        return Promise.resolve(null); // no exception for Friday
+      });
+      // No availability record for any day → next-day check triggers violation
+      availRepo.findOne.mockResolvedValue(null);
+
+      const shift = makeShift({ date: '2026-03-19', startTime: '22:00', endTime: '02:00' });
+      const result = await service.check(shift, makeStaff());
+      expect(result.violations.filter((v) => v.rule === 'availability')).toHaveLength(1);
+    });
   });
 
   // ---------------------------------------------------------------------------

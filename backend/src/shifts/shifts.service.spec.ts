@@ -327,6 +327,97 @@ describe('ShiftsService', () => {
     });
   });
 
+  describe('remove', () => {
+    it('throws ForbiddenException when manager does not manage the shift location', async () => {
+      const manager = makeManager(['loc-other']);
+      shiftRepo.findOne.mockResolvedValue(makeShift());
+      await expect(service.remove('shift-1', manager)).rejects.toThrow(ForbiddenException);
+    });
+
+    it('soft-removes the shift and emits schedule.updated when there are no active assignments', async () => {
+      const manager = makeManager(['loc-1']);
+      shiftRepo.findOne.mockResolvedValue(makeShift({ assignments: [] }));
+      shiftRepo.softRemove.mockResolvedValue(undefined);
+
+      await service.remove('shift-1', manager);
+      expect(shiftRepo.softRemove).toHaveBeenCalled();
+      expect(events.emit).toHaveBeenCalledWith('schedule.updated', expect.objectContaining({ locationId: 'loc-1' }));
+    });
+
+    it('cancels active assignments and related open drop requests when shift is deleted', async () => {
+      const manager = makeManager(['loc-1']);
+      const assignment = { id: 'assign-1', staffId: 'staff-1', status: AssignmentStatus.ASSIGNED };
+      shiftRepo.findOne.mockResolvedValue(makeShift({ assignments: [assignment] }));
+      assignRepo.save.mockResolvedValue({ ...assignment, status: AssignmentStatus.CANCELLED });
+      dropRepo.find.mockResolvedValue([{ id: 'drop-1', assignmentId: 'assign-1', status: 'open' }]);
+      dropRepo.save.mockResolvedValue({});
+      shiftRepo.softRemove.mockResolvedValue(undefined);
+
+      await service.remove('shift-1', manager);
+
+      expect(assignRepo.save).toHaveBeenCalledWith(expect.objectContaining({ status: AssignmentStatus.CANCELLED }));
+      expect(dropRepo.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'cancelled' }));
+    });
+
+    it('cancels pending swap requests and notifies the swap target when shift is deleted', async () => {
+      const manager = makeManager(['loc-1']);
+      const assignment = { id: 'assign-1', staffId: 'staff-1', status: AssignmentStatus.ASSIGNED };
+      shiftRepo.findOne.mockResolvedValue(makeShift({ assignments: [assignment] }));
+      assignRepo.save.mockResolvedValue({ ...assignment, status: AssignmentStatus.CANCELLED });
+      swapRepo.find.mockResolvedValue([{ id: 'swap-1', fromAssignmentId: 'assign-1', status: 'pending', toUserId: 'staff-2' }]);
+      swapRepo.save.mockResolvedValue({});
+      shiftRepo.softRemove.mockResolvedValue(undefined);
+
+      await service.remove('shift-1', manager);
+
+      expect(swapRepo.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'cancelled' }));
+      expect(events.emit).toHaveBeenCalledWith('notification.send', expect.objectContaining({ userId: 'staff-2', type: 'SWAP_CANCELLED_SHIFT_EDIT' }));
+    });
+
+    it('notifies each affected staff member when their shift is deleted', async () => {
+      const manager = makeManager(['loc-1']);
+      const assignment = { id: 'assign-1', staffId: 'staff-1', status: AssignmentStatus.ASSIGNED };
+      shiftRepo.findOne.mockResolvedValue(makeShift({ assignments: [assignment] }));
+      assignRepo.save.mockResolvedValue({ ...assignment, status: AssignmentStatus.CANCELLED });
+      shiftRepo.softRemove.mockResolvedValue(undefined);
+
+      await service.remove('shift-1', manager);
+
+      expect(events.emit).toHaveBeenCalledWith('notification.send', expect.objectContaining({ userId: 'staff-1', type: 'SHIFT_CANCELLED' }));
+    });
+  });
+
+  describe('autoSchedule', () => {
+    it('throws ForbiddenException when manager does not manage the target location', async () => {
+      const manager = makeManager(['loc-other']);
+      await expect(
+        service.autoSchedule({ locationId: 'loc-1', weekStart: '2099-06-16' } as any, manager),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('admin can auto-schedule at any location', async () => {
+      const admin = makeAdmin();
+      userRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: [] }));
+      dataSource.transaction.mockImplementation(async (fn: any) => {
+        return fn({ create: jest.fn().mockReturnValue({}), save: jest.fn().mockResolvedValue({}) });
+      });
+
+      const result = await service.autoSchedule({ locationId: 'loc-1', weekStart: '2099-06-16' } as any, admin);
+      expect(result).toHaveProperty('shiftsCreated');
+    });
+
+    it('manager can auto-schedule at a location they manage', async () => {
+      const manager = makeManager(['loc-1']);
+      userRepo.createQueryBuilder.mockReturnValue(buildQb({ getMany: [] }));
+      dataSource.transaction.mockImplementation(async (fn: any) => {
+        return fn({ create: jest.fn().mockReturnValue({}), save: jest.fn().mockResolvedValue({}) });
+      });
+
+      const result = await service.autoSchedule({ locationId: 'loc-1', weekStart: '2099-06-16' } as any, manager);
+      expect(result).toHaveProperty('shiftsCreated');
+    });
+  });
+
   describe('confirmAssignment', () => {
     it('throws ForbiddenException when it is not the staff member\'s assignment', async () => {
       assignRepo.findOne.mockResolvedValue({ id: 'assign-1', staffId: 'staff-1', confirmedAt: null });
