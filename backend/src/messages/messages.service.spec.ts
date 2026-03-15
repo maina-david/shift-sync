@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MessagesService } from './messages.service';
 import { Message, MessageType } from './entities/message.entity';
 import { UserRole } from '../users/entities/user.entity';
@@ -52,6 +53,7 @@ describe('MessagesService', () => {
       providers: [
         MessagesService,
         { provide: getRepositoryToken(Message), useValue: repo },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 
