@@ -74,7 +74,7 @@ export class TimesheetsService {
 
   async clockIn(staffId: string, dto: ClockInDto): Promise<Timesheet> {
     if (!dto.assignmentId && !dto.shiftId) {
-      throw new BadRequestException('Either assignmentId or shiftId must be provided to clock in');
+      throw new BadRequestException('No shift selected. Please clock in from your schedule or select today\'s shift.');
     }
 
     let locationId: string | null = null;

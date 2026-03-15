@@ -34,7 +34,7 @@ import {
 } from '@/components/ui/dialog';
 import { DataTable } from '@/components/ui/data-table';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import { timesheetsApi, getErrorMessage } from '@/lib/api';
+import { timesheetsApi, shiftsApi, getErrorMessage } from '@/lib/api';
 import { Timesheet, TimesheetStatus } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -57,9 +57,12 @@ function TimesheetStatusBadge({ status }: { status: TimesheetStatus }) {
 // ─── Clock-in/out widget ──────────────────────────────────────────────────────
 
 function ClockWidget() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [clockOutOpen, setClockOutOpen] = useState(false);
   const [breakMinutes, setBreakMinutes] = useState('0');
+
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   const { data: openTimesheet, isLoading: openLoading } = useQuery<Timesheet | null>({
     queryKey: ['timesheet-open'],
@@ -67,8 +70,27 @@ function ClockWidget() {
     refetchInterval: 60_000,
   });
 
+  // Fetch today's shifts to auto-detect the user's current assignment
+  const { data: todayShifts = [] } = useQuery({
+    queryKey: ['shifts-today', today],
+    queryFn: () => shiftsApi.list({ startDate: today, endDate: today, status: 'published' }),
+    enabled: !openTimesheet,
+    staleTime: 5 * 60_000,
+  });
+
+  const todayAssignment = !openTimesheet
+    ? todayShifts
+        .flatMap((s: any) => (s.assignments ?? []).map((a: any) => ({ ...a, shift: s })))
+        .find((a: any) => a.staffId === user?.id && a.status === 'assigned')
+    : null;
+
   const clockInMutation = useMutation({
-    mutationFn: () => timesheetsApi.clockIn({}),
+    mutationFn: () => {
+      if (!todayAssignment) {
+        return Promise.reject(new Error('No scheduled shift found for today. Check your schedule or ask your manager to assign you a shift.'));
+      }
+      return timesheetsApi.clockIn({ assignmentId: todayAssignment.id });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['timesheet-open'] });
       queryClient.invalidateQueries({ queryKey: ['timesheets-mine'] });
@@ -111,10 +133,17 @@ function ClockWidget() {
                       {format(parseISO(openTimesheet.clockIn), 'MMM d')}
                     </p>
                   </>
+                ) : todayAssignment ? (
+                  <>
+                    <p className="text-sm font-semibold">Not clocked in</p>
+                    <p className="text-xs text-muted-foreground">
+                      Shift today: {todayAssignment.shift.startTime}–{todayAssignment.shift.endTime}
+                    </p>
+                  </>
                 ) : (
                   <>
                     <p className="text-sm font-semibold">Not clocked in</p>
-                    <p className="text-xs text-muted-foreground">Clock in to start tracking your time</p>
+                    <p className="text-xs text-muted-foreground">No shift scheduled for today</p>
                   </>
                 )}
               </div>
@@ -134,7 +163,8 @@ function ClockWidget() {
               <Button
                 className="gap-2"
                 onClick={() => clockInMutation.mutate()}
-                disabled={clockInMutation.isPending}
+                disabled={clockInMutation.isPending || !todayAssignment}
+                title={!todayAssignment ? 'No shift scheduled for today' : undefined}
               >
                 <LogIn className="h-4 w-4" />
                 {clockInMutation.isPending ? 'Clocking in…' : 'Clock In'}
