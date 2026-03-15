@@ -6,9 +6,9 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Save, ShieldAlert } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
+import { TimePicker } from '@/components/ui/time-picker';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -151,18 +151,14 @@ export default function AvailabilityPage() {
                   />
                   <div className={`flex items-center gap-3 flex-1 ${!isActive && 'opacity-40 pointer-events-none'}`}>
                     <span className="w-24 text-sm font-medium">{day}</span>
-                    <Input
-                      type="time"
+                    <TimePicker
                       value={slot?.startTime ?? '09:00'}
-                      onChange={(e) => updateSlot(dayOfWeek, 'startTime', e.target.value)}
-                      className="w-32"
+                      onChange={(v) => updateSlot(dayOfWeek, 'startTime', v)}
                     />
                     <span className="text-muted-foreground text-sm">–</span>
-                    <Input
-                      type="time"
+                    <TimePicker
                       value={slot?.endTime ?? '17:00'}
-                      onChange={(e) => updateSlot(dayOfWeek, 'endTime', e.target.value)}
-                      className="w-32"
+                      onChange={(v) => updateSlot(dayOfWeek, 'endTime', v)}
                     />
                   </div>
                 </div>
@@ -221,20 +217,16 @@ export default function AvailabilityPage() {
                   <div className="grid gap-4">
                     <div className="grid gap-3">
                       <Label>Start time</Label>
-                      <Input
-                        type="time"
+                      <TimePicker
                         value={newException.startTime}
-                        onChange={(e) => setNewException({ ...newException, startTime: e.target.value })}
-                        className="w-32"
+                        onChange={(v) => setNewException({ ...newException, startTime: v })}
                       />
                     </div>
                     <div className="grid gap-3">
                       <Label>End time</Label>
-                      <Input
-                        type="time"
+                      <TimePicker
                         value={newException.endTime}
-                        onChange={(e) => setNewException({ ...newException, endTime: e.target.value })}
-                        className="w-32"
+                        onChange={(v) => setNewException({ ...newException, endTime: v })}
                       />
                     </div>
                   </div>
