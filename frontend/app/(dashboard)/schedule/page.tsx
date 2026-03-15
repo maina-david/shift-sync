@@ -376,9 +376,13 @@ export default function SchedulePage() {
                   type="time"
                   value={form.endTime}
                   onChange={(e) => setForm({ ...form, endTime: e.target.value })}
+                  className={form.startTime >= form.endTime ? 'border-destructive' : ''}
                 />
               </div>
             </div>
+            {form.startTime >= form.endTime && (
+              <p className="text-xs text-destructive -mt-1">End time must be after start time</p>
+            )}
 
             <div className="grid gap-3">
               <Label>Required skill (optional)</Label>
@@ -424,7 +428,7 @@ export default function SchedulePage() {
           <SheetFooter>
             <Button
               onClick={() => createMutation.mutate()}
-              disabled={!form.date || createMutation.isPending}
+              disabled={!form.date || form.startTime >= form.endTime || createMutation.isPending}
             >
               {createMutation.isPending ? 'Creating…' : 'Create shift'}
             </Button>

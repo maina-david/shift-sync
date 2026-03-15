@@ -42,7 +42,7 @@ import { useAuth } from '@/contexts/auth-context';
 
 
 function todayISO() {
-  return new Date().toISOString().split('T')[0];
+  return format(new Date(), 'yyyy-MM-dd');
 }
 
 function isValidISODate(s: string) {

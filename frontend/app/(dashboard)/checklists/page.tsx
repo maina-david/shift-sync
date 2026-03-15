@@ -76,7 +76,7 @@ export default function ChecklistsPage() {
     queryFn: locationsApi.list,
   });
 
-  const { data: checklists = [], isLoading } = useQuery<Checklist[]>({
+  const { data: checklists = [], isLoading, isError } = useQuery<Checklist[]>({
     queryKey: ['checklists', filterLocation, filterDate],
     queryFn: () =>
       checklistsApi.list({
@@ -203,7 +203,12 @@ export default function ChecklistsPage() {
       </div>
 
       {/* Grid */}
-      {isLoading ? (
+      {isError ? (
+        <div className="border rounded-lg p-12 text-center">
+          <p className="font-medium text-destructive">Failed to load checklists</p>
+          <p className="text-sm text-muted-foreground mt-1">Please refresh the page or try again.</p>
+        </div>
+      ) : isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-44 w-full rounded-xl" />)}
         </div>

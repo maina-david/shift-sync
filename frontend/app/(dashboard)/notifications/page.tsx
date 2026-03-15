@@ -30,7 +30,7 @@ function NotifIcon({ type }: { type: string }) {
 }
 
 export default function NotificationsPage() {
-  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const { notifications, unreadCount, isLoading, markRead, markAllRead } = useNotifications();
   const [typeFilter, setTypeFilter] = useState('all');
 
   // Derive unique top-level type categories for the filter
@@ -42,8 +42,6 @@ export default function NotificationsPage() {
     ? notifications
     : notifications.filter((n) => n.type?.replace(/_/g, ' ').toLowerCase() === typeFilter);
 
-  // Loading state — notifications come from context which initializes async
-  const isLoading = false; // context loads instantly after mount
 
   return (
     <div className="space-y-4 max-w-2xl">

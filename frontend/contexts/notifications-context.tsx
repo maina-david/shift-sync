@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 interface NotificationsContextValue {
   notifications: Notification[];
   unreadCount: number;
+  isLoading: boolean;
   markRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -21,6 +22,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -30,6 +32,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     ]);
     setNotifications(notifs);
     setUnreadCount(count);
+    setIsLoading(false);
   }, [user]);
 
   useEffect(() => {
@@ -90,7 +93,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   }, []);
 
   return (
-    <NotificationsContext.Provider value={{ notifications, unreadCount, markRead, markAllRead, refresh }}>
+    <NotificationsContext.Provider value={{ notifications, unreadCount, isLoading, markRead, markAllRead, refresh }}>
       {children}
     </NotificationsContext.Provider>
   );

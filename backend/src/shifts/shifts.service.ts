@@ -301,9 +301,10 @@ export class ShiftsService {
       throw new BadRequestException('Target week already has shifts. Delete them first or choose a different target week.');
     }
 
-    const dayOffset =
+    const dayOffset = Math.round(
       (new Date(targetWeekStart).getTime() - new Date(sourceWeekStart).getTime()) /
-      86400000;
+        86400000,
+    );
 
     const newShifts = sourceShifts.map((s) => {
       const newDate = addDays(s.date, dayOffset);
