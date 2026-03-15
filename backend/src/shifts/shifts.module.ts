@@ -9,6 +9,7 @@ import { User } from '../users/entities/user.entity';
 import { Availability } from '../users/entities/availability.entity';
 import { AvailabilityException } from '../users/entities/availability-exception.entity';
 import { SwapRequest } from '../swap-requests/entities/swap-request.entity';
+import { DropRequest } from '../drop-requests/entities/drop-request.entity';
 import { UsersModule } from '../users/users.module';
 import { AuthModule } from '../auth/auth.module';
 import { SseJwtGuard } from '../common/guards/sse-jwt.guard';
@@ -23,6 +24,7 @@ import { SettingsModule } from '../settings/settings.module';
       Availability,
       AvailabilityException,
       SwapRequest,
+      DropRequest,
     ]),
     UsersModule,
     AuthModule,

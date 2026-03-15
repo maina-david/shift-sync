@@ -1,4 +1,4 @@
-import { IsUUID, IsString, IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsUUID, IsDateString, IsOptional, IsInt, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AutoScheduleDto {
@@ -7,7 +7,7 @@ export class AutoScheduleDto {
   locationId: string;
 
   @ApiProperty({ description: 'ISO date string for the Monday that starts the week (YYYY-MM-DD)' })
-  @IsString()
+  @IsDateString()
   weekStart: string;
 
   @ApiPropertyOptional({ default: 3, description: 'Number of time slots per day (default 3)' })

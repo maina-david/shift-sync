@@ -124,6 +124,8 @@ export default function SchedulePage() {
     },
     onError: (err, _v, ctx) => {
       if (ctx) queryClient.setQueryData(ctx.key, ctx.prev);
+      // Force refetch so UI reflects true server state after rollback
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
       toast.error(getErrorMessage(err));
     },
   });

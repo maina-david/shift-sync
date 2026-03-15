@@ -12,6 +12,7 @@ let _accessToken: string | null = null;
 
 export function setAccessToken(token: string | null) {
   _accessToken = token;
+  if (token) _redirecting = false;
 }
 
 export function getAccessToken(): string | null {
@@ -29,6 +30,7 @@ api.interceptors.request.use((config) => {
 });
 
 let _refreshPromise: Promise<string | null> | null = null;
+let _redirecting = false;
 
 async function tryRefresh(): Promise<string | null> {
   if (_refreshPromise) return _refreshPromise;
@@ -66,7 +68,8 @@ api.interceptors.response.use(
         original.headers['Authorization'] = `Bearer ${newToken}`;
         return api(original);
       }
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && !_redirecting) {
+        _redirecting = true;
         window.location.href = '/login';
       }
     }

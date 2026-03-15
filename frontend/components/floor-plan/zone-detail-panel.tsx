@@ -44,10 +44,10 @@ export function ZoneDetailPanel({ zone, assignments, onClose }: Props) {
                   <div key={a.id}>
                     <div className="flex items-center gap-2.5 py-1">
                       <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[0.625rem] font-semibold text-primary shrink-0">
-                        {a.staff.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                        {a.staff?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() ?? '?'}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-medium truncate">{a.staff.name}</p>
+                        <p className="text-xs font-medium truncate">{a.staff?.name ?? 'Unknown'}</p>
                         {a.shift?.requiredSkill && (
                           <p className="text-[0.625rem] text-muted-foreground">{a.shift.requiredSkill.name}</p>
                         )}

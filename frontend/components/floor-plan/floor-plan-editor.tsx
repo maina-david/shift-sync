@@ -102,15 +102,17 @@ export function FloorPlanEditor({ locationId, initialZones, onClose }: Props) {
       if (!drag.current) return;
       const dx = e.clientX - drag.current.startMouseX;
       const dy = e.clientY - drag.current.startMouseY;
-      const newX = +(drag.current.startWorldX + dx / SCALE).toFixed(2);
-      const newY = +(drag.current.startWorldY + dy / SCALE).toFixed(2);
+      const rawX = drag.current.startWorldX + dx / SCALE;
+      const rawY = drag.current.startWorldY + dy / SCALE;
 
       setZones((prev) =>
-        prev.map((z) =>
-          z.id === drag.current!.zoneId
-            ? { ...z, position: [newX, newY] as [number, number] }
-            : z,
-        ),
+        prev.map((z) => {
+          if (z.id !== drag.current!.zoneId) return z;
+          // Clamp so zone stays fully within floor bounds
+          const clampedX = +Math.min(FLOOR_W / 2 - z.size[0], Math.max(-FLOOR_W / 2, rawX)).toFixed(2);
+          const clampedY = +Math.min(FLOOR_H / 2 - z.size[1], Math.max(-FLOOR_H / 2, rawY)).toFixed(2);
+          return { ...z, position: [clampedX, clampedY] as [number, number] };
+        }),
       );
     },
     [SCALE],

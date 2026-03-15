@@ -13,6 +13,7 @@ import { ShiftAssignment, AssignmentStatus } from './entities/shift-assignment.e
 import { User, UserRole } from '../users/entities/user.entity';
 import { Availability } from '../users/entities/availability.entity';
 import { SwapRequest, SwapRequestStatus } from '../swap-requests/entities/swap-request.entity';
+import { DropRequest, DropRequestStatus } from '../drop-requests/entities/drop-request.entity';
 import { ConstraintCheckerService } from './constraint-checker.service';
 import { CreateShiftDto } from './dto/create-shift.dto';
 import { UpdateShiftDto } from './dto/update-shift.dto';
@@ -32,6 +33,8 @@ export class ShiftsService {
     @InjectRepository(ShiftAssignment) private assignRepo: Repository<ShiftAssignment>,
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Availability) private availRepo: Repository<Availability>,
+    @InjectRepository(DropRequest) private dropRepo: Repository<DropRequest>,
+    @InjectRepository(SwapRequest) private swapRepo: Repository<SwapRequest>,
     private constraints: ConstraintCheckerService,
     private usersService: UsersService,
     private events: EventEmitter2,
@@ -491,6 +494,35 @@ export class ShiftsService {
 
     assignment.status = AssignmentStatus.CANCELLED;
     const saved = await this.assignRepo.save(assignment);
+
+    // Cancel any open/claimed drop requests for this assignment
+    const openDrops = await this.dropRepo.find({
+      where: {
+        assignmentId,
+        status: In([DropRequestStatus.OPEN, DropRequestStatus.CLAIMED]),
+      },
+    });
+    for (const drop of openDrops) {
+      drop.status = DropRequestStatus.CANCELLED;
+      await this.dropRepo.save(drop);
+    }
+
+    // Cancel any pending swap requests originating from this assignment
+    const pendingSwaps = await this.swapRepo.find({
+      where: { fromAssignmentId: assignmentId, status: SwapRequestStatus.PENDING },
+    });
+    for (const swap of pendingSwaps) {
+      swap.status = SwapRequestStatus.CANCELLED;
+      await this.swapRepo.save(swap);
+      this.safeEmit('notification.send', {
+        userId: swap.toUserId,
+        type: 'SWAP_CANCELLED_SHIFT_EDIT',
+        title: 'Swap Request Cancelled',
+        message: `A pending swap request was cancelled because the assignment was removed.`,
+        entityType: 'swap_request',
+        entityId: swap.id,
+      });
+    }
 
     this.safeEmit('audit.log', {
       entity: 'shift_assignment',

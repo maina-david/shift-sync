@@ -12,6 +12,8 @@ import { ConstraintCheckerService } from './constraint-checker.service';
 import { UsersService } from '../users/users.service';
 import { SettingsService } from '../settings/settings.service';
 import { Location } from '../locations/entities/location.entity';
+import { DropRequest } from '../drop-requests/entities/drop-request.entity';
+import { SwapRequest } from '../swap-requests/entities/swap-request.entity';
 
 function buildQb(opts: { getMany?: any[]; getManyAndCount?: [any[], number]; getCount?: number } = {}) {
   return {
@@ -85,6 +87,8 @@ describe('ShiftsService', () => {
   let events: jest.Mocked<any>;
   let dataSource: jest.Mocked<any>;
   let settingsService: jest.Mocked<any>;
+  let dropRepo: jest.Mocked<any>;
+  let swapRepo: jest.Mocked<any>;
 
   beforeEach(async () => {
     shiftRepo = {
@@ -99,6 +103,8 @@ describe('ShiftsService', () => {
     assignRepo = { findOne: jest.fn(), save: jest.fn(), createQueryBuilder: jest.fn() };
     userRepo = { findOne: jest.fn(), createQueryBuilder: jest.fn() };
     availRepo = {};
+    dropRepo = { find: jest.fn().mockResolvedValue([]), save: jest.fn() };
+    swapRepo = { find: jest.fn().mockResolvedValue([]), save: jest.fn() };
     constraints = { check: jest.fn().mockResolvedValue({ valid: true, violations: [], warnings: [] }) };
     usersService = { findQualifiedForShift: jest.fn().mockResolvedValue([]) };
     events = { emit: jest.fn() };
@@ -112,6 +118,8 @@ describe('ShiftsService', () => {
         { provide: getRepositoryToken(ShiftAssignment), useValue: assignRepo },
         { provide: getRepositoryToken(User), useValue: userRepo },
         { provide: getRepositoryToken(Availability), useValue: availRepo },
+        { provide: getRepositoryToken(DropRequest), useValue: dropRepo },
+        { provide: getRepositoryToken(SwapRequest), useValue: swapRepo },
         { provide: ConstraintCheckerService, useValue: constraints },
         { provide: UsersService, useValue: usersService },
         { provide: EventEmitter2, useValue: events },

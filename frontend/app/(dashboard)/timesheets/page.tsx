@@ -145,7 +145,7 @@ function ClockWidget() {
       </Card>
 
       {/* Clock-out dialog */}
-      <Dialog open={clockOutOpen} onOpenChange={setClockOutOpen}>
+      <Dialog open={clockOutOpen} onOpenChange={(open) => { setClockOutOpen(open); if (!open) setBreakMinutes('0'); }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Clock Out</DialogTitle>

@@ -635,7 +635,7 @@ export default function SwapRequestsPage() {
             ) : (
               <Button
                 onClick={() => createSwapMutation.mutate()}
-                disabled={createSwapMutation.isPending}
+                disabled={createSwapMutation.isPending || !newSwapAssignmentId}
               >
                 {createSwapMutation.isPending ? 'Sending…' : 'Send request'}
               </Button>

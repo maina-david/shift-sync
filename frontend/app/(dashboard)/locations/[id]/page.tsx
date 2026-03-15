@@ -43,6 +43,18 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
     );
   }
 
+  if (!location) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <MapPin className="h-10 w-10 text-muted-foreground/30" />
+        <p className="font-medium text-muted-foreground">Location not found</p>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/locations"><ArrowLeft className="h-4 w-4 mr-2" />Back to locations</Link>
+        </Button>
+      </div>
+    );
+  }
+
   if (editingLayout) {
     return (
       <div className="flex flex-col h-[calc(100vh-6rem)]">
