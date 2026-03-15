@@ -4,6 +4,14 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { RotateCcw, Sliders, ShieldAlert, MoreHorizontal, Pencil, Power, PowerOff } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -98,22 +106,22 @@ function SettingRow({
   }
 
   return (
-    <tr className="border-b border-border/50 last:border-0">
-      <td className="py-3 pr-4 w-64">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-mono text-foreground">{setting.key}</p>
-          {!setting.isEnabled && (
-            <Badge variant="secondary" className="text-xs px-1.5 py-0">Disabled</Badge>
-          )}
-        </div>
-      </td>
-      <td className="py-3 pr-4 text-sm text-muted-foreground">
+    <TableRow>
+      <TableCell className="w-64 font-mono text-sm">{setting.key}</TableCell>
+      <TableCell className="text-muted-foreground">
         {setting.description ?? <span className="italic opacity-50">No description</span>}
-      </td>
-      <td className="py-3 pr-4 text-right">
+      </TableCell>
+      <TableCell className="text-right font-mono text-sm">
         {renderValue()}
-      </td>
-      <td className="py-3 text-right">
+      </TableCell>
+      <TableCell>
+        {setting.isEnabled ? (
+          <Badge variant="outline" className="border-green-500/40 text-green-700 bg-green-500/10">Active</Badge>
+        ) : (
+          <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground bg-muted/40">Inactive</Badge>
+        )}
+      </TableCell>
+      <TableCell className="text-right">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -144,8 +152,8 @@ function SettingRow({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -170,22 +178,23 @@ function SettingsGroup({
         <CardTitle className="text-base">{meta.label}</CardTitle>
         {meta.description && <CardDescription>{meta.description}</CardDescription>}
       </CardHeader>
-      <CardContent>
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border/50">
-              <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Key</th>
-              <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Description</th>
-              <th className="pb-2 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Value</th>
-              <th className="pb-2 w-10" />
-            </tr>
-          </thead>
-          <tbody>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Key</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead className="text-right">Value</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-10" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {settings.map((s) => (
               <SettingRow key={s.key} setting={s} onEdit={onEdit} onToggleEnabled={onToggleEnabled} />
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );
