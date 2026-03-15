@@ -42,8 +42,6 @@ Swagger UI available at `http://localhost:3001/api`.
 
 ## Module Overview
 
-See [`src/README.md`](src/README.md) for the full module index.
-
 Key modules: `shifts`, `users`, `notifications`, `swap-requests`, `drop-requests`, `timesheets`, `scheduler`.
 
 ## Auth Flow
@@ -55,19 +53,24 @@ Key modules: `shifts`, `users`, `notifications`, `swap-requests`, `drop-requests
 
 ## Environment Variables
 
-| Variable | Description |
-| --- | --- |
-| `DB_HOST` | MySQL host |
-| `DB_PORT` | MySQL port (default 3306) |
-| `DB_USER` | MySQL user |
-| `DB_PASS` | MySQL password |
-| `DB_NAME` | Database name |
-| `JWT_SECRET` | Secret for signing access tokens |
-| `JWT_EXPIRES_IN` | Access token TTL (e.g. `15m`) |
-| `JWT_REFRESH_SECRET` | Secret for refresh tokens |
-| `JWT_REFRESH_EXPIRES_IN` | Refresh token TTL (e.g. `7d`) |
-| `SMTP_HOST` | Email server host |
-| `SMTP_PORT` | Email server port |
-| `SMTP_USER` | SMTP username |
-| `SMTP_PASS` | SMTP password |
-| `FRONTEND_URL` | Used for CORS and email links |
+Copy `.env.example` to `.env` and fill in the blanks. All variables are validated at startup by Joi.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PORT` | `3001` | HTTP port the server listens on |
+| `NODE_ENV` | `development` | `development` or `production` |
+| `FRONTEND_URL` | `http://localhost:3000` | Used for CORS and email links |
+| `DB_HOST` | `localhost` | MySQL host |
+| `DB_PORT` | `3306` | MySQL port |
+| `DB_USERNAME` | — | MySQL user |
+| `DB_PASSWORD` | — | MySQL password |
+| `DB_DATABASE` | `shift_sync` | Database name |
+| `JWT_SECRET` | — | Secret for signing access tokens (≥ 32 chars) |
+| `JWT_EXPIRES_IN` | `15m` | Access token TTL |
+| `JWT_REFRESH_SECRET` | — | Secret for refresh tokens (≥ 32 chars, different from JWT_SECRET) |
+| `JWT_REFRESH_EXPIRES_IN` | `7d` | Refresh token TTL |
+| `SMTP_HOST` | — | Email server host |
+| `SMTP_PORT` | `587` | Email server port |
+| `SMTP_USER` | — | SMTP username |
+| `SMTP_PASS` | — | SMTP password |
+| `SMTP_FROM` | — | From address (e.g. `"ShiftSync <noreply@shiftsync.dev>"`) |

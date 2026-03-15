@@ -78,9 +78,7 @@ API available at <http://localhost:3001> · Swagger docs at <http://localhost:30
 #### Seed the database
 
 ```bash
-# In a second terminal while the backend is running:
-cd backend
-npx ts-node src/seed.ts
+npm run seed
 ```
 
 Populates all entities: 4 locations, 11 users (1 admin + 2 managers + 8 staff), shifts across a 4-week window (last/this/next week), weekly availability, availability exceptions, swap requests, drop requests (open/claimed/approved), time-off entries, timesheets, certifications, notifications, reservations, schedule templates, checklists, shift feedback, fair-workweek change logs, audit log entries, messages, bookmarks, and system settings (scheduling + payroll defaults).
