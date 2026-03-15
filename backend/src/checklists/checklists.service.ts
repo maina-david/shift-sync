@@ -91,12 +91,12 @@ export class ChecklistsService {
       completedById: userId,
     };
 
-    // Mark the checklist complete once all required items are done
-    const allRequiredDone = checklist.items
-      .filter((i) => i.required)
-      .every((i) => i.completedAt !== null);
+    // Mark the checklist complete once every item is ticked off
+    const allDone =
+      checklist.items.length > 0 &&
+      checklist.items.every((i) => i.completedAt !== null);
 
-    if (allRequiredDone && !checklist.isCompleted) {
+    if (allDone && !checklist.isCompleted) {
       checklist.isCompleted = true;
       checklist.completedAt = new Date();
     }

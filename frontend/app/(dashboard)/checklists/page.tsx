@@ -26,6 +26,7 @@ import { checklistsApi, locationsApi, getErrorMessage } from '@/lib/api';
 import { Checklist, ChecklistType, Location } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
+import { DatePicker } from '@/components/ui/date-picker';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -183,10 +184,10 @@ export default function ChecklistsPage() {
           </SelectContent>
         </Select>
 
-        <Input
-          type="date"
-          value={filterDate}
-          onChange={(e) => setFilterDate(e.target.value)}
+        <DatePicker
+          value={filterDate || undefined}
+          onChange={(v) => setFilterDate(v)}
+          placeholder="Filter by date"
           className="w-44"
         />
 

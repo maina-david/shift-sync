@@ -150,7 +150,7 @@ describe('ChecklistsService', () => {
       expect(completedItem!.completedById).toBe('user-1');
     });
 
-    it('marks checklist as complete when all required items are done', async () => {
+    it('marks checklist complete when the only item is ticked', async () => {
       const cl = makeChecklist({
         items: [
           { id: 'item-1', label: 'Required', required: true, completedAt: null, completedById: null },
@@ -164,11 +164,11 @@ describe('ChecklistsService', () => {
       expect(result.completedAt).toBeDefined();
     });
 
-    it('does not mark checklist complete when optional items remain', async () => {
+    it('marks checklist complete when the last remaining item is ticked', async () => {
       const cl = makeChecklist({
         items: [
-          { id: 'item-1', label: 'Required', required: true, completedAt: '2026-01-01T09:00:00.000Z', completedById: 'user-1' },
-          { id: 'item-2', label: 'Optional', required: false, completedAt: null, completedById: null },
+          { id: 'item-1', label: 'Item 1', required: true, completedAt: '2026-01-01T09:00:00.000Z', completedById: 'user-1' },
+          { id: 'item-2', label: 'Item 2', required: false, completedAt: null, completedById: null },
         ],
       });
       repo.findOne.mockResolvedValue(cl);
@@ -176,6 +176,20 @@ describe('ChecklistsService', () => {
 
       const result = await service.completeItem('cl-1', 'item-2', 'user-1');
       expect(result.isCompleted).toBe(true);
+    });
+
+    it('does not mark checklist complete when other items remain unchecked', async () => {
+      const cl = makeChecklist({
+        items: [
+          { id: 'item-1', label: 'Item 1', required: false, completedAt: null, completedById: null },
+          { id: 'item-2', label: 'Item 2', required: false, completedAt: null, completedById: null },
+        ],
+      });
+      repo.findOne.mockResolvedValue(cl);
+      repo.save.mockImplementation((c: any) => Promise.resolve(c));
+
+      const result = await service.completeItem('cl-1', 'item-1', 'user-1');
+      expect(result.isCompleted).toBe(false);
     });
   });
 

@@ -42,6 +42,7 @@ import { certificationsApi, usersApi, getErrorMessage } from '@/lib/api';
 import { Certification, User } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
+import { DatePicker } from '@/components/ui/date-picker';
 
 // ─── Expiry logic ─────────────────────────────────────────────────────────────
 
@@ -457,18 +458,16 @@ export default function CertificationsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label>Issued date</Label>
-                <Input
-                  type="date"
-                  value={certForm.issuedDate}
-                  onChange={(e) => setCertForm((f) => ({ ...f, issuedDate: e.target.value }))}
+                <DatePicker
+                  value={certForm.issuedDate || undefined}
+                  onChange={(v) => setCertForm((f) => ({ ...f, issuedDate: v }))}
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Expiry date</Label>
-                <Input
-                  type="date"
-                  value={certForm.expiryDate}
-                  onChange={(e) => setCertForm((f) => ({ ...f, expiryDate: e.target.value }))}
+                <DatePicker
+                  value={certForm.expiryDate || undefined}
+                  onChange={(v) => setCertForm((f) => ({ ...f, expiryDate: v }))}
                 />
               </div>
             </div>
