@@ -11,7 +11,9 @@ import {
   PenSquare,
   ChevronDown,
   ChevronUp,
+  Loader2,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -76,13 +78,13 @@ export default function MessagesPage() {
 
   // ── Queries ──
 
-  const { data: inbox = [] } = useQuery<Message[]>({
+  const { data: inbox = [], isLoading: inboxLoading } = useQuery<Message[]>({
     queryKey: ['messages-inbox'],
     queryFn: messagesApi.getInbox,
     refetchInterval: 30_000,
   });
 
-  const { data: announcements = [] } = useQuery<Message[]>({
+  const { data: announcements = [], isLoading: annLoading } = useQuery<Message[]>({
     queryKey: ['announcements'],
     queryFn: () => messagesApi.getAnnouncements(),
     refetchInterval: 30_000,
@@ -180,7 +182,11 @@ export default function MessagesPage() {
           <p className="text-[0.625rem] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5 px-1">
             Announcements
           </p>
-          {recentAnnouncements.length === 0 ? (
+          {annLoading ? (
+            <div className="flex flex-col gap-1 px-1 py-1">
+              {[1, 2].map((i) => <Skeleton key={i} className="h-10 w-full rounded-md" />)}
+            </div>
+          ) : recentAnnouncements.length === 0 ? (
             <p className="text-xs text-muted-foreground px-1 py-2">No announcements</p>
           ) : (
             <div className="flex flex-col gap-0.5">
@@ -228,8 +234,18 @@ export default function MessagesPage() {
           <p className="text-[0.625rem] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5 px-1">
             Direct Messages
           </p>
-          {partners.length === 0 ? (
-            <p className="text-xs text-muted-foreground px-1 py-2">No conversations yet</p>
+          {inboxLoading ? (
+            <div className="flex flex-col gap-1 px-1 py-1">
+              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full rounded-md" />)}
+            </div>
+          ) : partners.length === 0 ? (
+            <div className="px-1 py-3 flex flex-col items-center gap-2 text-center">
+              <MessageSquare className="h-6 w-6 text-muted-foreground/40" />
+              <p className="text-xs text-muted-foreground">No conversations yet</p>
+              <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={() => setComposeOpen(true)}>
+                <PenSquare className="h-3 w-3 mr-1.5" /> Start a conversation
+              </Button>
+            </div>
           ) : (
             <div className="flex flex-col gap-0.5">
               {partners.map(({ user: partner, latest }) => {

@@ -233,6 +233,7 @@ export default function ReservationsPage() {
       <DataTable
         columns={columns}
         data={reservations}
+        isLoading={isLoading}
         searchKey="customerName"
         searchPlaceholder="Search guest name…"
         emptyState={

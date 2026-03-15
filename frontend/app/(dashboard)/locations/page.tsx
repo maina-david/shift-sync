@@ -118,7 +118,7 @@ export default function LocationsPage() {
   const [editLoc, setEditLoc] = useState<Location | null>(null);
   const [form, setForm] = useState(emptyForm);
 
-  const { data: locations = [] } = useQuery<Location[]>({
+  const { data: locations = [], isLoading: locationsLoading } = useQuery<Location[]>({
     queryKey: ['locations'],
     queryFn: locationsApi.list,
   });
@@ -284,6 +284,7 @@ export default function LocationsPage() {
       <DataTable
         columns={columns}
         data={locations}
+        isLoading={locationsLoading}
         searchKey="name"
         searchPlaceholder="Search locations…"
         emptyState={

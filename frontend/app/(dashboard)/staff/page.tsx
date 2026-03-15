@@ -39,6 +39,19 @@ import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyCont
 import { User, Location, Skill } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 
+function passwordStrength(pw: string): { score: number; label: string; color: string } {
+  if (!pw) return { score: 0, label: '', color: '' };
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/\d/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  const labels = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Very strong'];
+  const colors = ['', 'bg-destructive', 'bg-chart-warning', 'bg-yellow-400', 'bg-chart-success', 'bg-chart-success'];
+  return { score, label: labels[score] ?? 'Strong', color: colors[score] ?? 'bg-chart-success' };
+}
+
 const EMPTY_CREATE = { name: '', email: '', password: '', role: 'staff' };
 
 export default function StaffPage() {
@@ -62,7 +75,7 @@ export default function StaffPage() {
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
 
-  const { data: staff = [] } = useQuery<User[]>({
+  const { data: staff = [], isLoading: staffLoading } = useQuery<User[]>({
     queryKey: ['users'],
     queryFn: () => usersApi.list(),
   });
@@ -253,6 +266,7 @@ export default function StaffPage() {
       <DataTable
         columns={columns}
         data={staff}
+        isLoading={staffLoading}
         searchKey="name"
         searchPlaceholder="Search staff…"
         emptyState={
@@ -493,6 +507,19 @@ export default function StaffPage() {
                 {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+            {newPassword && (() => {
+              const s = passwordStrength(newPassword);
+              return (
+                <div className="space-y-1">
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <div key={i} className={`h-1 flex-1 rounded-full ${i <= s.score ? s.color : 'bg-muted'}`} />
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                </div>
+              );
+            })()}
           </div>
           <DialogFooter>
             <Button

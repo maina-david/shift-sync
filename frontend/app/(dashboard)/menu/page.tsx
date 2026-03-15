@@ -60,7 +60,7 @@ export default function MenuPage() {
     queryFn:  locationsApi.list,
   });
 
-  const { data: items = [] } = useQuery<MenuItem[]>({
+  const { data: items = [], isLoading: itemsLoading } = useQuery<MenuItem[]>({
     queryKey: ['menu-admin', locationFilter],
     queryFn:  () => menuApi.listAdmin(locationFilter || undefined),
   });
@@ -352,6 +352,7 @@ export default function MenuPage() {
       <DataTable
         columns={columns}
         data={items}
+        isLoading={itemsLoading}
         searchKey="name"
         searchPlaceholder="Search menu…"
         emptyState={

@@ -10,6 +10,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { locationsApi, logBookApi, getErrorMessage } from '@/lib/api';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
 import { Location } from '@/lib/types';
@@ -32,6 +42,7 @@ export default function LogBookPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [note, setNote] = useState('');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const dateStr = format(currentDate, 'yyyy-MM-dd');
 
@@ -169,7 +180,7 @@ export default function LogBookPage() {
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
-                    onClick={() => removeMutation.mutate(entry.id)}
+                    onClick={() => setDeleteId(entry.id)}
                     disabled={removeMutation.isPending}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -181,6 +192,26 @@ export default function LogBookPage() {
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete log entry?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteId && removeMutation.mutate(deleteId)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

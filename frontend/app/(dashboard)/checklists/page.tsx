@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { PlusCircle, CheckCircle2, Trash2, Plus, X } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -202,7 +203,9 @@ export default function ChecklistsPage() {
 
       {/* Grid */}
       {isLoading ? (
-        <div className="text-sm text-muted-foreground py-8 text-center">Loading…</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-44 w-full rounded-xl" />)}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="border rounded-lg p-12 text-center">
           <CheckCircle2 className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />

@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Save, User, Lock, Bell } from 'lucide-react';
+import { Save, User, Lock, Bell, Eye, EyeOff } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,19 @@ const profileSchema = z.object({
   email: z.string().email('Invalid email address'),
   desiredHoursPerWeek: z.coerce.number().min(0).max(168),
 });
+
+function passwordStrength(pw: string): { score: number; label: string; color: string } {
+  if (!pw) return { score: 0, label: '', color: '' };
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/\d/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  const labels = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Very strong'];
+  const colors = ['', 'bg-destructive', 'bg-chart-warning', 'bg-yellow-400', 'bg-chart-success', 'bg-chart-success'];
+  return { score, label: labels[score] ?? 'Strong', color: colors[score] ?? 'bg-chart-success' };
+}
 
 const passwordSchema = z
   .object({
@@ -56,14 +69,20 @@ export default function SettingsPage() {
     },
   });
 
+  const [showNewPw, setShowNewPw] = useState(false);
+
   const {
     register: regPassword,
     handleSubmit: handlePassword,
     reset: resetPassword,
+    watch: watchPassword,
     formState: { errors: passwordErrors },
   } = useForm<PasswordForm>({
     resolver: zodResolver(passwordSchema),
   });
+
+  const newPwValue = watchPassword('newPassword') ?? '';
+  const pwStrength = passwordStrength(newPwValue);
 
   const profileMutation = useMutation({
     mutationFn: (data: ProfileForm) => usersApi.update(user!.id, data),
@@ -164,7 +183,26 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>New password</Label>
-                  <Input {...regPassword('newPassword')} type="password" autoComplete="new-password" />
+                  <div className="relative">
+                    <Input {...regPassword('newPassword')} type={showNewPw ? 'text' : 'password'} autoComplete="new-password" className="pr-9" />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPw((v) => !v)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {newPwValue && (
+                    <div className="space-y-1">
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <div key={i} className={`h-1 flex-1 rounded-full ${i <= pwStrength.score ? pwStrength.color : 'bg-muted'}`} />
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{pwStrength.label}</p>
+                    </div>
+                  )}
                   {passwordErrors.newPassword && (
                     <p className="text-xs text-destructive">{passwordErrors.newPassword.message}</p>
                   )}

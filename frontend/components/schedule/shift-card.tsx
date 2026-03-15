@@ -3,7 +3,7 @@
 import { memo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Users, MoreHorizontal, Send, Star, EyeOff, FileText } from 'lucide-react';
+import { Plus, Users, MoreHorizontal, Send, Star, EyeOff, FileText, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -144,19 +144,28 @@ function ShiftCardInner({ shift, compact = false }: ShiftCardProps) {
                     <Plus className="h-3.5 w-3.5 mr-2" /> Assign staff
                   </DropdownMenuItem>
                   {isDraft && (
-                    <DropdownMenuItem onClick={() => publishMutation.mutate()}>
-                      <Send className="h-3.5 w-3.5 mr-2" /> Publish
+                    <DropdownMenuItem
+                      onClick={() => publishMutation.mutate()}
+                      disabled={publishMutation.isPending}
+                    >
+                      {publishMutation.isPending
+                        ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                        : <Send className="h-3.5 w-3.5 mr-2" />}
+                      {publishMutation.isPending ? 'Publishing…' : 'Publish'}
                     </DropdownMenuItem>
                   )}
                   {!isDraft && (
-                    <DropdownMenuItem onClick={() => unpublishMutation.mutate()} className="text-muted-foreground focus:text-foreground">
-                      <EyeOff className="h-3.5 w-3.5 mr-2" /> Unpublish
+                    <DropdownMenuItem
+                      onClick={() => unpublishMutation.mutate()}
+                      disabled={unpublishMutation.isPending}
+                      className="text-muted-foreground focus:text-foreground"
+                    >
+                      {unpublishMutation.isPending
+                        ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                        : <EyeOff className="h-3.5 w-3.5 mr-2" />}
+                      {unpublishMutation.isPending ? 'Unpublishing…' : 'Unpublish'}
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-muted-foreground text-xs">
-                    {shift.id.slice(0, 8)}…
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
