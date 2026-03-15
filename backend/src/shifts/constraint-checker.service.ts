@@ -80,14 +80,16 @@ export class ConstraintCheckerService {
       );
       for (const v of startDayViolations) push(v);
 
-      const nextDate = addDays(shift.date, 1);
-      const nextViolations = await this.checkDayAvailability(
-        staff,
-        nextDate,
-        0,
-        endMinutes,
-      );
-      for (const v of nextViolations) push(v);
+      if (endMinutes > 0) {
+        const nextDate = addDays(shift.date, 1);
+        const nextViolations = await this.checkDayAvailability(
+          staff,
+          nextDate,
+          0,
+          endMinutes,
+        );
+        for (const v of nextViolations) push(v);
+      }
     } else {
       const availViolations = await this.checkDayAvailability(
         staff,
