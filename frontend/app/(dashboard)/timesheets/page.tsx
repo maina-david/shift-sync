@@ -304,6 +304,7 @@ function ManageTimesheets() {
       timesheetsApi.review(id, { status, managerNote: note }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['timesheets'] });
+      queryClient.invalidateQueries({ queryKey: ['timesheets-mine'] });
       toast.success('Timesheet updated');
       setReviewTarget(null);
       setManagerNote('');

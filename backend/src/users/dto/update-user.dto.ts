@@ -1,4 +1,4 @@
-import { IsArray, IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { IsArray, IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '../entities/user.entity';
 
@@ -23,6 +23,7 @@ export class UpdateUserDto {
   @IsOptional()
   @IsInt()
   @Min(0)
+  @Max(168)
   desiredHoursPerWeek?: number;
 
   @ApiPropertyOptional()

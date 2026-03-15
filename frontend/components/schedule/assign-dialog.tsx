@@ -43,6 +43,7 @@ export function AssignDialog({ shift, open, onOpenChange }: AssignDialogProps) {
     queryKey: ['users', shift.locationId],
     queryFn: () => usersApi.list(shift.locationId),
     enabled: open,
+    staleTime: 5 * 60 * 1000,
   });
 
   const validateMutation = useMutation({

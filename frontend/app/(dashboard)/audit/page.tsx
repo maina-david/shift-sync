@@ -40,6 +40,7 @@ export default function AuditPage() {
   const { data: locations = [] } = useQuery<Location[]>({
     queryKey: ['locations'],
     queryFn: () => locationsApi.list(),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: logs = [], isLoading } = useQuery<AuditLog[]>({

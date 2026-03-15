@@ -83,7 +83,7 @@ cd backend
 npx ts-node src/seed.ts
 ```
 
-Populates 4 locations, 10 users, shifts across a 4-week window, swap/drop requests, time-off entries, timesheets, certifications, notifications, reservations, checklists, and audit log entries.
+Populates all entities: 4 locations, 11 users (1 admin + 2 managers + 8 staff), shifts across a 4-week window (last/this/next week), weekly availability, availability exceptions, swap requests, drop requests (open/claimed/approved), time-off entries, timesheets, certifications, notifications, reservations, schedule templates, checklists, shift feedback, fair-workweek change logs, audit log entries, messages, bookmarks, and system settings (scheduling + payroll defaults).
 
 ### 3. Frontend
 
@@ -163,12 +163,12 @@ All seeded accounts share the same password: **`Coastal2024!`**
 | --- | --- | --- | --- |
 | **Admin** | Sarah Chen | `admin@coastal.com` | Full access across all locations — users, shifts, analytics, audit log, settings |
 | **Manager** | Marcus Johnson | `marcus@coastal.com` | Manages North Beach & Midtown East — shifts, assignments, swap/drop approvals |
-| **Manager** | Priya Patel | `priya@coastal.com` | Manages Westside & Santa Monica — shifts, assignments, swap/drop approvals |
+| **Manager** | Priya Patel | `priya@coastal.com` | Manages Marina District & Santa Monica — shifts, assignments, swap/drop approvals |
 | **Staff** | Alice Thompson | `alice@coastal.com` | North Beach — views own shifts, requests swaps/drops, time-off |
 | **Staff** | Bob Martinez | `bob@coastal.com` | North Beach / Midtown East — part-time, 30 h/week desired |
 | **Staff** | Carol Williams | `carol@coastal.com` | Midtown East — has a seeded 7-consecutive-day scheduling edge case |
-| **Staff** | Dave Park | `dave@coastal.com` | Westside — 35 h/week desired |
-| **Staff** | Emma Rodriguez | `emma@coastal.com` | Westside — 25 h/week desired, part-time |
+| **Staff** | Dave Park | `dave@coastal.com` | Midtown East / Marina District — 35 h/week desired |
+| **Staff** | Emma Rodriguez | `emma@coastal.com` | Marina District / Santa Monica — 25 h/week desired, part-time |
 | **Staff** | Frank Chen | `frank@coastal.com` | Santa Monica — 20 h/week, notifications disabled |
 | **Staff** | Grace Kim | `grace@coastal.com` | North Beach — 40 h/week desired |
 

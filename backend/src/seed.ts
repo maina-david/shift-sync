@@ -27,6 +27,7 @@ import { Message, MessageType } from './messages/entities/message.entity';
 import { Checklist, ChecklistType } from './checklists/entities/checklist.entity';
 import { ShiftFeedback } from './shift-feedback/entities/shift-feedback.entity';
 import { ScheduleChangeLog, ChangeType } from './fair-workweek/entities/schedule-change-log.entity';
+import { SystemSetting } from './settings/entities/system-setting.entity';
 
 dotenv.config({ path: resolve(__dirname, '..', '.env') });
 
@@ -67,6 +68,7 @@ async function main() {
       MenuItem, Reservation, Bookmark,
       ScheduleTemplate, Timesheet, Certification,
       Message, Checklist, ShiftFeedback, ScheduleChangeLog,
+      SystemSetting,
     ],
     synchronize: true,
   });
@@ -86,6 +88,7 @@ async function main() {
     'menu_items', 'reservations', 'bookmarks',
     'schedule_templates', 'timesheets', 'certifications',
     'messages', 'checklists', 'shift_feedback', 'schedule_change_logs',
+    'system_settings',
   ];
   for (const table of tables) {
     await AppDataSource.query(`TRUNCATE TABLE \`${table}\``);
@@ -116,6 +119,7 @@ async function main() {
   const checklistRepo = AppDataSource.getRepository(Checklist);
   const feedbackRepo  = AppDataSource.getRepository(ShiftFeedback);
   const changeLogRepo = AppDataSource.getRepository(ScheduleChangeLog);
+  const settingRepo   = AppDataSource.getRepository(SystemSetting);
 
   const thisMonday = getThisMonday();
   const lastMonday = addDays(thisMonday, -7);
@@ -475,6 +479,7 @@ async function main() {
   const satStart = new Date(`${tw(5)}T22:00:00.000Z`);
   const expiresAt = new Date(satStart.getTime() - 24 * 60 * 60 * 1000);
 
+  // drop1: CLAIMED — Frank's Sat Santa Monica (claimed by Carol, awaiting manager approval)
   const drop1 = await dropRepo.save(dropRepo.create({
     assignment: aSmSat, assignmentId: aSmSat.id,
     claimedBy: uCarol, claimedById: uCarol.id,
@@ -483,7 +488,32 @@ async function main() {
     expiresAt,
   }));
 
-  console.log("  ✓ 1 drop request (Frank's Sat — claimed by Carol, awaiting Priya)\n");
+  // drop2: OPEN — Emma's Friday Marina District 16:00–22:00 (visible on pickup page)
+  const mdFriShiftStart = new Date(`${tw(4)}T16:00:00`);
+  const mdFriExpiresAt  = new Date(mdFriShiftStart.getTime() - 24 * 60 * 60 * 1000);
+  const drop2 = await dropRepo.save(dropRepo.create({
+    assignment: aMdFri, assignmentId: aMdFri.id,
+    claimedBy: null, claimedById: null,
+    reason: 'Time-off request was denied but I\'m really struggling this week. Hoping someone can cover.',
+    status: DropRequestStatus.OPEN,
+    expiresAt: mdFriExpiresAt,
+  }));
+
+  // drop3: APPROVED — Alice's last-week Mon morning North Beach (historical, transfer complete)
+  const lwMonExpiresAt = new Date(`${lw(0)}T09:00:00`);
+  lwMonExpiresAt.setDate(lwMonExpiresAt.getDate() - 1);
+  const drop3 = await dropRepo.save(dropRepo.create({
+    assignment: lwAssignments[0], assignmentId: lwAssignments[0].id,
+    claimedBy: uHenry, claimedById: uHenry.id,
+    reason: 'Had a last-minute appointment Monday morning.',
+    status: DropRequestStatus.APPROVED,
+    expiresAt: lwMonExpiresAt,
+    managerId: uMarcus.id,
+    reviewedAt: new Date(`${lw(0)}T07:00:00`),
+    managerNote: 'Henry is certified. Approved.',
+  }));
+
+  console.log('  ✓ 3 drop requests (CLAIMED, OPEN for pickup, APPROVED historical)\n');
 
   console.log('🔔 Creating notifications...');
 
@@ -534,8 +564,17 @@ async function main() {
     notif(uCarol,  'SHIFT_ASSIGNED', 'Override Assignment',
       'You were assigned Thursday at Midtown East as a 7th consecutive day (approved override). Please monitor fatigue.',
       'shift_assignment', aMeThu2Carol.id, true),
+    notif(uEmma,  'DROP_REQUEST_CREATED', 'Drop Request Posted',
+      'Your drop request for Friday Marina District (16:00–22:00) is live. Other staff can now claim it.',
+      'drop_request', drop2.id, true),
+    notif(uPriya, 'DROP_REQUEST_CREATED', 'Open Shift Available',
+      'Emma Rodriguez posted her Friday Marina District shift (16:00–22:00) for pickup. No one has claimed it yet.',
+      'drop_request', drop2.id),
+    notif(uAlice, 'DROP_REQUEST_APPROVED', 'Drop Approved (Historical)',
+      'Your Monday North Beach morning drop was approved by Marcus Johnson. Henry Wilson covered the shift.',
+      'drop_request', drop3.id, true),
   ]);
-  console.log('  ✓ 14 notifications seeded\n');
+  console.log('  ✓ 17 notifications seeded\n');
 
   console.log('📝 Creating audit log...');
 
@@ -1024,6 +1063,23 @@ async function main() {
   }));
   console.log('  ✓ 2 Fair Workweek change logs (1 violation + 1 compliant publish)\n');
 
+  console.log('⚙️  Creating system settings...');
+  const systemSettings = [
+    { key: 'scheduling.minRestHours',                value: 10,   description: 'Minimum rest hours required between consecutive shifts (hard block)' },
+    { key: 'scheduling.dailyWarnHours',              value: 8,    description: 'Daily hours threshold that triggers a soft warning on assignment' },
+    { key: 'scheduling.dailyBlockHours',             value: 12,   description: 'Daily hours hard limit — blocks the assignment entirely' },
+    { key: 'scheduling.weeklyWarnHours',             value: 35,   description: 'Weekly scheduled hours soft-warning threshold' },
+    { key: 'scheduling.weeklyOvertimeHours',         value: 40,   description: 'Weekly hours that trigger an overtime warning' },
+    { key: 'scheduling.maxConsecutiveDays',          value: 6,    description: 'Consecutive working days that trigger a scheduling warning' },
+    { key: 'scheduling.maxConsecutiveDaysHard',      value: 7,    description: 'Consecutive working days that require an explicit manager override' },
+    { key: 'scheduling.advanceNoticeHours',          value: 336,  description: 'Fair Workweek advance-notice window in hours (336 = 14 days)' },
+    { key: 'scheduling.predictabilityPayMultiplier', value: 1.0,  description: 'Extra pay multiplier applied when a schedule change is made inside the advance-notice window' },
+    { key: 'payroll.overtimeMultiplier',             value: 1.5,  description: 'Overtime pay multiplier applied to hours beyond the weekly OT threshold' },
+    { key: 'payroll.weeklyOvertimeThresholdHours',   value: 40,   description: 'Weekly hours before the overtime multiplier kicks in' },
+  ];
+  await settingRepo.save(systemSettings.map((s) => settingRepo.create(s)));
+  console.log(`  ✓ ${systemSettings.length} system settings seeded\n`);
+
   await AppDataSource.destroy();
 
   console.log('╔══════════════════════════════════════════════════════════════╗');
@@ -1053,6 +1109,7 @@ async function main() {
   console.log('║  • Swap   — Alice→Henry Thu AM (accepted, pending manager) ║');
   console.log('║  • Swap   — Bob→Grace Thu PM (pending response)            ║');
   console.log('║  • Drop   — Frank Sat SM (claimed by Carol, pending Priya) ║');
+  console.log('║  • Drop   — Emma Fri Marina (OPEN — visible on pickup page)║');
   console.log('║  • Alice exception — next Monday unavailable               ║');
   console.log('║  • Dave exception  — this Wednesday 18:00 start only       ║');
   console.log('║  • Henry exception — this Saturday 10:00–16:00 available   ║');
@@ -1073,6 +1130,7 @@ async function main() {
   console.log('║  • Checklists  — 8 (opening + closing per location)        ║');
   console.log('║  • Feedback    — 4 (last-week shifts, rating 4–5)          ║');
   console.log('║  • FWW logs    — 2 (1 violation, 1 compliant publish)      ║');
+  console.log('║  • Settings    — 11 system settings (scheduling + payroll)  ║');
   console.log('╚══════════════════════════════════════════════════════════════╝');
 }
 

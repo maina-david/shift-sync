@@ -78,16 +78,19 @@ export default function StaffPage() {
   const { data: staff = [], isLoading: staffLoading } = useQuery<User[]>({
     queryKey: ['users'],
     queryFn: () => usersApi.list(),
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: locations = [] } = useQuery<Location[]>({
     queryKey: ['locations'],
     queryFn: locationsApi.list,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: skills = [] } = useQuery<Skill[]>({
     queryKey: ['skills'],
     queryFn: skillsApi.list,
+    staleTime: 5 * 60 * 1000,
   });
 
   const createMutation = useMutation({

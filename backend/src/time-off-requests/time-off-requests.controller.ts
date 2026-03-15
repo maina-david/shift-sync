@@ -18,8 +18,9 @@ import { CreateTimeOffRequestDto } from './dto/create-time-off-request.dto';
 import { ReviewTimeOffDto } from './dto/review-time-off.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../common/roles.decorator';
 import { CurrentUser } from '../common/current-user.decorator';
-import { User } from '../users/entities/user.entity';
+import { User, UserRole } from '../users/entities/user.entity';
 
 @ApiTags('time-off-requests')
 @ApiBearerAuth()
@@ -48,6 +49,7 @@ export class TimeOffRequestsController {
   }
 
   @Patch(':id/approve')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Approve a time-off request (manager/admin)' })
   approve(
     @Param('id') id: string,
@@ -58,6 +60,7 @@ export class TimeOffRequestsController {
   }
 
   @Patch(':id/deny')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Deny a time-off request (manager/admin)' })
   deny(
     @Param('id') id: string,

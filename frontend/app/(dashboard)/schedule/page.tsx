@@ -75,12 +75,14 @@ export default function SchedulePage() {
   const { data: locations = [] } = useQuery<Location[]>({
     queryKey: ['locations'],
     queryFn: locationsApi.list,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: skills = [] } = useQuery<Skill[]>({
     queryKey: ['skills'],
     queryFn: skillsApi.list,
     enabled: createOpen,
+    staleTime: 5 * 60 * 1000,
   });
 
   const firstLocationId = selectedLocationId || locations[0]?.id || '';

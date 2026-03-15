@@ -41,7 +41,9 @@ import { TimeOffRequest } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 
 
-const TODAY_ISO = new Date().toISOString().split('T')[0];
+function todayISO() {
+  return new Date().toISOString().split('T')[0];
+}
 
 function isValidISODate(s: string) {
   if (!s) return false;
@@ -53,7 +55,7 @@ const requestSchema = z.object({
   startDate: z.string().min(1, 'Required').refine(isValidISODate, 'Invalid date'),
   endDate: z.string().min(1, 'Required').refine(isValidISODate, 'Invalid date'),
   reason: z.string().optional(),
-}).refine((d) => d.startDate >= TODAY_ISO, {
+}).refine((d) => d.startDate >= todayISO(), {
   message: 'Start date cannot be in the past',
   path: ['startDate'],
 }).refine((d) => d.endDate >= d.startDate, {
