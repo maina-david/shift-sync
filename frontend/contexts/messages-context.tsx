@@ -6,11 +6,13 @@ import React, {
   useState,
   useCallback,
   useMemo,
+  useEffect,
 } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { messagesApi, usersApi } from '@/lib/api';
 import { Message } from '@/lib/types';
 import { useAuth } from './auth-context';
+import { getSocket } from '@/lib/socket';
 import { toast } from 'sonner';
 
 export interface DmPartner {
@@ -144,6 +146,29 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
       }
     },
   });
+
+  // ── Real-time: invalidate queries when a new message arrives via WS ────────
+
+  useEffect(() => {
+    if (!user) return;
+    const socket = getSocket();
+
+    const onNewMessage = (payload: {
+      senderId: string;
+      recipientId: string | null;
+    }) => {
+      queryClient.invalidateQueries({ queryKey: ['messages-inbox'] });
+
+      // Refresh the open thread if this message belongs to it
+      const partner = payload.senderId === user.id ? payload.recipientId : payload.senderId;
+      if (partner && partner === selectedUserId) {
+        queryClient.invalidateQueries({ queryKey: ['thread', selectedUserId] });
+      }
+    };
+
+    socket.on('message:new', onNewMessage);
+    return () => { socket.off('message:new', onNewMessage); };
+  }, [user, selectedUserId, queryClient]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
 

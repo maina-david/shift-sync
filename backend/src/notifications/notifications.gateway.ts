@@ -77,6 +77,20 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     this.socketUser.delete(client.id);
   }
 
+  @SubscribeMessage('typing:start')
+  handleTypingStart(@ConnectedSocket() client: Socket, @MessageBody() recipientId: string) {
+    const userId = this.socketUser.get(client.id);
+    if (!userId || !recipientId) return;
+    this.server.to(`user:${recipientId}`).emit('typing:start', { userId });
+  }
+
+  @SubscribeMessage('typing:stop')
+  handleTypingStop(@ConnectedSocket() client: Socket, @MessageBody() recipientId: string) {
+    const userId = this.socketUser.get(client.id);
+    if (!userId || !recipientId) return;
+    this.server.to(`user:${recipientId}`).emit('typing:stop', { userId });
+  }
+
   @SubscribeMessage('join_location')
   async handleJoinLocation(@ConnectedSocket() client: Socket, @MessageBody() locationId: string) {
     const userId = this.socketUser.get(client.id);
@@ -104,6 +118,26 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
   emitToLocation(locationId: string, event: string, data: unknown) {
     this.server.to(`location:${locationId}`).emit(event, data);
+  }
+
+  @OnEvent('message.new')
+  handleNewMessage(payload: {
+    messageId: string;
+    senderId: string;
+    recipientId: string | null;
+    type: string;
+    locationId: string | null;
+  }) {
+    if (payload.recipientId) {
+      this.server.to(`user:${payload.recipientId}`).emit('message:new', payload);
+    }
+
+    // Notify sender too so their other open tabs update immediately
+    this.server.to(`user:${payload.senderId}`).emit('message:new', payload);
+
+    if (payload.type === 'announcement' && payload.locationId) {
+      this.server.to(`location:${payload.locationId}`).emit('message:new', payload);
+    }
   }
 
   @OnEvent('schedule.updated')

@@ -31,9 +31,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { messagesApi, usersApi, getErrorMessage } from '@/lib/api';
+import { getSocket } from '@/lib/socket';
 import { Message, User } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useMessages } from '@/contexts/messages-context';
+import { useTypingIndicator } from '@/hooks/use-typing-indicator';
 import { cn } from '@/lib/utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -94,6 +96,7 @@ export default function MessagesPage() {
   const annLoading = inboxLoading;
 
   const selectedUserId = selection?.kind === 'dm' ? selection.userId : undefined;
+  const { isPartnerTyping, onKeyStroke, onStopTyping } = useTypingIndicator(selectedUserId);
 
   const { data: thread = [] } = useQuery<Message[]>({
     queryKey: ['thread', selectedUserId],
@@ -148,6 +151,24 @@ export default function MessagesPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [thread]);
 
+  // Real-time: refresh on incoming message:new socket event
+  useEffect(() => {
+    if (!user) return;
+    const socket = getSocket();
+
+    const onNewMessage = (payload: { senderId: string; recipientId: string | null }) => {
+      queryClient.invalidateQueries({ queryKey: ['messages-inbox'] });
+      const partner = payload.senderId === user.id ? payload.recipientId : payload.senderId;
+      if (partner && partner === selectedUserId) {
+        queryClient.invalidateQueries({ queryKey: ['thread', selectedUserId] });
+      }
+    };
+
+    socket.on('message:new', onNewMessage);
+    return () => { socket.off('message:new', onNewMessage); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, selectedUserId]);
+
   // Mark unread messages in open thread as read
   useEffect(() => {
     if (!selectedUserId || !user) return;
@@ -170,6 +191,7 @@ export default function MessagesPage() {
 
   const handleSendReply = () => {
     if (!replyBody.trim() || !selectedUserId) return;
+    onStopTyping(selectedUserId);
     sendMutation.mutate({ type: 'direct', recipientId: selectedUserId, body: replyBody.trim() });
   };
 
@@ -383,13 +405,31 @@ export default function MessagesPage() {
             </div>
 
             {/* Reply input */}
-            <div className="border-t px-4 py-3 shrink-0">
+            <div className="border-t px-4 pt-2 pb-3 shrink-0">
+              {isPartnerTyping && (
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <div className="flex gap-0.5 items-center">
+                    {[0, 1, 2].map((i) => (
+                      <span
+                        key={i}
+                        className="w-1 h-1 rounded-full bg-muted-foreground/50 animate-bounce"
+                        style={{ animationDelay: `${i * 150}ms` }}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[0.6rem] text-muted-foreground">{selection.user.name} is typing…</span>
+                </div>
+              )}
               <div className="flex gap-2 items-end">
                 <Textarea
                   value={replyBody}
-                  onChange={(e) => setReplyBody(e.target.value)}
+                  onChange={(e) => {
+                    setReplyBody(e.target.value);
+                    if (selectedUserId) onKeyStroke(selectedUserId);
+                  }}
                   placeholder={`Message ${selection.user.name}…`}
                   className="min-h-10 max-h-32 resize-none text-sm"
+                  onBlur={() => { if (selectedUserId) onStopTyping(selectedUserId); }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();

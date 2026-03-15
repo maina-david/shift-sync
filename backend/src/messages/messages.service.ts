@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Message, MessageType } from './entities/message.entity';
 import { SendMessageDto } from './dto/send-message.dto';
 import { UserRole } from '../users/entities/user.entity';
@@ -15,6 +16,7 @@ export class MessagesService {
   constructor(
     @InjectRepository(Message)
     private repo: Repository<Message>,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async send(
@@ -50,7 +52,17 @@ export class MessagesService {
       isRead: false,
     });
 
-    return this.repo.save(message);
+    const saved = await this.repo.save(message);
+
+    this.eventEmitter.emit('message.new', {
+      messageId: saved.id,
+      senderId: saved.senderId,
+      recipientId: saved.recipientId ?? null,
+      type: saved.type,
+      locationId: saved.locationId ?? null,
+    });
+
+    return saved;
   }
 
   getDirectThread(userA: string, userB: string): Promise<Message[]> {

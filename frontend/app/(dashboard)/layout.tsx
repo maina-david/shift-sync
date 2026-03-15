@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils';
 import { PageTransition } from '@/components/ui/page-transition';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { NetworkStatusBanner } from '@/components/ui/network-status-banner';
+import { useTypingIndicator } from '@/hooks/use-typing-indicator';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -95,6 +96,7 @@ function MessagesSheet({ open, onClose }: { open: boolean; onClose: () => void }
   } = useMessages();
 
   const [replyBody, setReplyBody] = useState('');
+  const { isPartnerTyping, onKeyStroke, onStopTyping } = useTypingIndicator(selectedUserId);
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeRecipient, setComposeRecipient] = useState('');
   const [composeBody, setComposeBody] = useState('');
@@ -115,6 +117,7 @@ function MessagesSheet({ open, onClose }: { open: boolean; onClose: () => void }
 
   const handleSendReply = () => {
     if (!replyBody.trim() || !selectedUserId) return;
+    onStopTyping(selectedUserId);
     send({ type: 'direct', recipientId: selectedUserId, body: replyBody.trim() });
     setReplyBody('');
   };
@@ -272,13 +275,31 @@ function MessagesSheet({ open, onClose }: { open: boolean; onClose: () => void }
               <div ref={bottomRef} />
             </div>
 
-            <div className="border-t px-3 py-3 shrink-0">
+            <div className="border-t px-3 pt-2 pb-3 shrink-0">
+              {isPartnerTyping && (
+                <div className="flex items-center gap-1.5 mb-1.5 px-1">
+                  <div className="flex gap-0.5 items-center">
+                    {[0, 1, 2].map((i) => (
+                      <span
+                        key={i}
+                        className="w-1 h-1 rounded-full bg-muted-foreground/50 animate-bounce"
+                        style={{ animationDelay: `${i * 150}ms` }}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[0.6rem] text-muted-foreground">{selectedUser?.name} is typing…</span>
+                </div>
+              )}
               <div className="flex gap-2 items-end">
                 <Textarea
                   value={replyBody}
-                  onChange={(e) => setReplyBody(e.target.value)}
+                  onChange={(e) => {
+                    setReplyBody(e.target.value);
+                    if (selectedUserId) onKeyStroke(selectedUserId);
+                  }}
                   placeholder={`Message ${selectedUser?.name ?? ''}…`}
                   className="min-h-9 max-h-28 resize-none text-sm"
+                  onBlur={() => { if (selectedUserId) onStopTyping(selectedUserId); }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
