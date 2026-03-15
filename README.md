@@ -7,8 +7,8 @@ A full-stack shift scheduling and workforce management platform for **Coastal Ea
 ## Tech Stack
 
 | Layer | Technology |
-|---|---|
-| Backend | NestJS 10, TypeORM, MySQL 8, Socket.IO, Passport JWT |
+| --- | --- |
+| Backend | NestJS 11, TypeORM, MySQL 8, Socket.IO, Passport JWT |
 | Frontend | Next.js 16 (App Router), TypeScript, Tailwind CSS, shadcn/ui |
 | Auth | JWT access tokens (in-memory) + httpOnly refresh cookies (7 days) |
 | Email | @nestjs-modules/mailer, STARTTLS SMTP (Mailgun / Postmark / SES / Mailtrap) |
@@ -124,7 +124,7 @@ npm test -- --watch   # watch mode
 **317 tests across 27 service spec files — all passing.**
 
 | Area | Spec file | Tests |
-|---|---|---|
+| --- | --- | --- |
 | Constraint checker | `shifts/constraint-checker.service.spec.ts` | 13 |
 | Timesheets | `timesheets/timesheets.service.spec.ts` | 13 |
 | Time-off requests | `time-off-requests/time-off-requests.service.spec.ts` | 17 |
@@ -160,7 +160,7 @@ npm test -- --watch   # watch mode
 All seeded accounts share the same password: **`Coastal2024!`**
 
 | Role | Name | Email | Access |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **Admin** | Sarah Chen | `admin@coastal.com` | Full access across all locations — users, shifts, analytics, audit log, settings |
 | **Manager** | Marcus Johnson | `marcus@coastal.com` | Manages North Beach & Midtown East — shifts, assignments, swap/drop approvals |
 | **Manager** | Priya Patel | `priya@coastal.com` | Manages Westside & Santa Monica — shifts, assignments, swap/drop approvals |
@@ -240,7 +240,7 @@ All seeded accounts share the same password: **`Coastal2024!`**
 ## Scheduled Jobs
 
 | Schedule | Job |
-|---|---|
+| --- | --- |
 | Daily 00:05 | Mark past ASSIGNED shift-assignments as COMPLETED |
 | Daily 07:00 | Send shift reminders to all staff working today |
 | Weekdays 09:00 | Remind managers of time-off requests pending > 48 hours |
@@ -259,7 +259,7 @@ All seeded accounts share the same password: **`Coastal2024!`**
 ### Backend (`backend/.env`)
 
 | Variable | Required | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `PORT` | No | `3001` | API server port |
 | `NODE_ENV` | No | `development` | `development` or `production` |
 | `FRONTEND_URL` | No | `http://localhost:3000` | CORS allowed origin |
@@ -281,7 +281,7 @@ All seeded accounts share the same password: **`Coastal2024!`**
 ### Frontend (`frontend/.env.local`)
 
 | Variable | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:3001` | Backend API base URL |
 
 ---
@@ -415,5 +415,5 @@ shift-sync/
         ├── api/                                    # Per-resource Axios API modules
         ├── socket.ts                               # Socket.IO client singleton
         ├── types.ts                                # Shared TypeScript domain types
-        └── utils.ts                                # Tailwind class merge utility
+        └── utils.ts                                # Tailwind class merge + safeFormat / parseTimeMinutes helpers
 ```
